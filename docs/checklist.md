@@ -76,9 +76,9 @@ RLS Policies
 
 Auth
 
-[ ] Supabase Auth wiring in Next.js
-[ ] Automatic profile creation on new user
-[ ] Protected routes scaffolded
+[x] Supabase Auth wiring in Next.js
+[x] Automatic profile creation on new user
+[x] Protected routes scaffolded
 
 --------------------------------------------------
 PHASE 2 — IMPORT PIPELINE
@@ -123,7 +123,7 @@ PHASE 3 — SEARCH ("ASK INDEX")
 PHASE 4 — PROJECT ORGANIZATION
 --------------------------------------------------
 
-[ ] Create Project UI
+[x] Create Project UI
 [ ] Attach conversation to project UI
 [ ] Project-scoped search
 
@@ -137,6 +137,19 @@ PHASE 5 — HIGHLIGHTS & BRANCHING
 [ ] parent_conversation_id stored
 [ ] origin_highlight_id stored
 [ ] Branch conversation UI
+
+--------------------------------------------------
+PHASE 5.5 — ROUND-TRIP CHAT INITIATION (CONTEXT → EXPLORATION)
+--------------------------------------------------
+
+[ ] Context block generator (deterministic)
+[ ] "Start Chat from This" UI on highlights, branches, insights
+[ ] Clipboard copy of generated context
+[ ] Buttons: Open in ChatGPT / Claude / Cursor
+[ ] Destination links tested (new-tab behavior)
+[ ] UX spec matching wireframes.md implemented
+[ ] Post-MVP hooks documented (deep links, AI-refined context)
+
 
 --------------------------------------------------
 PHASE 6 — WEEKLY DIGEST
