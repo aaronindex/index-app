@@ -2,7 +2,7 @@
 import { getSupabaseServerClient } from '@/lib/supabaseServer';
 
 export default async function ProjectsPage() {
-  const supabase = getSupabaseServerClient();
+  const supabase = await getSupabaseServerClient();
   const { data, error } = await supabase
     .from('projects')
     .select('id, name, status')
