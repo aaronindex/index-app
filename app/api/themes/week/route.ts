@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
     // Aggregate tag counts
     const tagCounts = new Map<string, { name: string; category: string; count: number }>();
     topTags?.forEach((ct) => {
-      const tag = ct.tags;
+      const tag = ct.tags as any;
       if (tag) {
         const key = `${tag.name}-${tag.category}`;
         const current = tagCounts.get(key) || { name: tag.name, category: tag.category, count: 0 };
