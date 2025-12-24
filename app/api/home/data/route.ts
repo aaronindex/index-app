@@ -109,21 +109,21 @@ export async function GET(request: NextRequest) {
           conversation_id: t.conversation_id,
           created_at: t.created_at,
         })) || [],
-        decisions: recentDecisions?.map((d) => ({
+        decisions: recentDecisions?.map((d: any) => ({
           id: d.id,
           title: d.title,
           content: d.content,
           conversation_id: d.conversation_id,
-          conversation_title: d.conversations?.title || null,
+          conversation_title: (d.conversations as any)?.title || null,
           created_at: d.created_at,
         })) || [],
       },
-      latestInsights: recentHighlights?.map((h) => ({
+      latestInsights: recentHighlights?.map((h: any) => ({
         id: h.id,
         content: h.content,
         label: h.label,
         conversation_id: h.conversation_id,
-        conversation_title: h.conversations?.title || null,
+        conversation_title: (h.conversations as any)?.title || null,
         created_at: h.created_at,
       })) || [],
       thingsToRevisit,
