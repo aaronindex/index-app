@@ -247,15 +247,6 @@ export default function AskPage() {
                       {(result.similarity * 100).toFixed(0)}% match
                     </span>
                   </div>
-                  <button
-                    onClick={() => {
-                      setSelectedResult(result);
-                      setIsModalOpen(true);
-                    }}
-                    className="text-sm text-zinc-600 dark:text-zinc-400 hover:text-foreground transition-colors ml-4"
-                  >
-                    Start Chat →
-                  </button>
                 </div>
                 <p className="text-zinc-700 dark:text-zinc-300 text-sm leading-relaxed">
                   {result.content}
