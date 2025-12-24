@@ -99,13 +99,13 @@ export async function GET(request: NextRequest) {
       hasConversations: (conversationCount || 0) > 0,
       hasProjects: (projectCount || 0) > 0,
       priorityItems: {
-        tasks: openTasks?.map((t) => ({
+        tasks: openTasks?.map((t: any) => ({
           id: t.id,
           title: t.title,
           description: t.description,
           status: t.status,
           project_id: t.project_id,
-          project_name: t.projects?.name || null,
+          project_name: (t.projects as any)?.name || null,
           conversation_id: t.conversation_id,
           created_at: t.created_at,
         })) || [],
