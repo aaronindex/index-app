@@ -3,7 +3,10 @@
 
 export interface ChatGPTMessage {
   id: string;
-  role: 'user' | 'assistant' | 'system';
+  role?: 'user' | 'assistant' | 'system';
+  author?: {
+    role?: 'user' | 'assistant' | 'system' | 'tool';
+  };
   content: {
     parts?: string[];
     text?: string;
@@ -162,7 +165,7 @@ function parseSingleConversation(conv: any): ParsedConversation | null {
         // Walk backwards collecting all messages
         while (currentNodeId && !visited.has(currentNodeId)) {
           visited.add(currentNodeId);
-          const node = mapping[currentNodeId];
+          const node: ChatGPTMessageNode | undefined = mapping[currentNodeId];
           
           if (node?.message) {
             messageNodes.push({

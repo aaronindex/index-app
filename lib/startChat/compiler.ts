@@ -6,9 +6,6 @@
 
 import { getSupabaseServerClient } from '@/lib/supabaseServer';
 
-// Re-export types for use in components
-export type { StartChatIntent };
-
 export interface ContextRef {
   type: 'task' | 'decision' | 'highlight' | 'conversation';
   id: string;

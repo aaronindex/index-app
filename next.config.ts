@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  serverComponentsExternalPackages: ['openai'],
+  serverExternalPackages: ['openai'],
 };
 
 export default nextConfig;

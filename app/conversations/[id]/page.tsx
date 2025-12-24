@@ -48,7 +48,7 @@ export default async function ConversationPage({
   // Get conversation
   const { data: conversation, error } = await supabase
     .from('conversations')
-    .select('id, title, source, started_at, ended_at, created_at')
+    .select('id, title, source, started_at, ended_at, created_at, parent_conversation_id, origin_highlight_id')
     .eq('id', id)
     .eq('user_id', user.id)
     .single();
