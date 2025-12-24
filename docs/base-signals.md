@@ -69,3 +69,50 @@ MVP? No (post-MVP)
 
 NOTES: Could show as a simple “Index health” or “Project momentum” meter per project.
 
+
+[INDEX SIGNAL] — Round-Trip Chat Initiation
+
+DATE: 2025-01-13
+SOURCE: Product brainstorm
+TYPE: Feature — System Interaction Pattern
+
+Raw Observation
+
+Even though INDEX is not a chat platform, it should allow the user to start a new AI conversation based on a highlight, branch, insight, or open loop.
+
+Why It Matters
+
+Creates a feedback loop between reflection → action → reflection
+
+Strengthens INDEX's role as the “sensemaking layer”
+
+Respects user workflows (ChatGPT/Claude/Cursor remain the chat UIs)
+
+Keeps INDEX focused on memory + organization
+
+Enables future premium workflows (context-injected chat initiation)
+
+MVP Suggestion
+
+Button: “Start Chat from This Insight”
+
+Generates a clean context block
+
+Copy-to-clipboard
+
+Optional: deep-link buttons for ChatGPT / Claude / Cursor
+
+Does NOT host chats inside INDEX
+
+Future Potential
+
+Auto-deep-linked prompts
+
+Structured round-trip loops
+
+“Send to AI” composer
+
+Context-aware reminders to initiate exploration
+
+Status: Not MVP-critical, but extremely aligned with long-term vision.
+

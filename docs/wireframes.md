@@ -251,3 +251,89 @@ Clear hierarchy (Home → Project → Chat → Branch → Highlight)
 Index feels like a calm, intelligent layer
 
 Users never feel like they’re switching apps — Index is a lens, not a workspace
+
+
+
+11. Action Initiation (Round-Trip Chat)
+
+(New global pattern for generating AI-ready context from INDEX)
+
+Purpose:
+Allow the user to turn any highlight, branch, insight, or open-loop into a new AI conversation in their preferred chat tool, without INDEX becoming a chat UI.
+
+Entry Points
+
+The “Start Chat” action appears anywhere the user is looking at a meaningful piece of memory:
+
+Highlight detail panel
+
+Branch conversation header
+
+Project-level insights
+
+Weekly Digest (“Open Loops” section)
+
+Decision detail view
+
+UI Structure
+
+When the user clicks Start Chat from This, a small modal or side panel appears:
+
+Context generated from your INDEX memory:
+Project: {project_name}
+Source: Highlight / Branch / Insight
+Summary: "{short extracted phrase}"
+
+Suggested exploration:
+"{auto-generated question or direction}"
+
+[ Copy Context ]
+
+
+Below the block:
+
+Chat destinations (buttons):
+
+Open in ChatGPT
+
+Open in Claude
+
+Open in Cursor
+
+Behavior:
+
+Clicking a button = opens a new tab
+
+Context is auto-copied to clipboard
+
+User pastes into their chat environment
+
+No chat happens inside INDEX.
+
+MVP Functionality
+
+Generate context block (no AI summarization required yet — deterministic assembly)
+
+Clipboard copy
+
+Basic “Open in X” links
+
+No authentication or deep integration required
+
+Future Enhancements (not MVP)
+
+LLM-refined context instead of deterministic
+
+Smart suggested prompts
+
+Direct deep links with pre-filled messages (if platforms allow)
+
+Show “Related insights” underneath context
+
+Why This Belongs in the UX Spec
+
+This adds a clear outbound action pattern to your memory architecture:
+
+INDEX is where clarity forms. The chat tools are where exploration happens.
+
+This pattern reinforces INDEX’s role as the sensemaking layer.

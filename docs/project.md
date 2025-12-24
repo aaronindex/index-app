@@ -462,3 +462,107 @@ We chunk messages into smaller units for search.
 **Phase 5 – Native Thinking**
 - Native chat inside app  
 - Voice/email/SMS ingestion
+
+---
+
+## Round-Trip Exploration (Outbound Chat Initiation)
+
+(INDEX stays the memory layer; chats still happen elsewhere.)
+
+What it is:
+A lightweight mechanism for INDEX to suggest or enable continued exploration of an idea, insight, highlight, or branch — without hosting chat itself.
+
+Why it exists:
+Users naturally think in ChatGPT/Claude/Cursor.
+INDEX organizes their thinking.
+This feature links the two.
+
+How it Works (MVP)
+
+User selects:
+
+A highlight
+
+A branch
+
+A digest insight
+
+A decision
+
+INDEX generates a context block summarizing:
+
+Project / theme
+
+Source (highlight/branch/insight)
+
+Clean 1–2 line context
+
+A suggested exploration question
+
+User sees a “Start Chat” action with options:
+
+Open in ChatGPT
+
+Open in Claude
+
+Open in Cursor
+
+INDEX:
+
+Copies context to clipboard
+
+Opens the chat tool
+
+User pastes and continues the conversation
+
+Why It Matters
+
+Closes the loop between insight → action → insight
+
+Maintains INDEX’s identity as the sensemaking layer, not a chat UI
+
+Helps users continue useful threads without losing momentum
+
+Enables future differentiators:
+
+Smart context injection
+
+Prompt refinement
+
+Structured “round-trip loops”
+
+Automated suggestions in Weekly Digest
+
+MVP Scope
+
+Deterministic context generation (no LLM needed initially)
+
+Clipboard + simple outbound links
+
+Available anywhere insights appear
+
+No UI for chatting.
+No AI streaming.
+No discussion threads inside INDEX.
+
+Out of Scope (Post-MVP)
+
+Deep links with pre-filled messages
+
+AI-refined context
+
+Thread tracking between chat tool and INDEX
+
+In-app chat sandbox
+
+🎯 Summary of What This Update Achieves
+
+By adding these sections:
+
+Your UX spec now references this behavior, so Cursor can build UI affordances around it.
+
+Your Product spec now explains why the feature exists, how it works, and what’s in/out of scope.
+
+You stay aligned with INDEX’s identity:
+
+A personal memory + sensemaking layer, not a chat app.
