@@ -1,9 +1,16 @@
 // lib/ai/tagging.ts
 import OpenAI from 'openai';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Lazy initialization - only create OpenAI client when needed
+function getOpenAIClient() {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    throw new Error('OPENAI_API_KEY is not configured');
+  }
+  return new OpenAI({
+    apiKey,
+  });
+}
 
 export interface ExtractedTag {
   name: string;
@@ -57,6 +64,7 @@ Return a JSON object with:
 Extract 5-15 relevant tags. Be specific and avoid generic terms.`;
 
   try {
+    const openai = getOpenAIClient();
     const response = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
