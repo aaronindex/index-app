@@ -38,20 +38,20 @@ function SignInForm() {
   };
 
   return (
-    <main className="min-h-screen bg-white dark:bg-black flex items-center justify-center">
+    <main className="min-h-screen bg-[rgb(var(--bg))] flex items-center justify-center">
       <div className="max-w-md w-full px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-semibold text-foreground mb-2">
+          <h1 className="font-serif text-3xl font-semibold text-[rgb(var(--text))] mb-2">
             Sign in to INDEX
           </h1>
-          <p className="text-zinc-600 dark:text-zinc-400">
+          <p className="text-[rgb(var(--muted))]">
             Personal Business Intelligence for your AI life.
           </p>
         </div>
 
         <form onSubmit={handleSignIn} className="space-y-6">
           {error && (
-            <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+            <div className="p-4 rounded-xl bg-red-50 dark:bg-red-900/20 ring-1 ring-red-200 dark:ring-red-800">
               <p className="text-sm text-red-800 dark:text-red-400">{error}</p>
             </div>
           )}
@@ -59,7 +59,7 @@ function SignInForm() {
           <div>
             <label
               htmlFor="email"
-              className="block text-sm font-medium text-foreground mb-2"
+              className="block text-sm font-medium text-[rgb(var(--text))] mb-2"
             >
               Email
             </label>
@@ -69,7 +69,7 @@ function SignInForm() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-900 text-foreground focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:focus:ring-zinc-400"
+              className="w-full px-4 py-2 border border-[rgb(var(--ring)/0.12)] rounded-lg bg-[rgb(var(--surface))] text-[rgb(var(--text))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--ring)/0.2)]"
               placeholder="you@example.com"
             />
           </div>
@@ -77,7 +77,7 @@ function SignInForm() {
           <div>
             <label
               htmlFor="password"
-              className="block text-sm font-medium text-foreground mb-2"
+              className="block text-sm font-medium text-[rgb(var(--text))] mb-2"
             >
               Password
             </label>
@@ -87,7 +87,7 @@ function SignInForm() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-900 text-foreground focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:focus:ring-zinc-400"
+              className="w-full px-4 py-2 border border-[rgb(var(--ring)/0.12)] rounded-lg bg-[rgb(var(--surface))] text-[rgb(var(--text))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--ring)/0.2)]"
               placeholder="••••••••"
             />
           </div>
@@ -95,18 +95,18 @@ function SignInForm() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full px-4 py-2 bg-foreground text-background rounded-lg hover:opacity-90 transition-opacity font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full px-4 py-2 bg-[rgb(var(--text))] text-[rgb(var(--bg))] rounded-lg hover:opacity-90 transition-opacity font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? 'Signing in...' : 'Sign in'}
           </button>
         </form>
 
         <div className="mt-6 text-center">
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          <p className="text-sm text-[rgb(var(--muted))]">
             Don't have an account?{' '}
             <Link
               href="/auth/signup"
-              className="text-foreground hover:underline font-medium"
+              className="text-[rgb(var(--text))] hover:underline font-medium"
             >
               Sign up
             </Link>
@@ -120,8 +120,8 @@ function SignInForm() {
 export default function SignInPage() {
   return (
     <Suspense fallback={
-      <main className="min-h-screen bg-white dark:bg-black flex items-center justify-center">
-        <div className="text-foreground">Loading...</div>
+      <main className="min-h-screen bg-[rgb(var(--bg))] flex items-center justify-center">
+        <div className="text-[rgb(var(--text))]">Loading...</div>
       </main>
     }>
       <SignInForm />

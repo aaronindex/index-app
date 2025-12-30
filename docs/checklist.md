@@ -26,7 +26,7 @@ Email Provider
 
 [x] Resend account created
 [x] Resend API key stored
-[ ] From-domain configured (DNS + DKIM)
+[x] From-domain configured (DNS + DKIM) - Verified: hello@indexapp.co, all auth passing
 
 Local Dev
 
@@ -91,7 +91,7 @@ UI Flow
 
 [x] File upload UI built
 [x] Import record created on upload
-[ ] Background job queued (jobs table) - Currently processing synchronously
+[x] Background job queued (jobs table) - E1: Durable background jobs implemented
 
 Parser + Storage
 
@@ -111,6 +111,19 @@ UX Feedback
 [x] Import progress UI (basic)
 [x] Import error handling
 [x] Import success summary
+[x] Job status polling (every 3s while import screen open)
+[x] Step-by-step progress display with counts
+[x] Retry failed jobs
+
+Quick Import (Paste One Conversation)
+
+[x] Quick Import UI (paste one conversation)
+[x] Role-aware transcript parser
+[x] Quick Import → conversation/messages insert
+[x] Quick Import chunk + embed pipeline
+[x] Threshold: sync for small, background job for large
+[x] Optional project assignment on import
+[x] Deduplication check
 
 --------------------------------------------------
 PHASE 3 — SEARCH ("ASK INDEX")
@@ -130,6 +143,13 @@ PHASE 4 — PROJECT ORGANIZATION
 [x] Create Project UI
 [x] Attach conversation to project UI (import-time + post-import assignment)
 [x] Project-scoped search
+[x] Project Library tab implemented (links + youtube + pdf/images)
+[x] project_assets table + RLS
+[x] project-assets storage bucket wired (see docs/storage-bucket-setup.md)
+[x] Auto-title fetch for links/youtube
+[x] Notes supported and displayed
+[x] Thumbnail previews for links/youtube/images
+[x] ViewAssetModal for viewing images/youtube directly in app
 
 --------------------------------------------------
 PHASE 5 — HIGHLIGHTS & THOUGHT OBJECTS
@@ -145,6 +165,9 @@ PHASE 5 — HIGHLIGHTS & THOUGHT OBJECTS
 [x] Tasks/Decisions link back to projects and source conversations/highlights
 [x] Tasks support source_highlight_id for tracking origin
 [x] Decisions support project_id for direct project linking
+[x] Redactions table + UI tool added (selection → redact)
+[x] Redaction tool available alongside highlight in text selection
+[x] Redactions suppress content from resurfacing and Start Chat prompts
 
 --------------------------------------------------
 PHASE 5.5 — ROUND-TRIP CHAT INITIATION (CONTEXT → EXPLORATION)
@@ -162,6 +185,8 @@ PHASE 5.5 — ROUND-TRIP CHAT INITIATION (CONTEXT → EXPLORATION)
 [x] Start Chat removed from Highlights, Conversations, Ask Index results
 [x] Start Chat on Ask Index follow-ups requires conversion to Task/Decision first
 [x] Harvest/Abandon status tracking
+[x] Context compiler respects personal/inactive/redaction suppression rules
+[x] Start Chat excludes inactive items and redacted content by default
 [ ] Post-MVP hooks documented (deep links, AI-refined context) - Future enhancement
 
 
@@ -263,7 +288,15 @@ B3 — Theme Map ("The Field" v1)
 B4 — Status Layer Integration
 [x] Priority / Open / Complete / Dormant UI affordances
 [x] "What changed this week" (project-level activity summary)
-[ ] Filters + nudges
+[x] Personal project flag + filters (default business)
+[x] Inactive item flag + filters (default active)
+[x] Reducing valve rules applied to lists and sorting
+[x] Filter pills for projects (Business/All/Personal)
+[x] Filter pills for items (Active/All/Inactive)
+[x] Toggle UI for marking items inactive
+[x] Toggle UI for marking projects as personal (project header)
+[x] Inactive items visually de-emphasized and sorted to bottom
+[x] Personal badge displayed on project name when enabled
 
 ==================================================
 PHASE C — ROUND-TRIP LOOPS (INTELLIGENT ACTION)
@@ -286,10 +319,12 @@ C3 — Optional In-INDEX Micro-Chat (Post-Traction)
 PHASE D — ONBOARDING MAGIC
 ==================================================
 D1 — Frictionless First Run
-[ ] Ask user to import ChatGPT export
-[ ] Auto-generated insights
-[ ] Auto themes
-[ ] Digest preview
+[x] Onboarding flow component with step-by-step guidance
+[x] Empty state shows interactive onboarding (Welcome, Import, Projects, Ask Index, Digests)
+[x] Enhanced partial empty state with next steps guidance
+[x] Digest preview/explanation for new users (when no digest exists)
+[x] Clear call-to-action to generate first digest
+[ ] Auto-trigger insights extraction after first import (optional enhancement)
 
 D2 — Guided Tour
 [ ] 6-step intro flow (import → project → highlight → branch → Ask Index)
@@ -298,9 +333,28 @@ D2 — Guided Tour
 ==================================================
 PHASE E — PERFORMANCE & STABILITY
 ==================================================
-E1 — Move imports to full background jobs
+E1 — Move imports to durable background jobs
+[x] Step-by-step job processing (parse → insert_conversations → insert_messages → chunk_messages → embed_chunks → finalize)
+[x] Job tracking fields added (attempt_count, locked_at, last_error, step, progress_json)
+[x] Idempotency implemented (UPSERT for conversations, DELETE+INSERT for messages/chunks/embeddings)
+[x] Rate limiting with exponential backoff for OpenAI API calls
+[x] Cost safety measures (max chunks per run, batch size limits)
+[x] Job status polling API (/api/imports/jobs)
+[x] Vercel cron job configured (runs every minute via /api/jobs/process)
+[x] Cron authentication (x-vercel-cron header + optional token)
+[x] Quick import jobs supported (sync for small, async for large)
+[x] Deduplication hash for preventing duplicate imports
+
 E2 — Adaptive chunking strategy
 E3 — Error notifications + logging
+[x] Error notification component (toast system with error/success/info/warning)
+[x] Error notification container in root layout (global notifications)
+[x] Error handling utility with user-friendly messages
+[x] API error wrapper with automatic error display
+[x] React error boundary for component errors
+[x] Enhanced error messages in key components (create project, toggle actions, highlights, redactions)
+[x] Client-side error logging utility (ready for production error tracking service)
+
 E4 — Hybrid search ranking (recency + relevance)
 E5 — Micro-animations + UX polish
 [x] Loading skeletons for better perceived performance

@@ -4,6 +4,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import SelectableMessage from './SelectableMessage';
+import { showError, showSuccess } from '@/app/components/ErrorNotification';
 
 interface Message {
   id: string;
@@ -77,15 +78,53 @@ export default function ConversationViewClient({
 
       if (!response.ok) {
         const errorData = await response.json();
+        const errorMessage = errorData.error || 'Failed to create highlight';
+        showError(errorMessage);
         console.error('Failed to create highlight:', errorData.error);
         return;
       }
 
       const { highlight } = await response.json();
       setHighlights((prev) => [...prev, highlight]);
+      showSuccess('Highlight created successfully');
       router.refresh();
     } catch (err) {
       console.error('Error creating highlight:', err);
+    }
+  };
+
+  const handleRedact = async (
+    text: string,
+    startOffset: number,
+    endOffset: number,
+    messageId: string
+  ) => {
+    try {
+      // Get project_id from conversation if available
+      const response = await fetch('/api/redactions/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          conversation_id: conversation.id,
+          message_id: messageId,
+          redacted_text: text,
+          selection_start: startOffset,
+          selection_end: endOffset,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        const errorMessage = errorData.error || 'Failed to create redaction';
+        showError(errorMessage);
+        console.error('Failed to create redaction:', errorData.error);
+        return;
+      }
+
+      showSuccess('Content redacted successfully');
+      router.refresh();
+    } catch (err) {
+      console.error('Error creating redaction:', err);
     }
   };
 
@@ -133,8 +172,12 @@ export default function ConversationViewClient({
                     messageId={message.id}
                     content={message.content}
                     role={message.role}
+                    conversationId={conversation.id}
                     onHighlight={(text, start, end) =>
                       handleHighlight(text, start, end, message.id)
+                    }
+                    onRedact={(text, start, end) =>
+                      handleRedact(text, start, end, message.id)
                     }
                     existingHighlights={highlights
                       .filter((h) => h.message_id === message.id)

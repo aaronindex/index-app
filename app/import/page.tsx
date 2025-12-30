@@ -1,10 +1,11 @@
 // app/import/page.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSupabaseBrowserClient } from '@/lib/supabaseClient';
 import { parseChatGPTExport } from '@/lib/parsers/chatgpt';
+import QuickImportModal from './components/QuickImportModal';
 
 interface DetectedConversation {
   id: string;
@@ -25,6 +26,17 @@ export default function ImportPage() {
   const [projectAction, setProjectAction] = useState<'none' | 'existing' | 'new'>('none');
   const [newProjectName, setNewProjectName] = useState('');
   const [newProjectDescription, setNewProjectDescription] = useState('');
+  const [showQuickImport, setShowQuickImport] = useState(false);
+
+  // Check for quick import query param
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('quick') === 'true') {
+      setShowQuickImport(true);
+      // Clean up URL
+      router.replace('/import', { scroll: false });
+    }
+  }, [router]);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -158,7 +170,7 @@ export default function ImportPage() {
         };
       }
 
-      // Process the import
+      // Queue the import job
       const response = await fetch('/api/import/process', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -178,13 +190,49 @@ export default function ImportPage() {
         return;
       }
 
-      // Success - show success message and redirect
+      // Job queued - start polling for status
       const result = await response.json();
-      if (result.projectId) {
-        router.push(`/projects/${result.projectId}?imported=${result.conversationsImported}`);
-      } else {
-        router.push(`/unassigned?imported=${result.conversationsImported}`);
-      }
+      const jobId = result.jobId;
+      
+      // Poll for job completion
+      const pollInterval = setInterval(async () => {
+        try {
+          const jobsResponse = await fetch('/api/imports/jobs');
+          if (jobsResponse.ok) {
+            const jobsData = await jobsResponse.json();
+            const currentJob = jobsData.jobs?.find((j: any) => j.id === jobId);
+            
+            if (currentJob) {
+              if (currentJob.status === 'complete') {
+                clearInterval(pollInterval);
+                setLoading(false);
+                // Redirect to project or unassigned
+                if (finalProjectId) {
+                  router.push(`/projects/${finalProjectId}?imported=${currentJob.counts.conversations || 0}`);
+                } else {
+                  router.push(`/unassigned?imported=${currentJob.counts.conversations || 0}`);
+                }
+              } else if (currentJob.status === 'error') {
+                clearInterval(pollInterval);
+                setError(currentJob.error || 'Import failed');
+                setLoading(false);
+              }
+              // Otherwise continue polling
+            }
+          }
+        } catch (err) {
+          console.error('Error polling job status:', err);
+        }
+      }, 3000); // Poll every 3 seconds
+
+      // Stop polling after 10 minutes (safety timeout)
+      setTimeout(() => {
+        clearInterval(pollInterval);
+        if (loading) {
+          setError('Import is taking longer than expected. Please check back later.');
+          setLoading(false);
+        }
+      }, 10 * 60 * 1000);
     } catch (err) {
       setError('Import failed. Please try again.');
       console.error(err);
@@ -193,9 +241,9 @@ export default function ImportPage() {
   };
 
   return (
-    <main className="min-h-screen bg-white dark:bg-black">
+    <main className="min-h-screen bg-[rgb(var(--bg))]">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <h1 className="text-3xl font-semibold text-foreground mb-8">Import Conversations</h1>
+        <h1 className="font-serif text-3xl font-semibold text-[rgb(var(--text))] mb-8">Import Conversations</h1>
 
         {error && (
           <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
@@ -207,24 +255,38 @@ export default function ImportPage() {
           <div className="space-y-6">
             <div>
               <h2 className="text-xl font-medium text-foreground mb-4">Step 1 — Choose Source</h2>
-              <div className="border-2 border-dashed border-zinc-300 dark:border-zinc-700 rounded-lg p-12 text-center">
-                <input
-                  type="file"
-                  accept=".json"
-                  onChange={handleFileSelect}
-                  className="hidden"
-                  id="file-upload"
-                  disabled={loading}
-                />
-                <label
-                  htmlFor="file-upload"
-                  className="cursor-pointer inline-block px-6 py-3 bg-foreground text-background rounded-lg hover:opacity-90 transition-opacity font-medium"
-                >
-                  {loading ? 'Processing...' : 'Upload ChatGPT Export (JSON)'}
-                </label>
-                <p className="mt-4 text-sm text-zinc-600 dark:text-zinc-400">
-                  Select a JSON file exported from ChatGPT
-                </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="border-2 border-dashed border-zinc-300 dark:border-zinc-700 rounded-lg p-8 text-center">
+                  <input
+                    type="file"
+                    accept=".json"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                    id="file-upload"
+                    disabled={loading}
+                  />
+                  <label
+                    htmlFor="file-upload"
+                    className="cursor-pointer inline-block px-6 py-3 bg-foreground text-background rounded-lg hover:opacity-90 transition-opacity font-medium"
+                  >
+                    {loading ? 'Processing...' : 'Upload ChatGPT Export (JSON)'}
+                  </label>
+                  <p className="mt-4 text-sm text-zinc-600 dark:text-zinc-400">
+                    Select a JSON file exported from ChatGPT
+                  </p>
+                </div>
+                <div className="border-2 border-dashed border-zinc-300 dark:border-zinc-700 rounded-lg p-8 text-center">
+                  <button
+                    onClick={() => setShowQuickImport(true)}
+                    className="px-6 py-3 bg-foreground text-background rounded-lg hover:opacity-90 transition-opacity font-medium"
+                    disabled={loading}
+                  >
+                    Quick Import (Paste One Conversation)
+                  </button>
+                  <p className="mt-4 text-sm text-zinc-600 dark:text-zinc-400">
+                    Paste a single conversation transcript
+                  </p>
+                </div>
               </div>
             </div>
           </div>
@@ -372,6 +434,7 @@ export default function ImportPage() {
           </div>
         )}
       </div>
+      <QuickImportModal isOpen={showQuickImport} onClose={() => setShowQuickImport(false)} />
     </main>
   );
 }

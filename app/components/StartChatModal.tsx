@@ -11,7 +11,7 @@ interface StartChatModalProps {
   runId?: string | null;
   onStatusUpdate?: (status: 'copied' | 'harvested' | 'abandoned') => void;
   mode?: 'intent-selector' | 'prompt-viewer';
-  onGenerate?: (intent: string, targetTool: string) => Promise<void>;
+  onGenerate?: (intent: string, targetTool: string) => Promise<{ promptText: string; runId: string } | void>;
   projectName?: string;
 }
 
@@ -46,7 +46,7 @@ export default function StartChatModal({
   isOpen,
   onClose,
   contextBlock,
-  runId,
+  runId: initialRunId,
   onStatusUpdate,
   mode = 'prompt-viewer',
   onGenerate,
@@ -58,16 +58,26 @@ export default function StartChatModal({
   const [targetTool, setTargetTool] = useState<'chatgpt' | 'claude' | 'cursor' | 'other'>('chatgpt');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Internal state for 2-step flow
+  const [modalMode, setModalMode] = useState<'configure' | 'ready'>('configure');
+  const [generatedPrompt, setGeneratedPrompt] = useState<string | null>(null);
+  const [generatedRunId, setGeneratedRunId] = useState<string | null>(initialRunId || null);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   useEffect(() => {
     if (!isOpen) {
       setCopied(false);
+      setModalMode('configure');
+      setGeneratedPrompt(null);
+      setIsExpanded(false);
+      setError(null);
     }
   }, [isOpen]);
 
   const handleCopy = async () => {
     try {
-      let textToCopy = contextBlock.fullContext;
+      let textToCopy = generatedPrompt || contextBlock.fullContext;
       
       // Add watermark if project name is available
       if (projectName) {
@@ -80,8 +90,23 @@ export default function StartChatModal({
       setTimeout(() => setCopied(false), 2000);
       
       // Update status to 'copied' if runId exists
-      if (runId && onStatusUpdate) {
-        onStatusUpdate('copied');
+      const currentRunId = generatedRunId || initialRunId;
+      if (currentRunId) {
+        // Call API to update status
+        try {
+          await fetch(`/api/start-chat/${currentRunId}/update-status`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'copied' }),
+          });
+        } catch (apiErr) {
+          console.error('Failed to update status:', apiErr);
+        }
+        
+        // Also call callback if provided
+        if (onStatusUpdate) {
+          onStatusUpdate('copied');
+        }
       }
     } catch (err) {
       console.error('Failed to copy to clipboard:', err);
@@ -91,7 +116,7 @@ export default function StartChatModal({
   const handleOpenDestination = async (url: string) => {
     // Copy context to clipboard first
     try {
-      let textToCopy = contextBlock.fullContext;
+      let textToCopy = generatedPrompt || contextBlock.fullContext;
       
       // Add watermark if project name is available
       if (projectName) {
@@ -103,8 +128,23 @@ export default function StartChatModal({
       setCopied(true);
       
       // Update status to 'copied' if runId exists
-      if (runId && onStatusUpdate) {
-        onStatusUpdate('copied');
+      const currentRunId = generatedRunId || initialRunId;
+      if (currentRunId) {
+        // Call API to update status
+        try {
+          await fetch(`/api/start-chat/${currentRunId}/update-status`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'copied' }),
+          });
+        } catch (apiErr) {
+          console.error('Failed to update status:', apiErr);
+        }
+        
+        // Also call callback if provided
+        if (onStatusUpdate) {
+          onStatusUpdate('copied');
+        }
       }
     } catch (err) {
       console.error('Failed to copy to clipboard:', err);
@@ -127,7 +167,22 @@ export default function StartChatModal({
     setError(null);
 
     try {
-      await onGenerate(intent, targetTool);
+      const result = await onGenerate(intent, targetTool);
+      
+      // If onGenerate returns prompt data, use it; otherwise it's handled externally
+      if (result && typeof result === 'object' && 'promptText' in result) {
+        setGeneratedPrompt(result.promptText);
+        if (result.runId) {
+          setGeneratedRunId(result.runId);
+        }
+        setModalMode('ready');
+      } else {
+        // Legacy behavior: if onGenerate doesn't return data, assume it's handled externally
+        // But we still switch to ready mode if we have fullContext
+        if (contextBlock.fullContext) {
+          setModalMode('ready');
+        }
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to generate prompt');
     } finally {
@@ -136,51 +191,65 @@ export default function StartChatModal({
   };
 
   const handleHarvest = () => {
-    if (runId && onStatusUpdate) {
+    const currentRunId = generatedRunId || initialRunId;
+    if (currentRunId && onStatusUpdate) {
       onStatusUpdate('harvested');
     }
     onClose();
   };
 
   const handleAbandon = () => {
-    if (runId && onStatusUpdate) {
+    const currentRunId = generatedRunId || initialRunId;
+    if (currentRunId && onStatusUpdate) {
       onStatusUpdate('abandoned');
     }
     onClose();
   };
 
+  const handleBackToConfigure = () => {
+    setModalMode('configure');
+    setIsExpanded(false);
+  };
+
   if (!isOpen) return null;
 
-  if (mode === 'intent-selector') {
+  // Determine which mode to show
+  const showConfigure = mode === 'intent-selector' && modalMode === 'configure';
+  const showReady = (mode === 'intent-selector' && modalMode === 'ready') || (mode === 'prompt-viewer' && contextBlock.fullContext);
+
+  if (showConfigure) {
     return (
       <div
         className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 dark:bg-black/70"
         onClick={onClose}
       >
         <div
-          className="bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg p-6 max-w-lg w-full mx-4 shadow-xl"
+          className="bg-[rgb(var(--surface))] rounded-2xl p-6 max-w-lg w-full mx-4 shadow-xl ring-1 ring-[rgb(var(--ring)/0.12)]"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-foreground">Resume</h2>
-            <button
-              onClick={onClose}
-              className="text-zinc-500 hover:text-foreground transition-colors"
-            >
-              ✕
-            </button>
+          {/* Optional tonal gradient header strip */}
+          <div className="bg-gradient-to-br from-[rgb(var(--surface2))] to-[rgb(var(--surface))] -m-6 mb-4 p-6 rounded-t-2xl">
+            <div className="flex items-center justify-between">
+              <h2 className="font-serif text-xl font-semibold text-[rgb(var(--text))]">Resume</h2>
+              <button
+                onClick={onClose}
+                className="text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] transition-colors"
+              >
+                ✕
+              </button>
+            </div>
           </div>
 
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-foreground mb-3">
+              <label className="block text-sm font-medium text-[rgb(var(--text))] mb-3">
                 Intent (required)
               </label>
               <div className="space-y-2">
                 {Object.entries(INTENT_DESCRIPTIONS).map(([key, label]) => (
                   <label
                     key={key}
-                    className="flex items-center gap-2 p-2 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-900 cursor-pointer"
+                    className="flex items-center gap-2 p-2 rounded-lg hover:bg-[rgb(var(--surface2))] cursor-pointer transition-colors"
                   >
                     <input
                       type="radio"
@@ -191,21 +260,21 @@ export default function StartChatModal({
                         setSelectedIntent(e.target.value);
                         setCustomIntent('');
                       }}
-                      className="w-4 h-4 text-foreground focus:ring-2 focus:ring-zinc-500 dark:focus:ring-zinc-400"
+                      className="w-4 h-4 text-[rgb(var(--text))] focus:ring-2 focus:ring-[rgb(var(--ring)/0.2)]"
                     />
-                    <span className="text-sm text-foreground">{label}</span>
+                    <span className="text-sm text-[rgb(var(--text))]">{label}</span>
                   </label>
                 ))}
-                <label className="flex items-center gap-2 p-2 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-900 cursor-pointer">
+                <label className="flex items-center gap-2 p-2 rounded-lg hover:bg-[rgb(var(--surface2))] cursor-pointer transition-colors">
                   <input
                     type="radio"
                     name="intent"
                     value="custom"
                     checked={selectedIntent === 'custom'}
                     onChange={(e) => setSelectedIntent(e.target.value)}
-                    className="w-4 h-4 text-foreground focus:ring-2 focus:ring-zinc-500 dark:focus:ring-zinc-400"
+                    className="w-4 h-4 text-[rgb(var(--text))] focus:ring-2 focus:ring-[rgb(var(--ring)/0.2)]"
                   />
-                  <span className="text-sm text-foreground">Custom…</span>
+                  <span className="text-sm text-[rgb(var(--text))]">Custom…</span>
                 </label>
               </div>
             </div>
@@ -217,19 +286,19 @@ export default function StartChatModal({
                   value={customIntent}
                   onChange={(e) => setCustomIntent(e.target.value)}
                   placeholder="Describe your intent..."
-                  className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-950 text-foreground focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:focus:ring-zinc-400"
+                  className="w-full px-3 py-2 border border-[rgb(var(--ring)/0.12)] rounded-lg bg-[rgb(var(--surface))] text-[rgb(var(--text))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--ring)/0.2)]"
                 />
               </div>
             )}
 
             <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
+              <label className="block text-sm font-medium text-[rgb(var(--text))] mb-2">
                 Target Tool
               </label>
               <select
                 value={targetTool}
                 onChange={(e) => setTargetTool(e.target.value as typeof targetTool)}
-                className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-950 text-foreground focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:focus:ring-zinc-400"
+                className="w-full px-3 py-2 border border-[rgb(var(--ring)/0.12)] rounded-lg bg-[rgb(var(--surface))] text-[rgb(var(--text))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--ring)/0.2)]"
               >
                 <option value="chatgpt">ChatGPT</option>
                 <option value="claude">Claude</option>
@@ -245,7 +314,7 @@ export default function StartChatModal({
             <button
               onClick={handleGenerate}
               disabled={loading || (selectedIntent === 'custom' && !customIntent.trim())}
-              className="w-full px-4 py-2 bg-foreground text-background rounded-lg hover:opacity-90 transition-opacity font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full px-4 py-2 bg-[rgb(var(--text))] text-[rgb(var(--bg))] rounded-lg hover:opacity-90 transition-opacity font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Generating...' : 'Generate Prompt'}
             </button>
@@ -255,46 +324,184 @@ export default function StartChatModal({
     );
   }
 
+  // Ready mode: Show prompt preview and actions
+  if (showReady) {
+    const promptToShow = generatedPrompt || contextBlock.fullContext || '';
+    const previewText = promptToShow.substring(0, 200) + (promptToShow.length > 200 ? '...' : '');
+    const displayText = isExpanded ? promptToShow : previewText;
+
+    return (
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 dark:bg-black/70"
+        onClick={onClose}
+      >
+        <div
+          className="bg-[rgb(var(--surface))] rounded-2xl p-6 max-w-2xl w-full mx-4 shadow-xl ring-1 ring-[rgb(var(--ring)/0.12)] max-h-[90vh] overflow-y-auto"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Optional tonal gradient header strip */}
+          <div className="bg-gradient-to-br from-[rgb(var(--surface2))] to-[rgb(var(--surface))] -m-6 mb-4 p-6 rounded-t-2xl">
+            <div className="flex items-center justify-between">
+              <h2 className="font-serif text-xl font-semibold text-[rgb(var(--text))]">Resume</h2>
+              <button
+                onClick={onClose}
+                className="text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            {/* Back to configure link */}
+            <button
+              onClick={handleBackToConfigure}
+              className="text-sm text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] transition-colors"
+            >
+              ← Edit intent
+            </button>
+
+            {/* Prompt Preview */}
+            <div>
+              <h3 className="text-sm font-medium text-[rgb(var(--text))] mb-2">Prompt Preview</h3>
+              <div className="relative bg-[rgb(var(--surface2))] border border-[rgb(var(--ring)/0.08)] rounded-lg p-4 overflow-hidden">
+                {/* Subtle intelligence texture */}
+                <div 
+                  className="absolute inset-0 opacity-[0.015] dark:opacity-[0.03] pointer-events-none"
+                  style={{
+                    backgroundImage: `
+                      radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0),
+                      linear-gradient(90deg, transparent 0%, currentColor 1px, transparent 1px)
+                    `,
+                    backgroundSize: '20px 20px, 20px 20px',
+                  }}
+                />
+                <pre className="relative text-xs text-[rgb(var(--text))] whitespace-pre-wrap break-words font-mono">
+                  {displayText}
+                </pre>
+                {promptToShow.length > 200 && (
+                  <button
+                    onClick={() => setIsExpanded(!isExpanded)}
+                    className="relative mt-2 text-xs text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] transition-colors"
+                  >
+                    {isExpanded ? 'Collapse' : 'Expand details'}
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {error && (
+              <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+            )}
+
+            {/* Primary action: Copy Prompt */}
+            <div className="flex justify-center">
+              <button
+                onClick={handleCopy}
+                className="max-w-md w-full px-4 py-2 bg-[rgb(var(--text))] text-[rgb(var(--bg))] rounded-lg hover:opacity-85 transition-opacity font-medium flex items-center justify-center gap-2"
+              >
+                {copied ? (
+                  <>
+                    <span>✓</span>
+                    <span>Copied!</span>
+                  </>
+                ) : (
+                  <>
+                    <span>📋</span>
+                    <span>Copy Prompt</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+            {/* Secondary actions: Open in tools */}
+            <div className="border-t border-[rgb(var(--ring)/0.08)] pt-4">
+              <p className="text-sm font-medium text-[rgb(var(--text))] mb-3">
+                Open in your chat tool:
+              </p>
+              <div className="grid grid-cols-3 gap-3">
+                {Object.entries(CHAT_DESTINATIONS).map(([key, dest]) => (
+                  <button
+                    key={key}
+                    onClick={() => handleOpenDestination(dest.url)}
+                    className="px-4 py-3 border border-[rgb(var(--ring)/0.12)] rounded-lg hover:border-[rgb(var(--ring)/0.2)] hover:bg-[rgb(var(--surface2))] transition-colors text-sm font-medium text-[rgb(var(--text))] flex flex-col items-center gap-1"
+                  >
+                    <span className="text-lg">{dest.icon}</span>
+                    <span>{dest.name}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Status update actions (if runId exists) */}
+            {generatedRunId && onStatusUpdate && (
+              <div className="border-t border-zinc-200 dark:border-zinc-800 pt-4 mt-4">
+                <p className="text-xs text-zinc-500 dark:text-zinc-500 mb-2">
+                  After using this in your chat tool:
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleHarvest}
+                    className="flex-1 px-3 py-2 text-xs bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50 rounded-lg transition-colors"
+                  >
+                    Mark Harvested
+                  </button>
+                  <button
+                    onClick={handleAbandon}
+                    className="flex-1 px-3 py-2 text-xs bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-lg transition-colors"
+                  >
+                    Abandon
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Fallback: prompt-viewer mode (for non-Resume use cases)
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 dark:bg-black/70"
       onClick={onClose}
     >
       <div
-        className="bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg p-6 max-w-2xl w-full mx-4 shadow-xl"
+        className="bg-[rgb(var(--surface))] rounded-2xl p-6 max-w-2xl w-full mx-4 shadow-xl ring-1 ring-[rgb(var(--ring)/0.12)]"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold text-foreground">Start Chat from This</h2>
+          <h2 className="font-serif text-xl font-semibold text-[rgb(var(--text))]">Start Chat from This</h2>
           <button
             onClick={onClose}
-            className="text-zinc-500 hover:text-foreground transition-colors"
+            className="text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] transition-colors"
           >
             ✕
           </button>
         </div>
 
         <div className="mb-6">
-          <div className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg p-4 mb-4">
-            <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400 mb-2">
+          <div className="bg-[rgb(var(--surface2))] border border-[rgb(var(--ring)/0.08)] rounded-lg p-4 mb-4">
+            <p className="text-sm font-medium text-[rgb(var(--muted))] mb-2">
               Context generated from your INDEX memory:
             </p>
             {contextBlock.project && (
-              <p className="text-sm text-foreground mb-1">
+              <p className="text-sm text-[rgb(var(--text))] mb-1">
                 <span className="font-medium">Project:</span> {contextBlock.project}
               </p>
             )}
-            <p className="text-sm text-foreground mb-1">
+            <p className="text-sm text-[rgb(var(--text))] mb-1">
               <span className="font-medium">Source:</span>{' '}
               {contextBlock.source === 'highlight' && 'Highlight'}
               {contextBlock.source === 'branch' && 'Branch'}
               {contextBlock.source === 'search_result' && 'Search Result'}
               {contextBlock.source === 'decision' && 'Decision'}
             </p>
-            <p className="text-sm text-foreground mb-3">
+            <p className="text-sm text-[rgb(var(--text))] mb-3">
               <span className="font-medium">Summary:</span> {contextBlock.summary}
             </p>
-            <p className="text-sm text-foreground">
+            <p className="text-sm text-[rgb(var(--text))]">
               <span className="font-medium">Suggested exploration:</span>{' '}
               {contextBlock.suggestedExploration}
             </p>
@@ -302,7 +509,7 @@ export default function StartChatModal({
 
           <button
             onClick={handleCopy}
-            className="w-full px-4 py-2 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-lg text-sm font-medium text-foreground transition-colors flex items-center justify-center gap-2"
+            className="w-full px-4 py-2 bg-[rgb(var(--surface2))] hover:bg-[rgb(var(--surface))] rounded-lg text-sm font-medium text-[rgb(var(--text))] transition-colors flex items-center justify-center gap-2"
           >
             {copied ? (
               <>
@@ -318,8 +525,8 @@ export default function StartChatModal({
           </button>
         </div>
 
-        <div className="border-t border-zinc-200 dark:border-zinc-800 pt-4">
-          <p className="text-sm font-medium text-foreground mb-3">
+        <div className="border-t border-[rgb(var(--ring)/0.08)] pt-4">
+          <p className="text-sm font-medium text-[rgb(var(--text))] mb-3">
             Open in your chat tool:
           </p>
           <div className="grid grid-cols-3 gap-3">
@@ -327,7 +534,7 @@ export default function StartChatModal({
               <button
                 key={key}
                 onClick={() => handleOpenDestination(dest.url)}
-                className="px-4 py-3 border border-zinc-200 dark:border-zinc-800 rounded-lg hover:border-zinc-300 dark:hover:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors text-sm font-medium text-foreground flex flex-col items-center gap-1"
+                className="px-4 py-3 border border-[rgb(var(--ring)/0.12)] rounded-lg hover:border-[rgb(var(--ring)/0.2)] hover:bg-[rgb(var(--surface2))] transition-colors text-sm font-medium text-[rgb(var(--text))] flex flex-col items-center gap-1"
               >
                 <span className="text-lg">{dest.icon}</span>
                 <span>{dest.name}</span>
@@ -336,13 +543,13 @@ export default function StartChatModal({
           </div>
         </div>
 
-        <p className="text-xs text-zinc-500 dark:text-zinc-500 mt-4 text-center">
+        <p className="text-xs text-[rgb(var(--muted))] mt-4 text-center">
           Context will be copied to your clipboard when you click a destination
         </p>
 
-        {runId && (
-          <div className="border-t border-zinc-200 dark:border-zinc-800 pt-4 mt-4">
-            <p className="text-xs text-zinc-500 dark:text-zinc-500 mb-2">
+        {(generatedRunId || initialRunId) && (
+          <div className="border-t border-[rgb(var(--ring)/0.08)] pt-4 mt-4">
+            <p className="text-xs text-[rgb(var(--muted))] mb-2">
               After using this in your chat tool:
             </p>
             <div className="flex gap-2">
@@ -354,7 +561,7 @@ export default function StartChatModal({
               </button>
               <button
                 onClick={handleAbandon}
-                className="flex-1 px-3 py-2 text-xs bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-lg transition-colors"
+                className="flex-1 px-3 py-2 text-xs bg-[rgb(var(--surface2))] text-[rgb(var(--muted))] hover:bg-[rgb(var(--surface))] rounded-lg transition-colors"
               >
                 Abandon
               </button>

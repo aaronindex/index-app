@@ -1,11 +1,15 @@
 // app/projects/[id]/components/TasksTab.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import TaskStartChatButton from './TaskStartChatButton';
 import TaskStatusControl from './TaskStatusControl';
 import DeleteTaskButton from './DeleteTaskButton';
+import ActiveFilterPills from './ActiveFilterPills';
+import ToggleInactiveButton from './ToggleInactiveButton';
+import Card from '@/app/components/ui/Card';
+import Pill from '@/app/components/ui/Pill';
 
 interface Task {
   id: string;
@@ -15,6 +19,7 @@ interface Task {
   conversation_title: string | null;
   conversation_id: string | null;
   created_at: string;
+  is_inactive?: boolean;
 }
 
 interface TasksTabProps {
@@ -22,9 +27,23 @@ interface TasksTabProps {
 }
 
 type StatusFilter = 'all' | 'open' | 'in_progress' | 'complete' | 'priority' | 'dormant' | 'cancelled';
+type ActiveFilter = 'active' | 'all' | 'inactive';
 
 export default function TasksTab({ tasks }: TasksTabProps) {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [activeFilter, setActiveFilter] = useState<ActiveFilter>('active');
+
+  const { activeTasks, inactiveTasks } = useMemo(() => {
+    const active = tasks.filter((t) => !t.is_inactive);
+    const inactive = tasks.filter((t) => t.is_inactive);
+    return { activeTasks: active, inactiveTasks: inactive };
+  }, [tasks]);
+
+  const filteredByActive = useMemo(() => {
+    if (activeFilter === 'active') return activeTasks;
+    if (activeFilter === 'inactive') return inactiveTasks;
+    return [...activeTasks, ...inactiveTasks];
+  }, [activeFilter, activeTasks, inactiveTasks]);
   const formatDate = (dateString: string) => {
     try {
       const date = new Date(dateString);
@@ -65,8 +84,8 @@ export default function TasksTab({ tasks }: TasksTabProps) {
   };
 
   const filteredTasks = statusFilter === 'all' 
-    ? tasks 
-    : tasks.filter((task) => task.status === statusFilter);
+    ? filteredByActive 
+    : filteredByActive.filter((task) => task.status === statusFilter);
 
   const statusCounts = {
     all: tasks.length,
@@ -80,31 +99,33 @@ export default function TasksTab({ tasks }: TasksTabProps) {
 
   return (
     <div className="space-y-6">
+      {/* Active/Inactive Filter */}
+      {tasks.length > 0 && (
+        <ActiveFilterPills
+          activeCount={activeTasks.length}
+          inactiveCount={inactiveTasks.length}
+          onFilterChange={setActiveFilter}
+        />
+      )}
+
       {/* Status Filters */}
       {tasks.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {(['all', 'open', 'in_progress', 'complete', 'priority', 'dormant', 'cancelled'] as StatusFilter[]).map((filter) => (
-            <button
+            <Pill
               key={filter}
+              active={statusFilter === filter}
               onClick={() => setStatusFilter(filter)}
-              className={`
-                px-3 py-1.5 text-xs font-medium rounded-lg transition-colors
-                ${
-                  statusFilter === filter
-                    ? 'bg-foreground text-background'
-                    : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700'
-                }
-              `}
             >
               {filter === 'all' ? 'All' : getStatusLabel(filter)} ({statusCounts[filter]})
-            </button>
+            </Pill>
           ))}
         </div>
       )}
 
       {filteredTasks.length === 0 ? (
         <div className="text-center py-12">
-          <p className="text-zinc-600 dark:text-zinc-400">
+          <p className="text-[rgb(var(--muted))]">
             {tasks.length === 0
               ? 'No tasks in this project yet.'
               : `No tasks with status "${getStatusLabel(statusFilter)}".`}
@@ -113,39 +134,53 @@ export default function TasksTab({ tasks }: TasksTabProps) {
       ) : (
         <div className="space-y-3">
           {filteredTasks.map((task) => (
-            <div
+            <Card
               key={task.id}
-              className="p-4 border border-zinc-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-950"
+              className={task.is_inactive ? 'opacity-60' : ''}
             >
-              <div className="flex items-start justify-between mb-2">
-                <h3 className="font-medium text-foreground flex-1">{task.title}</h3>
-                <TaskStatusControl taskId={task.id} currentStatus={task.status} />
-              </div>
-              {task.description && (
-                <p className="text-zinc-700 dark:text-zinc-300 mb-3 text-sm">
-                  {task.description}
-                </p>
-              )}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4 text-sm text-zinc-600 dark:text-zinc-400">
-                  {task.conversation_id && task.conversation_title ? (
-                    <Link
-                      href={`/conversations/${task.conversation_id}`}
-                      className="hover:text-foreground transition-colors"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      From: {task.conversation_title}
-                    </Link>
-                  ) : (
-                    <span>Created: {formatDate(task.created_at)}</span>
-                  )}
+              <div className="p-4">
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex-1 flex items-center gap-2">
+                    <h3 className="font-medium text-[rgb(var(--text))]">{task.title}</h3>
+                    {task.is_inactive && (
+                      <span className="px-2 py-0.5 text-xs font-medium rounded-md bg-[rgb(var(--surface2))] text-[rgb(var(--muted))]">
+                        Inactive
+                      </span>
+                    )}
+                  </div>
+                  <TaskStatusControl taskId={task.id} currentStatus={task.status} />
                 </div>
-                <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                  <TaskStartChatButton taskId={task.id} />
-                  <DeleteTaskButton taskId={task.id} taskTitle={task.title} />
+                {task.description && (
+                  <p className="text-[rgb(var(--text))] mb-3 text-sm">
+                    {task.description}
+                  </p>
+                )}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4 text-sm text-[rgb(var(--muted))]">
+                    {task.conversation_id && task.conversation_title ? (
+                      <Link
+                        href={`/conversations/${task.conversation_id}`}
+                        className="hover:text-[rgb(var(--text))] transition-colors"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        From: {task.conversation_title}
+                      </Link>
+                    ) : (
+                      <span>Created: {formatDate(task.created_at)}</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                    <ToggleInactiveButton
+                      type="task"
+                      id={task.id}
+                      isInactive={task.is_inactive || false}
+                    />
+                    <TaskStartChatButton taskId={task.id} />
+                    <DeleteTaskButton taskId={task.id} taskTitle={task.title} />
+                  </div>
                 </div>
               </div>
-            </div>
+            </Card>
           ))}
         </div>
       )}

@@ -2,14 +2,33 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Design Tokens - Warm Neutrals */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: 250 247 242;        /* warm paper (#FAF7F2) */
+  --surface: 253 250 245;   /* surface panels - 1-2% lighter than bg for subtle lift */
+  --surface2: 248 245 240;  /* subtle alt surface */
+  --text: 18 18 17;          /* warm ink */
+  --muted: 60 60 58;
+  --ring: 18 18 17;
+  --shadow: 0 0 0;
+  
+  /* Legacy support */
+  --background: rgb(var(--bg));
+  --foreground: rgb(var(--text));
 }
 
 .dark {
-  --background: #0a0a0a;
-  --foreground: #ededed;
+  --bg: 18 18 17;            /* warm ink background */
+  --surface: 28 28 26;       /* dark surface */
+  --surface2: 34 34 32;     /* subtle alt surface */
+  --text: 250 247 240;       /* warm paper text */
+  --muted: 190 185 175;
+  --ring: 250 247 240;
+  --shadow: 0 0 0;
+  
+  /* Legacy support */
+  --background: rgb(var(--bg));
+  --foreground: rgb(var(--text));
 }
 
 @theme inline {
@@ -17,15 +36,16 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-serif: var(--font-playfair);
 }
 
 html {
-  background: var(--background);
-  color: var(--foreground);
+  background: rgb(var(--bg));
+  color: rgb(var(--text));
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: rgb(var(--bg));
+  color: rgb(var(--text));
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
 }

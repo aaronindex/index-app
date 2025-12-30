@@ -7,7 +7,9 @@ interface SelectableMessageProps {
   messageId: string;
   content: string;
   role: string;
+  conversationId: string;
   onHighlight: (text: string, startOffset: number, endOffset: number) => void;
+  onRedact?: (text: string, startOffset: number, endOffset: number) => void;
   existingHighlights?: Array<{
     id: string;
     start_offset: number | null;
@@ -20,7 +22,9 @@ export default function SelectableMessage({
   messageId,
   content,
   role,
+  conversationId,
   onHighlight,
+  onRedact,
   existingHighlights = [],
 }: SelectableMessageProps) {
   const [selectedText, setSelectedText] = useState('');
@@ -134,6 +138,14 @@ export default function SelectableMessage({
     }
   };
 
+  const handleRedact = () => {
+    if (selectedText && selectionRange && onRedact) {
+      onRedact(selectedText, selectionRange.start, selectionRange.end);
+      setShowHighlightButton(false);
+      window.getSelection()?.removeAllRanges();
+    }
+  };
+
   // Apply highlight styles to content
   const renderContentWithHighlights = () => {
     if (existingHighlights.length === 0) {
@@ -214,18 +226,30 @@ export default function SelectableMessage({
       </div>
 
       {showHighlightButton && (
-        <button
+        <div
           data-highlight-button
-          onClick={handleHighlight}
-          className="fixed z-50 px-3 py-1.5 text-xs font-medium bg-foreground text-background rounded-lg shadow-lg hover:opacity-90 transition-opacity"
+          className="fixed z-50 flex gap-2"
           style={{
             top: `${buttonPosition.top}px`,
             left: `${buttonPosition.left}px`,
             transform: 'translateX(-50%)',
           }}
         >
-          Highlight
-        </button>
+          <button
+            onClick={handleHighlight}
+            className="px-3 py-1.5 text-xs font-medium bg-foreground text-background rounded-lg shadow-lg hover:opacity-90 transition-opacity"
+          >
+            Highlight
+          </button>
+          {onRedact && (
+            <button
+              onClick={handleRedact}
+              className="px-3 py-1.5 text-xs font-medium bg-red-600 text-white rounded-lg shadow-lg hover:opacity-90 transition-opacity"
+            >
+              Redact
+            </button>
+          )}
+        </div>
       )}
     </div>
   );

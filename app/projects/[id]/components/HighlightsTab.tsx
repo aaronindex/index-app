@@ -4,6 +4,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import DeleteHighlightButton from './DeleteHighlightButton';
+import Card from '@/app/components/ui/Card';
 
 type Status = 'priority' | 'open' | 'complete' | 'dormant';
 
@@ -57,41 +58,42 @@ export default function HighlightsTab({ highlights, projectName }: HighlightsTab
     <div className="space-y-6">
       {highlights.length === 0 ? (
         <div className="text-center py-12">
-          <p className="text-zinc-600 dark:text-zinc-400">
+          <p className="text-[rgb(var(--muted))]">
             No highlights in this project yet. Highlight text in your chats to create highlights.
           </p>
         </div>
       ) : (
         <div className="space-y-3">
           {highlights.map((highlight) => (
-            <Link
-              key={highlight.id}
-              href={`/conversations/${highlight.conversation_id}`}
-              className="block p-4 border border-zinc-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-950 hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors"
-            >
-              <div className="flex items-start justify-between mb-2">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    {highlight.label && (
-                      <h3 className="font-medium text-foreground">{highlight.label}</h3>
-                    )}
-                    <StatusPill status={highlight.status} />
-                  </div>
-                  <p className="text-zinc-700 dark:text-zinc-300 mb-2">
-                    {highlight.content}
-                  </p>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4 text-sm text-zinc-600 dark:text-zinc-400">
-                      <span>From: {highlight.conversation_title || 'Untitled Chat'}</span>
-                      <span>Created: {formatDate(highlight.created_at)}</span>
+            <Card key={highlight.id} hover>
+              <Link
+                href={`/conversations/${highlight.conversation_id}`}
+                className="block p-4"
+              >
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      {highlight.label && (
+                        <h3 className="font-medium text-[rgb(var(--text))]">{highlight.label}</h3>
+                      )}
+                      <StatusPill status={highlight.status} />
                     </div>
-                    <div onClick={(e) => e.preventDefault()}>
-                      <DeleteHighlightButton highlightId={highlight.id} highlightLabel={highlight.label} />
+                    <p className="text-[rgb(var(--text))] mb-2">
+                      {highlight.content}
+                    </p>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4 text-sm text-[rgb(var(--muted))]">
+                        <span>From: {highlight.conversation_title || 'Untitled Chat'}</span>
+                        <span>Created: {formatDate(highlight.created_at)}</span>
+                      </div>
+                      <div onClick={(e) => e.preventDefault()}>
+                        <DeleteHighlightButton highlightId={highlight.id} highlightLabel={highlight.label} />
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            </Link>
+              </Link>
+            </Card>
           ))}
         </div>
       )}

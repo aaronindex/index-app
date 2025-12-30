@@ -31,19 +31,19 @@ export default async function DigestDetailPage({
   }
 
   return (
-    <main className="min-h-screen bg-white dark:bg-black">
+    <main className="min-h-screen bg-[rgb(var(--bg))]">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="mb-8">
           <Link
             href="/digests"
-            className="text-sm text-zinc-600 dark:text-zinc-400 hover:text-foreground transition-colors mb-4 inline-block"
+            className="text-sm text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] transition-colors mb-4 inline-block"
           >
             ← Back to Digests
           </Link>
-          <h1 className="text-3xl font-semibold text-foreground mb-2">
+          <h1 className="font-serif text-3xl font-semibold text-[rgb(var(--text))] mb-2">
             Weekly Digest: {new Date(digest.week_start).toLocaleDateString()} - {new Date(digest.week_end).toLocaleDateString()}
           </h1>
-          <p className="text-zinc-600 dark:text-zinc-400">
+          <p className="text-[rgb(var(--muted))]">
             Created: {new Date(digest.created_at).toLocaleDateString()}
             {digest.email_sent_at && (
               <span className="ml-2">• Email sent: {new Date(digest.email_sent_at).toLocaleDateString()}</span>

@@ -101,42 +101,52 @@ export async function compileProjectContinuityPacket(
 
   const conversationIds = projectConversations?.map((pc) => pc.conversation_id) || [];
 
-  // Get top tasks (priority/open/blocked)
+  // Get top tasks (priority/open/blocked) - exclude inactive
   const { data: tasks } = await supabase
     .from('tasks')
     .select('id, title, description, status, created_at')
     .eq('project_id', projectId)
     .eq('user_id', userId)
+    .eq('is_inactive', false)
     .in('status', ['open', 'in_progress', 'priority'])
     .order('created_at', { ascending: false })
     .limit(10);
 
-  // Get key decisions
+  // Get key decisions - exclude inactive
   const { data: decisions } = await supabase
     .from('decisions')
     .select('id, title, content, created_at, conversation_id')
     .eq('user_id', userId)
+    .eq('is_inactive', false)
     .in('conversation_id', conversationIds.length > 0 ? conversationIds : ['00000000-0000-0000-0000-000000000000'])
     .order('created_at', { ascending: false })
     .limit(7);
 
-  // Get key highlights (recent + important)
+  // Get key highlights (recent + important) - exclude inactive conversations
   const { data: highlights } = await supabase
     .from('highlights')
     .select('id, content, label, created_at, conversation_id')
     .eq('user_id', userId)
     .in('conversation_id', conversationIds.length > 0 ? conversationIds : ['00000000-0000-0000-0000-000000000000'])
     .order('created_at', { ascending: false })
-    .limit(10);
+    .limit(20); // Get more to filter redacted ones
 
-  // Get recent conversation titles
+  // Get recent conversation titles - exclude inactive
   const { data: conversations } = await supabase
     .from('conversations')
     .select('id, title, created_at')
     .in('id', conversationIds)
     .eq('user_id', userId)
+    .eq('is_inactive', false)
     .order('created_at', { ascending: false })
     .limit(5);
+
+  // Get redactions for this project to filter out redacted content
+  const { data: redactions } = await supabase
+    .from('redactions')
+    .select('message_id, message_chunk_id, conversation_id')
+    .eq('project_id', projectId)
+    .eq('user_id', userId);
 
   const now = new Date();
   const contextRefs: ContextRef[] = [];
@@ -157,8 +167,19 @@ export async function compileProjectContinuityPacket(
   scoredDecisions.sort((a, b) => b.score - a.score);
   const topDecisions = scoredDecisions.slice(0, 5);
 
-  // Score and sort highlights
-  const scoredHighlights = (highlights || []).map((h) => ({
+  // Score and sort highlights, filtering out redacted ones
+  const redactedConversationIds = new Set(redactions?.map((r) => r.conversation_id).filter(Boolean) || []);
+  
+  // Filter highlights: exclude those from redacted conversations
+  const filteredHighlights = (highlights || []).filter((h) => {
+    // Exclude if conversation is redacted
+    if (redactedConversationIds.has(h.conversation_id)) {
+      return false;
+    }
+    return true;
+  });
+  
+  const scoredHighlights = filteredHighlights.map((h) => ({
     ...h,
     score: calculateImportanceScore(h, 'highlight', now),
   }));
@@ -309,6 +330,7 @@ export async function compileTaskStartChatPacket(
     .select('id, title, description, status, project_id, conversation_id, source_highlight_id')
     .eq('id', taskId)
     .eq('user_id', userId)
+    .eq('is_inactive', false)
     .single();
 
   if (!task) {
@@ -388,6 +410,7 @@ export async function compileDecisionStartChatPacket(
     .select('id, title, content, conversation_id, project_id, created_at')
     .eq('id', decisionId)
     .eq('user_id', userId)
+    .eq('is_inactive', false)
     .single();
 
   if (!decision) {
@@ -441,6 +464,7 @@ export async function compileDecisionStartChatPacket(
         .select('id, title, description, status, created_at')
         .eq('project_id', projectId)
         .eq('user_id', userId)
+        .eq('is_inactive', false)
         .in('status', ['open', 'in_progress', 'priority'])
         .order('created_at', { ascending: false })
         .limit(5)
@@ -453,6 +477,7 @@ export async function compileDecisionStartChatPacket(
         .select('id, title, content, created_at')
         .eq('project_id', projectId)
         .eq('user_id', userId)
+        .eq('is_inactive', false)
         .neq('id', decisionId)
         .order('created_at', { ascending: false })
         .limit(5)
@@ -466,7 +491,7 @@ export async function compileDecisionStartChatPacket(
         .eq('user_id', userId)
         .in('conversation_id', conversationIds)
         .order('created_at', { ascending: false })
-        .limit(5)
+        .limit(10)
     : { data: null };
 
   // Get conversation context if available
@@ -477,6 +502,7 @@ export async function compileDecisionStartChatPacket(
       .select('id, title')
       .eq('id', decision.conversation_id)
       .eq('user_id', userId)
+      .eq('is_inactive', false)
       .single();
     
     if (conversation) {

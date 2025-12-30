@@ -67,66 +67,66 @@ export default function SettingsPage() {
   };
 
   return (
-    <main className="min-h-screen bg-white dark:bg-black">
+    <main className="min-h-screen bg-[rgb(var(--bg))]">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="mb-8">
           <Link
             href="/projects"
-            className="text-sm text-zinc-600 dark:text-zinc-400 hover:text-foreground transition-colors mb-4 inline-block"
+            className="text-sm text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] transition-colors mb-4 inline-block"
           >
             ← Back to Projects
           </Link>
-          <h1 className="text-3xl font-semibold text-foreground mb-2">Settings</h1>
-          <p className="text-zinc-600 dark:text-zinc-400">
+          <h1 className="font-serif text-3xl font-semibold text-[rgb(var(--text))] mb-2">Settings</h1>
+          <p className="text-[rgb(var(--muted))]">
             Manage your account and data
           </p>
         </div>
 
         <div className="space-y-8">
           {/* Data Export */}
-          <div className="border border-zinc-200 dark:border-zinc-800 rounded-lg p-6 bg-white dark:bg-zinc-950">
-            <h2 className="text-xl font-semibold text-foreground mb-2">Export Your Data</h2>
-            <p className="text-zinc-600 dark:text-zinc-400 mb-4">
+          <div className="rounded-xl p-6 bg-[rgb(var(--surface))] ring-1 ring-[rgb(var(--ring)/0.08)]">
+            <h2 className="font-serif text-xl font-semibold text-[rgb(var(--text))] mb-2">Export Your Data</h2>
+            <p className="text-[rgb(var(--muted))] mb-4">
               Download all your data as a JSON file. This includes your projects, conversations,
               messages, highlights, and all other data stored in INDEX.
             </p>
             <button
               onClick={handleExport}
               disabled={exporting}
-              className="px-4 py-2 bg-foreground text-background rounded-lg hover:opacity-90 transition-opacity font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 bg-[rgb(var(--text))] text-[rgb(var(--bg))] rounded-lg hover:opacity-90 transition-opacity font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {exporting ? 'Exporting...' : 'Export All Data'}
             </button>
           </div>
 
           {/* Feedback */}
-          <div className="border border-zinc-200 dark:border-zinc-800 rounded-lg p-6 bg-white dark:bg-zinc-950">
-            <h2 className="text-xl font-semibold text-foreground mb-2">Feedback</h2>
-            <p className="text-zinc-600 dark:text-zinc-400 mb-4">
+          <div className="rounded-xl p-6 bg-[rgb(var(--surface))] ring-1 ring-[rgb(var(--ring)/0.08)]">
+            <h2 className="font-serif text-xl font-semibold text-[rgb(var(--text))] mb-2">Feedback</h2>
+            <p className="text-[rgb(var(--muted))] mb-4">
               Help us improve INDEX. Share bugs, feature requests, or suggestions.
             </p>
             <Link
               href="/feedback"
-              className="inline-block px-4 py-2 bg-foreground text-background rounded-lg hover:opacity-90 transition-opacity font-medium"
+              className="inline-block px-4 py-2 bg-[rgb(var(--text))] text-[rgb(var(--bg))] rounded-lg hover:opacity-90 transition-opacity font-medium"
             >
               Submit Feedback
             </Link>
           </div>
 
           {/* Privacy Notice */}
-          <div className="border border-zinc-200 dark:border-zinc-800 rounded-lg p-6 bg-white dark:bg-zinc-950">
-            <h2 className="text-xl font-semibold text-foreground mb-2">Your Privacy</h2>
-            <p className="text-zinc-600 dark:text-zinc-400 mb-4">
-              <strong className="text-foreground">We do not train AI models on your data.</strong>
+          <div className="rounded-xl p-6 bg-[rgb(var(--surface))] ring-1 ring-[rgb(var(--ring)/0.08)]">
+            <h2 className="font-serif text-xl font-semibold text-[rgb(var(--text))] mb-2">Your Privacy</h2>
+            <p className="text-[rgb(var(--muted))] mb-4">
+              <strong className="text-[rgb(var(--text))]">We do not train AI models on your data.</strong>
             </p>
-            <p className="text-zinc-600 dark:text-zinc-400 mb-4">
+            <p className="text-[rgb(var(--muted))] mb-4">
               Your conversations, highlights, and all data stored in INDEX are private and belong to you.
               We use your data only to provide the INDEX service—search, organization, and summaries.
               We never use your data to train AI models or share it with third parties.
             </p>
             <Link
               href="/privacy"
-              className="text-sm text-zinc-600 dark:text-zinc-400 hover:text-foreground transition-colors"
+              className="text-sm text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] transition-colors"
             >
               Read our full privacy policy →
             </Link>

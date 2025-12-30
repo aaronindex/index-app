@@ -122,24 +122,24 @@ export default function WhatChangedThisWeek({ projectId }: WhatChangedThisWeekPr
   }
 
   return (
-    <div>
-      <h3 className="font-medium text-foreground mb-4">What Changed This Week</h3>
-      <div className="space-y-3">
+    <div className="space-y-8">
+      <h3 className="font-serif text-xl font-semibold text-[rgb(var(--text))]">What Changed This Week</h3>
+      <div className="space-y-6">
         {/* Tasks Cards */}
         {data.tasks.items.length > 0 && (
           <div>
-            <h4 className="text-sm font-medium text-foreground mb-2">Tasks</h4>
-            <div className="space-y-2">
+            <h4 className="text-sm font-medium text-[rgb(var(--text))] mb-3">Tasks</h4>
+            <div className="space-y-3">
               {data.tasks.items.map((task) => (
                 <Link
                   key={task.id}
                   href={`/projects/${projectId}?tab=tasks`}
-                  className="block p-3 border border-zinc-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-950 hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors"
+                  className="block p-4 rounded-xl bg-gradient-to-br from-[rgb(var(--surface2))] to-[rgb(var(--surface))] shadow-sm ring-1 ring-[rgb(var(--ring)/0.08)] hover:shadow-md hover:ring-[rgb(var(--ring)/0.12)] transition-all"
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-foreground">{task.title}</p>
-                      <p className="text-xs text-zinc-600 dark:text-zinc-400 mt-1">
+                      <p className="text-sm font-medium text-[rgb(var(--text))]">{task.title}</p>
+                      <p className="text-xs text-[rgb(var(--muted))] mt-1">
                         Status: {task.status}
                       </p>
                     </div>
@@ -153,15 +153,15 @@ export default function WhatChangedThisWeek({ projectId }: WhatChangedThisWeekPr
         {/* Decisions Cards */}
         {data.decisions.items.length > 0 && (
           <div>
-            <h4 className="text-sm font-medium text-foreground mb-2">Decisions</h4>
-            <div className="space-y-2">
+            <h4 className="text-sm font-medium text-[rgb(var(--text))] mb-3">Decisions</h4>
+            <div className="space-y-3">
               {data.decisions.items.map((decision) => (
                 <Link
                   key={decision.id}
                   href={`/projects/${projectId}?tab=decisions`}
-                  className="block p-3 border border-zinc-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-950 hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors"
+                  className="block p-4 rounded-xl bg-gradient-to-br from-[rgb(var(--surface2))] to-[rgb(var(--surface))] shadow-sm ring-1 ring-[rgb(var(--ring)/0.08)] hover:shadow-md hover:ring-[rgb(var(--ring)/0.12)] transition-all"
                 >
-                  <p className="text-sm font-medium text-foreground">{decision.title}</p>
+                  <p className="text-sm font-medium text-[rgb(var(--text))]">{decision.title}</p>
                 </Link>
               ))}
             </div>
@@ -171,18 +171,18 @@ export default function WhatChangedThisWeek({ projectId }: WhatChangedThisWeekPr
         {/* Highlights Cards */}
         {data.highlights.items.length > 0 && (
           <div>
-            <h4 className="text-sm font-medium text-foreground mb-2">Highlights</h4>
-            <div className="space-y-2">
+            <h4 className="text-sm font-medium text-[rgb(var(--text))] mb-3">Highlights</h4>
+            <div className="space-y-3">
               {data.highlights.items.map((highlight) => (
                 <Link
                   key={highlight.id}
                   href={`/projects/${projectId}?tab=highlights`}
-                  className="block p-3 border border-zinc-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-950 hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors"
+                  className="block p-4 rounded-xl bg-gradient-to-br from-[rgb(var(--surface2))] to-[rgb(var(--surface))] shadow-sm ring-1 ring-[rgb(var(--ring)/0.08)] hover:shadow-md hover:ring-[rgb(var(--ring)/0.12)] transition-all"
                 >
-                  <p className="text-sm font-medium text-foreground mb-1">
+                  <p className="text-sm font-medium text-[rgb(var(--text))] mb-1">
                     {highlight.label || 'Highlight'}
                   </p>
-                  <p className="text-xs text-zinc-600 dark:text-zinc-400 line-clamp-2">
+                  <p className="text-xs text-[rgb(var(--muted))] line-clamp-2">
                     {highlight.content}
                   </p>
                 </Link>
@@ -194,15 +194,15 @@ export default function WhatChangedThisWeek({ projectId }: WhatChangedThisWeekPr
         {/* Conversations Cards */}
         {data.conversations.items.length > 0 && (
           <div>
-            <h4 className="text-sm font-medium text-foreground mb-2">Conversations</h4>
-            <div className="space-y-2">
+            <h4 className="text-sm font-medium text-[rgb(var(--text))] mb-3">Conversations</h4>
+            <div className="space-y-3">
               {data.conversations.items.map((conversation) => (
                 <Link
                   key={conversation.id}
                   href={`/conversations/${conversation.id}`}
-                  className="block p-3 border border-zinc-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-950 hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors"
+                  className="block p-4 rounded-xl bg-gradient-to-br from-[rgb(var(--surface2))] to-[rgb(var(--surface))] shadow-sm ring-1 ring-[rgb(var(--ring)/0.08)] hover:shadow-md hover:ring-[rgb(var(--ring)/0.12)] transition-all"
                 >
-                  <p className="text-sm font-medium text-foreground">
+                  <p className="text-sm font-medium text-[rgb(var(--text))]">
                     {conversation.title || 'Untitled Conversation'}
                   </p>
                 </Link>

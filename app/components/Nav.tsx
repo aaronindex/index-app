@@ -1,71 +1,192 @@
+'use client';
+
 import Link from 'next/link';
-import NavAuth from './NavAuth';
+import { useState, useEffect, useRef } from 'react';
+import AccountDropdown from './header/AccountDropdown';
 import ThemeToggle from './ThemeToggle';
+import CommandPalette from './command-palette/CommandPalette';
+import { useKeyboardShortcut } from '@/app/hooks/useKeyboardShortcut';
 
 export default function Nav() {
+  const [showCommandPalette, setShowCommandPalette] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const mobileMenuRef = useRef<HTMLDivElement>(null);
+
+  // Keyboard shortcut handler (CommandPalette also handles this, but we need it here for the button)
+  useKeyboardShortcut({
+    key: 'k',
+    metaKey: true,
+    onPress: () => setShowCommandPalette(true),
+  });
+
+  // Close mobile menu on outside click
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target as Node)) {
+        setIsMobileMenuOpen(false);
+      }
+    };
+
+    if (isMobileMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isMobileMenuOpen]);
+
+  // Close mobile menu on Escape
+  useEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && isMobileMenuOpen) {
+        setIsMobileMenuOpen(false);
+      }
+    };
+
+    if (isMobileMenuOpen) {
+      document.addEventListener('keydown', handleEscape);
+      return () => document.removeEventListener('keydown', handleEscape);
+    }
+  }, [isMobileMenuOpen]);
+
+  // Prevent body scroll when mobile menu is open
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isMobileMenuOpen]);
+
+  const navLinks = [
+    { href: '/projects', label: 'Projects' },
+    { href: '/unassigned', label: 'Unassigned' },
+    { href: '/ask', label: 'Ask' },
+    { href: '/import', label: 'Import' },
+    { href: '/tools', label: 'Tools' },
+  ];
+
   return (
-    <nav className="border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-black">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          <div className="flex items-center space-x-8">
-            <Link
-              href="/"
-              className="text-lg font-semibold text-foreground hover:text-zinc-600 dark:hover:text-zinc-400 transition-colors"
-            >
-              INDEX
-            </Link>
-            <div className="flex items-center space-x-6">
+    <>
+      <nav className="border-b border-[rgb(var(--ring)/0.08)] bg-[rgb(var(--surface))]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center space-x-8">
               <Link
-                href="/projects"
-                className="text-sm text-zinc-600 dark:text-zinc-400 hover:text-foreground transition-colors"
+                href="/"
+                className="font-serif text-xl font-semibold text-[rgb(var(--text))] hover:opacity-70 transition-opacity"
               >
-                Projects
+                INDEX
               </Link>
-              <Link
-                href="/unassigned"
-                className="text-sm text-zinc-600 dark:text-zinc-400 hover:text-foreground transition-colors"
+              {/* Desktop navigation */}
+              <div className="hidden md:flex items-center space-x-6">
+                {navLinks.map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className="text-sm text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] transition-colors"
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setShowCommandPalette(true)}
+                className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-[rgb(var(--muted))] border border-[rgb(var(--ring)/0.12)] rounded-md hover:bg-[rgb(var(--surface2))] transition-colors focus:outline-none focus:ring-2 focus:ring-[rgb(var(--ring)/0.2)]"
+                aria-label="Open command palette"
               >
-                Unassigned
-              </Link>
-              <Link
-                href="/ask"
-                className="text-sm text-zinc-600 dark:text-zinc-400 hover:text-foreground transition-colors"
+                <kbd className="font-mono text-[10px]">⌘</kbd>
+                <kbd className="font-mono text-[10px]">K</kbd>
+              </button>
+              <ThemeToggle />
+              <AccountDropdown />
+              {/* Mobile hamburger button */}
+              <button
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className="md:hidden w-9 h-9 rounded-lg ring-1 ring-[rgb(var(--ring)/0.12)] bg-[rgb(var(--surface))] hover:bg-[rgb(var(--surface2))] flex items-center justify-center transition-all focus:outline-none focus:ring-2 focus:ring-[rgb(var(--ring)/0.2)]"
+                aria-label="Toggle menu"
+                aria-expanded={isMobileMenuOpen}
               >
-                Ask
-              </Link>
-              <Link
-                href="/import"
-                className="text-sm text-zinc-600 dark:text-zinc-400 hover:text-foreground transition-colors"
-              >
-                Import
-              </Link>
-              <Link
-                href="/tools"
-                className="text-sm text-zinc-600 dark:text-zinc-400 hover:text-foreground transition-colors"
-              >
-                Tools
-              </Link>
+                {isMobileMenuOpen ? (
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="w-5 h-5 text-[rgb(var(--text))]"
+                  >
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                ) : (
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="w-5 h-5 text-[rgb(var(--text))]"
+                  >
+                    <line x1="4" y1="12" x2="20" y2="12" />
+                    <line x1="4" x2="20" y1="6" y2="6" />
+                    <line x1="4" x2="20" y1="18" y2="18" />
+                  </svg>
+                )}
+              </button>
             </div>
           </div>
-          <div className="flex items-center gap-4">
-            <Link
-              href="/feedback"
-              className="text-sm text-zinc-600 dark:text-zinc-400 hover:text-foreground transition-colors"
-            >
-              Feedback
-            </Link>
-            <Link
-              href="/settings"
-              className="text-sm text-zinc-600 dark:text-zinc-400 hover:text-foreground transition-colors"
-            >
-              Settings
-            </Link>
-            <ThemeToggle />
-            <NavAuth />
+        </div>
+      </nav>
+
+      {/* Mobile menu overlay */}
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 z-40 md:hidden">
+          <div className="fixed inset-0 bg-black/50" onClick={() => setIsMobileMenuOpen(false)} />
+          <div
+            ref={mobileMenuRef}
+            className="fixed top-16 left-0 right-0 bottom-0 bg-[rgb(var(--surface))] border-b border-[rgb(var(--ring)/0.08)] overflow-y-auto"
+          >
+            <div className="px-4 py-6 space-y-1">
+              {navLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="block px-4 py-3 text-base text-[rgb(var(--text))] hover:bg-[rgb(var(--surface2))] rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-[rgb(var(--ring)/0.2)]"
+                >
+                  {link.label}
+                </Link>
+              ))}
+              <div className="pt-4 mt-4 border-t border-[rgb(var(--ring)/0.08)]">
+                <button
+                  onClick={() => {
+                    setShowCommandPalette(true);
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="w-full text-left px-4 py-3 text-base text-[rgb(var(--text))] hover:bg-[rgb(var(--surface2))] rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-[rgb(var(--ring)/0.2)]"
+                >
+                  Command Palette (⌘K)
+                </button>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-    </nav>
+      )}
+
+      {showCommandPalette && (
+        <CommandPalette
+          isOpen={showCommandPalette}
+          onClose={() => setShowCommandPalette(false)}
+        />
+      )}
+    </>
   );
 }
-

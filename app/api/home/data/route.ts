@@ -14,19 +14,26 @@ export async function GET(request: NextRequest) {
 
     // 1. Priority Items: Open tasks and open decisions
     // Include AI-extracted insights (commitments, blockers, open loops) which are stored as tasks
-    const { data: openTasks } = await supabase
+    // Default: exclude inactive items and personal projects
+    const { data: allTasks } = await supabase
       .from('tasks')
-      .select('id, title, description, status, project_id, conversation_id, created_at, source_query, projects(name)')
+      .select('id, title, description, status, project_id, conversation_id, created_at, source_query, projects(name, is_personal)')
       .eq('user_id', user.id)
+      .eq('is_inactive', false)
       .in('status', ['open', 'in_progress'])
       .order('created_at', { ascending: false })
-      .limit(10);
+      .limit(20);
+
+    // Filter out tasks from personal projects
+    const openTasks = allTasks?.filter((t: any) => !(t.projects as any)?.is_personal).slice(0, 10) || [];
 
     // Get decisions (assuming they don't have a status field, so we'll get recent ones)
+    // Default: exclude inactive items
     const { data: recentDecisions } = await supabase
       .from('decisions')
       .select('id, title, content, conversation_id, created_at, conversations(title)')
       .eq('user_id', user.id)
+      .eq('is_inactive', false)
       .order('created_at', { ascending: false })
       .limit(5);
 
@@ -49,10 +56,12 @@ export async function GET(request: NextRequest) {
       .single();
 
     // 5. Recent conversations for "things to revisit" (conversations with no recent activity but have highlights)
+    // Default: exclude inactive conversations
     const { data: conversationsWithHighlights } = await supabase
       .from('conversations')
       .select('id, title, created_at, started_at, ended_at')
       .eq('user_id', user.id)
+      .eq('is_inactive', false)
       .order('created_at', { ascending: false })
       .limit(20);
 
@@ -84,6 +93,7 @@ export async function GET(request: NextRequest) {
       })) || [];
 
     // Check if user has any conversations or projects (for empty state)
+    // For empty state check, include all (active and inactive, business and personal)
     const { count: conversationCount } = await supabase
       .from('conversations')
       .select('*', { count: 'exact', head: true })

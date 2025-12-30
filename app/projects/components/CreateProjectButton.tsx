@@ -4,6 +4,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSupabaseBrowserClient } from '@/lib/supabaseClient';
+import { showError, showSuccess } from '@/app/components/ErrorNotification';
 
 export default function CreateProjectButton() {
   const router = useRouter();
@@ -42,7 +43,9 @@ export default function CreateProjectButton() {
       .single();
 
     if (insertError) {
-      setError(insertError.message);
+      const errorMessage = insertError.message || 'Failed to create project';
+      setError(errorMessage);
+      showError(errorMessage);
       setLoading(false);
       return;
     }
@@ -51,6 +54,7 @@ export default function CreateProjectButton() {
     setName('');
     setDescription('');
     setIsOpen(false);
+    showSuccess('Project created successfully!');
     router.refresh();
     
     // Navigate to the new project
@@ -63,21 +67,21 @@ export default function CreateProjectButton() {
     <>
       <button
         onClick={() => setIsOpen(true)}
-        className="px-4 py-2 bg-foreground text-background rounded-lg hover:opacity-90 transition-opacity font-medium"
+        className="px-4 py-2 bg-[rgb(var(--text))] text-[rgb(var(--bg))] rounded-lg hover:opacity-90 transition-opacity font-medium"
       >
         Create Project
       </button>
 
       {isOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-zinc-900 rounded-lg max-w-md w-full p-6">
-            <h2 className="text-xl font-semibold text-foreground mb-4">
+          <div className="bg-[rgb(var(--surface))] rounded-2xl max-w-md w-full p-6 shadow-xl ring-1 ring-[rgb(var(--ring)/0.12)]">
+            <h2 className="font-serif text-xl font-semibold text-[rgb(var(--text))] mb-4">
               Create New Project
             </h2>
 
             <form onSubmit={handleSubmit} className="space-y-4">
               {error && (
-                <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                <div className="p-3 rounded-xl bg-red-50 dark:bg-red-900/20 ring-1 ring-red-200 dark:ring-red-800">
                   <p className="text-sm text-red-800 dark:text-red-400">{error}</p>
                 </div>
               )}
@@ -85,7 +89,7 @@ export default function CreateProjectButton() {
               <div>
                 <label
                   htmlFor="project-name"
-                  className="block text-sm font-medium text-foreground mb-2"
+                  className="block text-sm font-medium text-[rgb(var(--text))] mb-2"
                 >
                   Project Name *
                 </label>
@@ -95,7 +99,7 @@ export default function CreateProjectButton() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   required
-                  className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-foreground focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:focus:ring-zinc-400"
+                  className="w-full px-4 py-2 border border-[rgb(var(--ring)/0.12)] rounded-lg bg-[rgb(var(--surface))] text-[rgb(var(--text))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--ring)/0.2)]"
                   placeholder="My Project"
                   autoFocus
                 />
@@ -104,7 +108,7 @@ export default function CreateProjectButton() {
               <div>
                 <label
                   htmlFor="project-description"
-                  className="block text-sm font-medium text-foreground mb-2"
+                  className="block text-sm font-medium text-[rgb(var(--text))] mb-2"
                 >
                   Description (optional)
                 </label>
@@ -113,7 +117,7 @@ export default function CreateProjectButton() {
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   rows={3}
-                  className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-foreground focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:focus:ring-zinc-400"
+                  className="w-full px-4 py-2 border border-[rgb(var(--ring)/0.12)] rounded-lg bg-[rgb(var(--surface))] text-[rgb(var(--text))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--ring)/0.2)]"
                   placeholder="What is this project about?"
                 />
               </div>
@@ -127,14 +131,14 @@ export default function CreateProjectButton() {
                     setName('');
                     setDescription('');
                   }}
-                  className="flex-1 px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors font-medium"
+                  className="flex-1 px-4 py-2 border border-[rgb(var(--ring)/0.12)] rounded-lg hover:bg-[rgb(var(--surface2))] transition-colors font-medium text-[rgb(var(--text))]"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={loading || !name.trim()}
-                  className="flex-1 px-4 py-2 bg-foreground text-background rounded-lg hover:opacity-90 transition-opacity font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 px-4 py-2 bg-[rgb(var(--text))] text-[rgb(var(--bg))] rounded-lg hover:opacity-90 transition-opacity font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? 'Creating...' : 'Create'}
                 </button>

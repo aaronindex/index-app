@@ -9,8 +9,10 @@ import ChatsTab from './components/ChatsTab';
 import HighlightsTab from './components/HighlightsTab';
 import DecisionsTab from './components/DecisionsTab';
 import TasksTab from './components/TasksTab';
+import LibraryTab from './components/LibraryTab';
 import DeleteProjectButton from './components/DeleteProjectButton';
 import ProjectStartChatButton from './components/ProjectStartChatButton';
+import TogglePersonalButton from './components/TogglePersonalButton';
 
 type Status = 'priority' | 'open' | 'complete' | 'dormant';
 
@@ -53,7 +55,7 @@ export default async function ProjectDetailPage({
   const supabase = await getSupabaseServerClient();
   const { data: project, error } = await supabase
     .from('projects')
-    .select('id, name, status, description, created_at')
+    .select('id, name, status, description, created_at, is_personal')
     .eq('id', id)
     .eq('user_id', user.id)
     .single();
@@ -75,13 +77,14 @@ export default async function ProjectDetailPage({
   let highlightsData: any[] = [];
   let decisionsData: any[] = [];
   let tasksData: any[] = [];
+  let assetsData: any[] = [];
 
   if (conversationIds.length > 0) {
     if (tab === 'chats') {
-      // Get conversations
+      // Get conversations (include inactive for filtering)
       const { data: conversations } = await supabase
         .from('conversations')
-        .select('id, title, created_at')
+        .select('id, title, created_at, is_inactive')
         .in('id', conversationIds)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
@@ -144,7 +147,7 @@ export default async function ProjectDetailPage({
       // Query decisions for this project (by project_id OR by conversation_id)
       let decisionsQuery = supabase
         .from('decisions')
-        .select('id, title, content, conversation_id, created_at')
+        .select('id, title, content, conversation_id, created_at, is_inactive')
         .eq('user_id', user.id);
 
       // Build OR condition: project_id = id OR conversation_id in conversationIds
@@ -180,10 +183,10 @@ export default async function ProjectDetailPage({
     }
 
     if (tab === 'tasks') {
-      // Query tasks for this project
+      // Query tasks for this project (include inactive for filtering)
       const { data: tasks } = await supabase
         .from('tasks')
-        .select('id, title, description, status, conversation_id, created_at')
+        .select('id, title, description, status, conversation_id, created_at, is_inactive')
         .eq('project_id', id)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
@@ -210,34 +213,54 @@ export default async function ProjectDetailPage({
         }));
       }
     }
+
+    if (tab === 'library') {
+      // Query assets for this project (include inactive for filtering)
+      const { data: assets } = await supabase
+        .from('project_assets')
+        .select('id, type, title, url, domain, note, storage_path, mime_type, file_size, thumbnail_url, created_at, is_inactive')
+        .eq('project_id', id)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      assetsData = assets || [];
+    }
   }
 
-  const activeTab = (['overview', 'chats', 'highlights', 'decisions', 'tasks'].includes(tab)
+  const activeTab = (['overview', 'chats', 'highlights', 'decisions', 'tasks', 'library'].includes(tab)
     ? tab
-    : 'overview') as 'overview' | 'chats' | 'highlights' | 'decisions' | 'tasks';
+    : 'overview') as 'overview' | 'chats' | 'highlights' | 'decisions' | 'tasks' | 'library';
 
   return (
-    <main className="min-h-screen bg-white dark:bg-black">
+    <main className="min-h-screen bg-[rgb(var(--bg))]">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="mb-8">
           <Link
             href="/projects"
-            className="text-sm text-zinc-600 dark:text-zinc-400 hover:text-foreground transition-colors mb-4 inline-block"
+            className="text-sm text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] transition-colors mb-4 inline-block"
           >
             ← Back to Projects
           </Link>
           <div className="flex items-center justify-between mt-4">
-            <h1 className="text-3xl font-semibold text-foreground">
-              {project.name}
-            </h1>
+            <div className="flex items-center gap-3">
+              <h1 className="font-serif text-3xl font-semibold text-[rgb(var(--text))]">
+                {project.name}
+              </h1>
+              {project.is_personal && (
+                <span className="px-2 py-0.5 text-xs font-medium rounded-md bg-[rgb(var(--surface2))] text-[rgb(var(--muted))]">
+                  Personal
+                </span>
+              )}
+            </div>
             <div className="flex items-center gap-3">
               <StatusPill status={project.status} />
+              <TogglePersonalButton projectId={id} isPersonal={project.is_personal || false} />
               <ProjectStartChatButton projectId={id} projectName={project.name} />
               <DeleteProjectButton projectId={id} projectName={project.name} />
             </div>
           </div>
           {project.description && (
-            <p className="mt-4 text-zinc-600 dark:text-zinc-400">
+            <p className="mt-4 text-[rgb(var(--muted))]">
               {project.description}
             </p>
           )}
@@ -258,6 +281,7 @@ export default async function ProjectDetailPage({
             )}
             {activeTab === 'decisions' && <DecisionsTab decisions={decisionsData} projectId={id} />}
             {activeTab === 'tasks' && <TasksTab tasks={tasksData} />}
+            {activeTab === 'library' && <LibraryTab assets={assetsData} projectId={id} />}
           </div>
         </div>
       </div>

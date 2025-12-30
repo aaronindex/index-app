@@ -52,11 +52,11 @@ export default function FeedbackPage() {
 
   if (submitted) {
     return (
-      <main className="min-h-screen bg-white dark:bg-black">
+      <main className="min-h-screen bg-[rgb(var(--bg))]">
         <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="border border-green-200 dark:border-green-800 rounded-lg p-8 bg-green-50 dark:bg-green-900/20 text-center">
+          <div className="rounded-xl p-8 bg-green-50 dark:bg-green-900/20 ring-1 ring-green-200 dark:ring-green-800 text-center">
             <div className="text-4xl mb-4">✓</div>
-            <h1 className="text-2xl font-semibold text-green-800 dark:text-green-400 mb-2">
+            <h1 className="font-serif text-2xl font-semibold text-green-800 dark:text-green-400 mb-2">
               Thank You!
             </h1>
             <p className="text-green-700 dark:text-green-300 mb-6">
@@ -87,30 +87,30 @@ export default function FeedbackPage() {
   }
 
   return (
-    <main className="min-h-screen bg-white dark:bg-black">
+    <main className="min-h-screen bg-[rgb(var(--bg))]">
       <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="mb-8">
           <Link
             href="/settings"
-            className="text-sm text-zinc-600 dark:text-zinc-400 hover:text-foreground transition-colors mb-4 inline-block"
+            className="text-sm text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] transition-colors mb-4 inline-block"
           >
             ← Back to Settings
           </Link>
-          <h1 className="text-3xl font-semibold text-foreground mb-2">Feedback</h1>
-          <p className="text-zinc-600 dark:text-zinc-400">
+          <h1 className="font-serif text-3xl font-semibold text-[rgb(var(--text))] mb-2">Feedback</h1>
+          <p className="text-[rgb(var(--muted))]">
             Help us improve INDEX. We read every piece of feedback.
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block text-sm font-medium text-foreground mb-2">
+            <label className="block text-sm font-medium text-[rgb(var(--text))] mb-2">
               Type of Feedback
             </label>
             <select
               value={feedbackType}
               onChange={(e) => setFeedbackType(e.target.value as FeedbackType)}
-              className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-950 text-foreground focus:outline-none focus:ring-2 focus:ring-zinc-500"
+              className="w-full px-4 py-2 border border-[rgb(var(--ring)/0.12)] rounded-lg bg-[rgb(var(--surface))] text-[rgb(var(--text))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--ring)/0.2)]"
             >
               <option value="improvement">Improvement / Suggestion</option>
               <option value="bug">Bug Report</option>
@@ -121,7 +121,7 @@ export default function FeedbackPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-foreground mb-2">
+            <label className="block text-sm font-medium text-[rgb(var(--text))] mb-2">
               Subject
             </label>
             <input
@@ -129,13 +129,13 @@ export default function FeedbackPage() {
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
               placeholder="Brief description of your feedback"
-              className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-950 text-foreground focus:outline-none focus:ring-2 focus:ring-zinc-500"
+              className="w-full px-4 py-2 border border-[rgb(var(--ring)/0.12)] rounded-lg bg-[rgb(var(--surface))] text-[rgb(var(--text))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--ring)/0.2)]"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-foreground mb-2">
+            <label className="block text-sm font-medium text-[rgb(var(--text))] mb-2">
               Message
             </label>
             <textarea
@@ -143,16 +143,16 @@ export default function FeedbackPage() {
               onChange={(e) => setMessage(e.target.value)}
               placeholder="Tell us what's on your mind..."
               rows={8}
-              className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-950 text-foreground focus:outline-none focus:ring-2 focus:ring-zinc-500 resize-none"
+              className="w-full px-4 py-2 border border-[rgb(var(--ring)/0.12)] rounded-lg bg-[rgb(var(--surface))] text-[rgb(var(--text))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--ring)/0.2)] resize-none"
               required
             />
-            <p className="text-xs text-zinc-500 dark:text-zinc-500 mt-2">
+            <p className="text-xs text-[rgb(var(--muted))] mt-2">
               Include details about what you were doing, what you expected, and what happened.
             </p>
           </div>
 
           {error && (
-            <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+            <div className="p-4 rounded-xl bg-red-50 dark:bg-red-900/20 ring-1 ring-red-200 dark:ring-red-800">
               <p className="text-sm text-red-800 dark:text-red-400">{error}</p>
             </div>
           )}
@@ -161,26 +161,26 @@ export default function FeedbackPage() {
             <button
               type="submit"
               disabled={submitting || !subject.trim() || !message.trim()}
-              className="px-6 py-3 bg-foreground text-background rounded-lg hover:opacity-90 transition-opacity font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-6 py-3 bg-[rgb(var(--text))] text-[rgb(var(--bg))] rounded-lg hover:opacity-90 transition-opacity font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {submitting ? 'Submitting...' : 'Submit Feedback'}
             </button>
             <Link
               href="/settings"
-              className="px-6 py-3 border border-zinc-300 dark:border-zinc-700 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors font-medium"
+              className="px-6 py-3 border border-[rgb(var(--ring)/0.12)] rounded-lg hover:bg-[rgb(var(--surface2))] transition-colors font-medium text-[rgb(var(--text))]"
             >
               Cancel
             </Link>
           </div>
         </form>
 
-        <div className="mt-8 p-4 bg-zinc-50 dark:bg-zinc-900 rounded-lg">
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
-            <strong className="text-foreground">Prefer email?</strong> You can also send feedback
+        <div className="mt-8 p-4 rounded-lg bg-[rgb(var(--surface2))]">
+          <p className="text-sm text-[rgb(var(--muted))]">
+            <strong className="text-[rgb(var(--text))]">Prefer email?</strong> You can also send feedback
             directly to{' '}
             <a
               href="mailto:aaron@indexapp.co?subject=Alpha Feedback"
-              className="text-zinc-600 dark:text-zinc-400 hover:text-foreground underline"
+              className="text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] underline"
             >
               aaron@indexapp.co
             </a>

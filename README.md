@@ -2,6 +2,20 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
+### Environment Variables
+
+Before running the app, you need to set up environment variables. See [`docs/environment-variables.md`](./docs/environment-variables.md) for detailed instructions.
+
+**Quick setup for local development:**
+1. Create a `.env.local` file in the project root
+2. Add the required variables (see the docs for the complete list)
+
+**For Vercel deployment:**
+1. Go to your Vercel project > Settings > Environment Variables
+2. Add all required variables (see the docs)
+
+### Running the Development Server
+
 First, run the development server:
 
 ```bash

@@ -3,6 +3,8 @@ import { getSupabaseServerClient } from '@/lib/supabaseServer';
 import { getCurrentUser } from '@/lib/getUser';
 import Link from 'next/link';
 import CreateProjectButton from './components/CreateProjectButton';
+import ProjectFilterPills from './components/ProjectFilterPills';
+import Card from '../components/ui/Card';
 
 type Status = 'priority' | 'open' | 'complete' | 'dormant';
 
@@ -27,37 +29,54 @@ function StatusPill({ status }: { status: string | null }) {
   );
 }
 
-export default async function ProjectsPage() {
+export default async function ProjectsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ filter?: string }>;
+}) {
   const user = await getCurrentUser();
   if (!user) {
     // Middleware should handle this, but just in case
     return null;
   }
 
+  const { filter = 'business' } = await searchParams;
   const supabase = await getSupabaseServerClient();
-  const { data, error } = await supabase
+  
+  let query = supabase
     .from('projects')
-    .select('id, name, status')
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: false });
+    .select('id, name, status, is_personal')
+    .eq('user_id', user.id);
+
+  // Apply filter: business (default), personal, or all
+  if (filter === 'business') {
+    query = query.eq('is_personal', false);
+  } else if (filter === 'personal') {
+    query = query.eq('is_personal', true);
+  }
+  // 'all' means no filter
+
+  const { data, error } = await query.order('created_at', { ascending: false });
 
   return (
-    <main className="min-h-screen bg-white dark:bg-black">
+    <main className="min-h-screen bg-[rgb(var(--bg))]">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-semibold text-foreground">Projects</h1>
+          <h1 className="font-serif text-3xl font-semibold text-[rgb(var(--text))]">Projects</h1>
           <CreateProjectButton />
         </div>
         
+        <ProjectFilterPills />
+        
         {error && (
-          <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+          <div className="p-4 rounded-xl bg-red-50 dark:bg-red-900/20 ring-1 ring-red-200 dark:ring-red-800">
             <p className="text-red-800 dark:text-red-400">Error loading projects.</p>
           </div>
         )}
 
         {!error && (!data || data.length === 0) && (
           <div className="text-center py-12">
-            <p className="text-zinc-600 dark:text-zinc-400 mb-4">No projects yet.</p>
+            <p className="text-[rgb(var(--muted))] mb-4">No projects yet.</p>
             <CreateProjectButton />
           </div>
         )}
@@ -65,18 +84,26 @@ export default async function ProjectsPage() {
         {!error && data && data.length > 0 && (
           <div className="space-y-4">
             {data.map((project) => (
-              <Link
-                key={project.id}
-                href={`/projects/${project.id}`}
-                className="block p-6 border border-zinc-200 dark:border-zinc-800 rounded-lg hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors bg-white dark:bg-zinc-950"
-              >
-                <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-medium text-foreground">
-                    {project.name}
-                  </h2>
-                  <StatusPill status={project.status} />
-                </div>
-              </Link>
+              <Card key={project.id} hover>
+                <Link
+                  href={`/projects/${project.id}`}
+                  className="block p-6"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <h2 className="font-serif text-xl font-medium text-[rgb(var(--text))]">
+                        {project.name}
+                      </h2>
+                      {project.is_personal && (
+                        <span className="px-2 py-0.5 text-xs font-medium rounded-md bg-[rgb(var(--surface2))] text-[rgb(var(--muted))]">
+                          Personal
+                        </span>
+                      )}
+                    </div>
+                    <StatusPill status={project.status} />
+                  </div>
+                </Link>
+              </Card>
             ))}
           </div>
         )}

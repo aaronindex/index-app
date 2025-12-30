@@ -173,11 +173,11 @@ export default function UnassignedConversationsClient({
   };
 
   return (
-    <main className="min-h-screen bg-white dark:bg-black">
+    <main className="min-h-screen bg-[rgb(var(--bg))]">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="mb-8">
-          <h1 className="text-3xl font-semibold text-foreground mb-2">Unassigned Conversations</h1>
-          <p className="text-zinc-600 dark:text-zinc-400">
+          <h1 className="font-serif text-3xl font-semibold text-[rgb(var(--text))] mb-2">Unassigned Conversations</h1>
+          <p className="text-[rgb(var(--muted))]">
             Conversations that haven't been assigned to a project yet.
           </p>
         </div>
