@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabaseServer';
 import { getCurrentUser } from '@/lib/getUser';
+import { checkMeaningObjectLimit, incrementLimit } from '@/lib/limits';
 
 export async function POST(request: NextRequest) {
   try {
@@ -25,6 +26,17 @@ export async function POST(request: NextRequest) {
         { error: 'Missing required fields: type, prompt' },
         { status: 400 }
       );
+    }
+
+    // Check meaning object limit for task/decision/highlight
+    if (type === 'task' || type === 'decision' || type === 'highlight') {
+      const limitCheck = await checkMeaningObjectLimit(user.id);
+      if (!limitCheck.allowed) {
+        return NextResponse.json(
+          { error: limitCheck.message || 'Limit reached' },
+          { status: 429 }
+        );
+      }
     }
 
     const supabase = await getSupabaseServerClient();
@@ -67,6 +79,9 @@ export async function POST(request: NextRequest) {
           );
         }
 
+        // Increment limit counter
+        await incrementLimit(user.id, 'meaning_object');
+
         return NextResponse.json({ success: true, task });
       }
 
@@ -89,6 +104,9 @@ export async function POST(request: NextRequest) {
             { status: 500 }
           );
         }
+
+        // Increment limit counter
+        await incrementLimit(user.id, 'meaning_object');
 
         return NextResponse.json({ success: true, decision });
       }
@@ -136,6 +154,9 @@ export async function POST(request: NextRequest) {
             { status: 500 }
           );
         }
+
+        // Increment limit counter
+        await incrementLimit(user.id, 'meaning_object');
 
         return NextResponse.json({ success: true, highlight });
       }

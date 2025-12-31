@@ -49,3 +49,10 @@ body {
   color: rgb(var(--text));
   font-family: var(--font-geist-sans), system-ui, sans-serif;
 }
+
+/* Hide Next.js dev indicator */
+#__next-build-watcher,
+[data-nextjs-toast],
+.nextjs-toast-root {
+  display: none !important;
+}

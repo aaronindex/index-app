@@ -217,6 +217,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Check import limit
+    const { checkImportLimit, incrementLimit } = await import('@/lib/limits');
+    const limitCheck = await checkImportLimit(user.id);
+    if (!limitCheck.allowed) {
+      return NextResponse.json(
+        { error: limitCheck.message || 'Import limit reached' },
+        { status: 429 }
+      );
+    }
+
     const body = await request.json();
     const { transcript, title, projectId, newProject, swapRoles, treatAsSingleBlock } = body;
 
@@ -287,6 +297,18 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: result.error }, { status: 500 });
       }
 
+      // Increment limit counter
+      await incrementLimit(user.id, 'import');
+
+      // Fire analytics event
+      if (typeof window !== 'undefined' && (window as any).dataLayer) {
+        (window as any).dataLayer.push({
+          event: 'import_complete',
+          import_type: 'quick_import',
+          conversation_id: result.conversationId,
+        });
+      }
+
       return NextResponse.json({
         success: true,
         conversationId: result.conversationId,
@@ -355,6 +377,9 @@ export async function POST(request: NextRequest) {
           .eq('id', importRecord.id);
         return NextResponse.json({ error: 'Failed to queue import job' }, { status: 500 });
       }
+
+      // Increment limit counter
+      await incrementLimit(user.id, 'import');
 
       return NextResponse.json({
         success: true,

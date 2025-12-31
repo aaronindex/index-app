@@ -2,12 +2,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabaseServer';
 import { getCurrentUser } from '@/lib/getUser';
+import { checkMeaningObjectLimit, incrementLimit } from '@/lib/limits';
 
 export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Check meaning object limit
+    const limitCheck = await checkMeaningObjectLimit(user.id);
+    if (!limitCheck.allowed) {
+      return NextResponse.json(
+        { error: limitCheck.message || 'Limit reached' },
+        { status: 429 }
+      );
     }
 
     const body = await request.json();
@@ -93,6 +103,18 @@ export async function POST(request: NextRequest) {
         { error: taskError?.message || 'Failed to create task' },
         { status: 500 }
       );
+    }
+
+    // Increment limit counter
+    await incrementLimit(user.id, 'meaning_object');
+
+    // Fire analytics event
+    if (typeof window !== 'undefined' && (window as any).dataLayer) {
+      (window as any).dataLayer.push({
+        event: 'task_created',
+        task_id: task.id,
+        has_project: !!project_id,
+      });
     }
 
     return NextResponse.json({ success: true, task });

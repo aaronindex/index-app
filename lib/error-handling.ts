@@ -3,6 +3,9 @@
 
 import { showError, showSuccess, showInfo, showWarning } from '@/app/components/ErrorNotification';
 
+// Re-export for convenience
+export { showError, showSuccess, showInfo, showWarning };
+
 export interface ApiError {
   error: string;
   details?: string;

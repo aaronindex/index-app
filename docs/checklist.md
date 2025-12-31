@@ -363,6 +363,50 @@ E5 — Micro-animations + UX polish
 [x] Renamed "Toolbelt" to "Tools" for clarity
 
 ==================================================
+PHASE 8 — LAUNCH-READY POLISH
+==================================================
+A) Routing & Access Control
+[x] Invite-code gate implemented (invite_codes table + parser + signup block)
+[x] Landing page for logged-out users
+[x] Auth routing redirects (/ → /home for authenticated)
+[x] Invite code verification and usage tracking
+
+B) Free-User Limits (Reducing Valve)
+[x] Free-user limits enforced server-side (imports, ask, meaning objects, assets)
+[x] Limit tracking fields added to profiles
+[x] Limit hit toast messages in UI
+[x] Limits reset after 24 hours
+
+C) Landing Page
+[x] LandingPage.tsx component created
+[x] Hero section with copy from marketing narrative
+[x] Screenshot section placeholder
+[x] Trust row ("Your data is not used for training...")
+[x] CTA: Sign In / Get Started button
+[x] Ramp-style redesign: 2-column hero, value cards, feature sections
+[x] MonitorScreenshotPanel component for screenshot display
+[x] ValueCard component for reusable marketing cards
+[x] Full-width sections with proper spacing and hierarchy
+
+D) Onboarding (Alpha-Minimal)
+[x] OnboardingSteps.tsx component created
+[x] 6-step onboarding flow (import, project, highlight, task/decision, ask, digest)
+[x] Completion state stored in localStorage
+[x] Conditional rendering after first import
+
+E) Analytics Markers
+[x] GA4 dataLayer events added (landing_view, invite_code_used)
+[x] Import events (import_start, import_complete)
+[x] Ask Index events (ask_query)
+[x] Start Chat events (start_chat_invoked)
+[x] Meaning object events (highlight_created, task_created, decision_created)
+
+F) UI Polish
+[x] Nav bar background color with opacity (sticky header above content)
+[x] Signed-out nav state (minimal: INDEX logo + Sign in button)
+[x] Signed-in nav state (full navigation with mobile menu)
+
+==================================================
 PHASE F — MONETIZATION PREP
 ==================================================
 F1 — Billing page

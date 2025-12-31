@@ -104,6 +104,10 @@ export async function POST(request: NextRequest) {
       // Don't fail the request, but log the error
     }
 
+    // Fire analytics event (client-side will handle this via dataLayer)
+    // Note: This is a server route, so we can't directly push to dataLayer
+    // The client should fire this event when calling this endpoint
+
     return NextResponse.json({
       success: true,
       promptText: packet.promptText,

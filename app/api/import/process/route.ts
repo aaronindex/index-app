@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabaseServer';
 import { getCurrentUser } from '@/lib/getUser';
 import { generateDedupeHash } from '@/lib/jobs/importProcessor';
+import { checkImportLimit, incrementLimit } from '@/lib/limits';
 import crypto from 'crypto';
 
 export async function POST(request: NextRequest) {
@@ -11,6 +12,15 @@ export async function POST(request: NextRequest) {
     const user = await getCurrentUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Check import limit
+    const limitCheck = await checkImportLimit(user.id);
+    if (!limitCheck.allowed) {
+      return NextResponse.json(
+        { error: limitCheck.message || 'Import limit reached' },
+        { status: 429 }
+      );
     }
 
     const body = await request.json();
@@ -82,6 +92,17 @@ export async function POST(request: NextRequest) {
         })
         .eq('id', importId);
       return NextResponse.json({ error: 'Failed to queue import job' }, { status: 500 });
+    }
+
+    // Increment limit counter (only when job is successfully queued)
+    await incrementLimit(user.id, 'import');
+
+    // Fire analytics event
+    if (typeof window !== 'undefined' && (window as any).dataLayer) {
+      (window as any).dataLayer.push({
+        event: 'import_start',
+        import_id: importId,
+      });
     }
 
     // Return immediately - job will be processed in background

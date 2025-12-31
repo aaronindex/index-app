@@ -4,6 +4,7 @@ import { getCurrentUser } from '@/lib/getUser';
 import { searchChunks } from '@/lib/search';
 import { synthesizeAnswer } from '@/lib/ai/answer';
 import { getRelatedContent } from '@/lib/relatedContent';
+import { checkAskLimit, incrementLimit } from '@/lib/limits';
 
 export async function POST(request: NextRequest) {
   try {
@@ -17,6 +18,15 @@ export async function POST(request: NextRequest) {
 
     if (!query || typeof query !== 'string' || query.trim().length === 0) {
       return NextResponse.json({ error: 'Query is required' }, { status: 400 });
+    }
+
+    // Check Ask Index limit
+    const limitCheck = await checkAskLimit(user.id);
+    if (!limitCheck.allowed) {
+      return NextResponse.json(
+        { error: limitCheck.message || 'Ask Index limit reached' },
+        { status: 429 }
+      );
     }
 
     console.log('[Search API] Starting search for query:', query.substring(0, 50));
@@ -57,6 +67,18 @@ export async function POST(request: NextRequest) {
         console.error('[Search API] Related content fetch failed:', error);
         // Continue without related content if fetch fails
       }
+    }
+
+    // Increment limit counter
+    await incrementLimit(user.id, 'ask');
+
+    // Fire analytics event
+    if (typeof window !== 'undefined' && (window as any).dataLayer) {
+      (window as any).dataLayer.push({
+        event: 'ask_query',
+        query_length: query.length,
+        result_count: results.length,
+      });
     }
 
     return NextResponse.json({

@@ -1,39 +1,95 @@
 // app/auth/signup/page.tsx
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { getSupabaseBrowserClient } from '@/lib/supabaseClient';
 import Link from 'next/link';
+import { showError } from '@/lib/error-handling';
 
-export default function SignUpPage() {
+function SignUpForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [inviteCode, setInviteCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Pre-fill invite code from URL if provided
+  useEffect(() => {
+    const codeFromUrl = searchParams.get('code');
+    if (codeFromUrl) {
+      setInviteCode(codeFromUrl.toUpperCase());
+    }
+  }, [searchParams]);
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
-    const supabase = getSupabaseBrowserClient();
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-    });
-
-    if (error) {
-      setError(error.message);
+    // Verify invite code first
+    if (!inviteCode.trim()) {
+      setError('Invite code is required');
       setLoading(false);
       return;
     }
 
-    // Profile will be auto-created via database trigger
-    // Redirect to home
-    router.push('/');
-    router.refresh();
+    try {
+      // Verify invite code
+      const verifyResponse = await fetch('/api/invite-codes/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: inviteCode }),
+      });
+
+      const verifyData = await verifyResponse.json();
+
+      if (!verifyData.valid) {
+        setError(verifyData.error || 'Invalid invite code');
+        setLoading(false);
+        return;
+      }
+
+      // Create account
+      const supabase = getSupabaseBrowserClient();
+      const { error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+      });
+
+      if (signUpError) {
+        setError(signUpError.message);
+        setLoading(false);
+        return;
+      }
+
+      // Use invite code (increment uses)
+      await fetch('/api/invite-codes/use', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: inviteCode }),
+      });
+
+      // Fire analytics event
+      if (typeof window !== 'undefined' && (window as any).dataLayer) {
+        (window as any).dataLayer.push({
+          event: 'invite_code_used',
+          invite_code: inviteCode.trim().toUpperCase(),
+        });
+      }
+
+      // Profile will be auto-created via database trigger
+      // Redirect to home
+      router.push('/home');
+      router.refresh();
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to create account';
+      setError(errorMessage);
+      showError(errorMessage);
+      setLoading(false);
+    }
   };
 
   return (
@@ -95,6 +151,27 @@ export default function SignUpPage() {
             </p>
           </div>
 
+          <div>
+            <label
+              htmlFor="inviteCode"
+              className="block text-sm font-medium text-[rgb(var(--text))] mb-2"
+            >
+              Invite Code <span className="text-red-500">*</span>
+            </label>
+            <input
+              id="inviteCode"
+              type="text"
+              value={inviteCode}
+              onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+              required
+              className="w-full px-4 py-2 border border-[rgb(var(--ring)/0.12)] rounded-lg bg-[rgb(var(--surface))] text-[rgb(var(--text))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--ring)/0.2)] uppercase"
+              placeholder="ABC123"
+            />
+            <p className="mt-1 text-xs text-[rgb(var(--muted))]">
+              Alpha access requires an invite code
+            </p>
+          </div>
+
           <button
             type="submit"
             disabled={loading}
@@ -120,3 +197,14 @@ export default function SignUpPage() {
   );
 }
 
+export default function SignUpPage() {
+  return (
+    <Suspense fallback={
+      <main className="min-h-screen bg-[rgb(var(--bg))] flex items-center justify-center">
+        <div className="text-[rgb(var(--muted))]">Loading...</div>
+      </main>
+    }>
+      <SignUpForm />
+    </Suspense>
+  );
+}

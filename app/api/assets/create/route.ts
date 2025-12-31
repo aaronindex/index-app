@@ -162,6 +162,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
 
+    // Check asset limit for project
+    const { checkAssetLimit } = await import('@/lib/limits');
+    const limitCheck = await checkAssetLimit(projectId);
+    if (!limitCheck.allowed) {
+      return NextResponse.json(
+        { error: limitCheck.message || 'Asset limit reached for this project' },
+        { status: 429 }
+      );
+    }
+
     let finalType = type;
     let finalUrl = url;
     let finalTitle = title?.trim() || null;

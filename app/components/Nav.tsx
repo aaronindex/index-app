@@ -2,6 +2,8 @@
 
 import Link from 'next/link';
 import { useState, useEffect, useRef } from 'react';
+import { getSupabaseBrowserClient } from '@/lib/supabaseClient';
+import type { User } from '@supabase/supabase-js';
 import AccountDropdown from './header/AccountDropdown';
 import ThemeToggle from './ThemeToggle';
 import CommandPalette from './command-palette/CommandPalette';
@@ -10,7 +12,29 @@ import { useKeyboardShortcut } from '@/app/hooks/useKeyboardShortcut';
 export default function Nav() {
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
+
+  // Check auth state
+  useEffect(() => {
+    const supabase = getSupabaseBrowserClient();
+
+    // Get initial session
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user);
+      setLoading(false);
+    });
+
+    // Listen for auth changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   // Keyboard shortcut handler (CommandPalette also handles this, but we need it here for the button)
   useKeyboardShortcut({
@@ -67,14 +91,48 @@ export default function Nav() {
     { href: '/tools', label: 'Tools' },
   ];
 
+  // Show nothing while loading
+  if (loading) {
+    return null;
+  }
+
+  // Signed-out state: Only INDEX logo and Sign in button
+  if (!user) {
+    return (
+      <nav 
+        className="sticky top-0 z-50 border-b border-[rgb(var(--ring)/0.08)] bg-[rgb(var(--surface)/0.85)]"
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <Link
+              href="/"
+              className="font-serif text-xl font-semibold text-[rgb(var(--text))] hover:opacity-70 transition-opacity"
+            >
+              INDEX
+            </Link>
+            <Link
+              href="/auth/signin"
+              className="text-sm text-[rgb(var(--text))] hover:opacity-70 transition-opacity font-medium"
+            >
+              Sign in
+            </Link>
+          </div>
+        </div>
+      </nav>
+    );
+  }
+
+  // Signed-in state: Full navigation
   return (
     <>
-      <nav className="border-b border-[rgb(var(--ring)/0.08)] bg-[rgb(var(--surface))]">
+      <nav 
+        className="sticky top-0 z-50 border-b border-[rgb(var(--ring)/0.08)] bg-[rgb(var(--surface)/0.85)]"
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-8">
               <Link
-                href="/"
+                href="/home"
                 className="font-serif text-xl font-semibold text-[rgb(var(--text))] hover:opacity-70 transition-opacity"
               >
                 INDEX
