@@ -218,7 +218,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check import limit
-    const { checkImportLimit, incrementLimit } = await import('@/lib/limits');
+    const { checkImportLimit, incrementLimit } = await import('@/lib/limits.js');
     const limitCheck = await checkImportLimit(user.id);
     if (!limitCheck.allowed) {
       return NextResponse.json(
