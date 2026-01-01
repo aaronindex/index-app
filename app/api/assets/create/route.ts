@@ -163,7 +163,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check asset limit for project
-    const { checkAssetLimit } = await import('@/lib/limits.js');
+    const { checkAssetLimit } = await import('@/lib/limits');
     const limitCheck = await checkAssetLimit(projectId);
     if (!limitCheck.allowed) {
       return NextResponse.json(

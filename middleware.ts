@@ -13,10 +13,14 @@ export async function middleware(request: NextRequest) {
       return NextResponse.next({ request });
     }
 
+    // Log that we're starting middleware (for debugging)
+    console.log('[Middleware] Starting for path:', request.nextUrl.pathname);
+
     let supabaseResponse = NextResponse.next({
       request,
     });
 
+    console.log('[Middleware] Creating Supabase client');
     const supabase = createServerClient(
       supabaseUrl,
       supabaseAnonKey,
@@ -66,11 +70,20 @@ export async function middleware(request: NextRequest) {
     // Refresh session if expired - required for Server Components
     let user = null;
     try {
+      console.log('[Middleware] Getting user');
       const {
         data: { user: authUser },
       } = await supabase.auth.getUser();
       user = authUser;
+      console.log('[Middleware] User:', user ? 'authenticated' : 'not authenticated');
     } catch (error) {
+      // Log the error details
+      console.error('[Middleware] Error getting user:', error);
+      console.error('[Middleware] Error type:', error instanceof Error ? error.constructor.name : typeof error);
+      console.error('[Middleware] Error message:', error instanceof Error ? error.message : String(error));
+      if (error instanceof Error && error.stack) {
+        console.error('[Middleware] Error stack:', error.stack);
+      }
       // Continue without user if there's an error
       return NextResponse.next({ request });
     }
@@ -95,8 +108,21 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(url);
     }
 
+    console.log('[Middleware] Successfully completed');
     return supabaseResponse;
   } catch (error) {
+    // Log comprehensive error details
+    console.error('[Middleware] Fatal error:', error);
+    console.error('[Middleware] Error type:', error instanceof Error ? error.constructor.name : typeof error);
+    console.error('[Middleware] Error message:', error instanceof Error ? error.message : String(error));
+    if (error instanceof Error && error.stack) {
+      console.error('[Middleware] Error stack:', error.stack);
+    }
+    // Log error properties
+    if (error instanceof Error) {
+      console.error('[Middleware] Error name:', error.name);
+      console.error('[Middleware] Error cause:', error.cause);
+    }
     // If anything fails, just continue with the request
     return NextResponse.next({ request });
   }
