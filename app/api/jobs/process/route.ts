@@ -6,6 +6,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabaseServer';
 import { processImportJobStep } from '@/lib/jobs/importProcessor';
 
+// Force Node.js runtime to avoid Edge runtime issues with __dirname
+export const runtime = 'nodejs';
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
