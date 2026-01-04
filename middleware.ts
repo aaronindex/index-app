@@ -1,9 +1,10 @@
-// proxy.ts (formerly middleware.ts)
-// Next.js 16+ uses "proxy" instead of "middleware" to clarify the feature's purpose
+// middleware.ts
+// Note: Next.js 16 shows a deprecation warning for middleware.ts in favor of proxy.ts,
+// but proxy.ts may not be fully stable yet. Keeping middleware.ts for now.
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
-export async function proxy(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   try {
     // Check for required environment variables
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -14,14 +15,14 @@ export async function proxy(request: NextRequest) {
       return NextResponse.next({ request });
     }
 
-    // Log that we're starting proxy (for debugging)
-    console.log('[Proxy] Starting for path:', request.nextUrl.pathname);
+    // Log that we're starting middleware (for debugging)
+    console.log('[Middleware] Starting for path:', request.nextUrl.pathname);
 
     let supabaseResponse = NextResponse.next({
       request,
     });
 
-    console.log('[Proxy] Creating Supabase client');
+    console.log('[Middleware] Creating Supabase client');
     const supabase = createServerClient(
       supabaseUrl,
       supabaseAnonKey,
@@ -71,19 +72,19 @@ export async function proxy(request: NextRequest) {
     // Refresh session if expired - required for Server Components
     let user = null;
     try {
-      console.log('[Proxy] Getting user');
+      console.log('[Middleware] Getting user');
       const {
         data: { user: authUser },
       } = await supabase.auth.getUser();
       user = authUser;
-      console.log('[Proxy] User:', user ? 'authenticated' : 'not authenticated');
+      console.log('[Middleware] User:', user ? 'authenticated' : 'not authenticated');
     } catch (error) {
       // Log the error details
-      console.error('[Proxy] Error getting user:', error);
-      console.error('[Proxy] Error type:', error instanceof Error ? error.constructor.name : typeof error);
-      console.error('[Proxy] Error message:', error instanceof Error ? error.message : String(error));
+      console.error('[Middleware] Error getting user:', error);
+      console.error('[Middleware] Error type:', error instanceof Error ? error.constructor.name : typeof error);
+      console.error('[Middleware] Error message:', error instanceof Error ? error.message : String(error));
       if (error instanceof Error && error.stack) {
-        console.error('[Proxy] Error stack:', error.stack);
+        console.error('[Middleware] Error stack:', error.stack);
       }
       // Continue without user if there's an error
       return NextResponse.next({ request });
@@ -109,20 +110,20 @@ export async function proxy(request: NextRequest) {
       return NextResponse.redirect(url);
     }
 
-    console.log('[Proxy] Successfully completed');
+    console.log('[Middleware] Successfully completed');
     return supabaseResponse;
   } catch (error) {
     // Log comprehensive error details
-    console.error('[Proxy] Fatal error:', error);
-    console.error('[Proxy] Error type:', error instanceof Error ? error.constructor.name : typeof error);
-    console.error('[Proxy] Error message:', error instanceof Error ? error.message : String(error));
+    console.error('[Middleware] Fatal error:', error);
+    console.error('[Middleware] Error type:', error instanceof Error ? error.constructor.name : typeof error);
+    console.error('[Middleware] Error message:', error instanceof Error ? error.message : String(error));
     if (error instanceof Error && error.stack) {
-      console.error('[Proxy] Error stack:', error.stack);
+      console.error('[Middleware] Error stack:', error.stack);
     }
     // Log error properties
     if (error instanceof Error) {
-      console.error('[Proxy] Error name:', error.name);
-      console.error('[Proxy] Error cause:', error.cause);
+      console.error('[Middleware] Error name:', error.name);
+      console.error('[Middleware] Error cause:', error.cause);
     }
     // If anything fails, just continue with the request
     return NextResponse.next({ request });
