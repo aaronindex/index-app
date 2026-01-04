@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ['openai'],
+  serverExternalPackages: ['openai', '@supabase/ssr'],
   // Disable service worker generation to avoid __dirname issues
   // If you need PWA, configure it properly with a custom service worker
   experimental: {
