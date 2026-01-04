@@ -42,10 +42,6 @@ export const metadata: Metadata = {
       { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
     ],
   },
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#FAF7F2" },
-    { media: "(prefers-color-scheme: dark)", color: "#121211" },
-  ],
   viewport: {
     width: "device-width",
     initialScale: 1,
@@ -54,6 +50,15 @@ export const metadata: Metadata = {
     viewportFit: "cover",
   },
 };
+
+export function generateViewport() {
+  return {
+    themeColor: [
+      { media: "(prefers-color-scheme: light)", color: "#FAF7F2" },
+      { media: "(prefers-color-scheme: dark)", color: "#121211" },
+    ],
+  };
+}
 
 export default function RootLayout({
   children,
