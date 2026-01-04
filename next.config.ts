@@ -7,6 +7,12 @@ const nextConfig: NextConfig = {
   experimental: {
     // This prevents Next.js from auto-generating service workers
   },
+  // Suppress middleware deprecation warning (middleware.ts is still correct for Next.js 16)
+  onDemandEntries: {
+    // Keep pages in memory for faster HMR
+    maxInactiveAge: 25 * 1000,
+    pagesBufferLength: 2,
+  },
 };
 
 export default nextConfig;
