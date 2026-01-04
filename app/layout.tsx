@@ -42,17 +42,15 @@ export const metadata: Metadata = {
       { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
     ],
   },
-  viewport: {
+};
+
+export function generateViewport() {
+  return {
     width: "device-width",
     initialScale: 1,
     maximumScale: 1,
     userScalable: false,
     viewportFit: "cover",
-  },
-};
-
-export function generateViewport() {
-  return {
     themeColor: [
       { media: "(prefers-color-scheme: light)", color: "#FAF7F2" },
       { media: "(prefers-color-scheme: dark)", color: "#121211" },
