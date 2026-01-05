@@ -36,8 +36,7 @@ export default async function ProjectsPage({
 }) {
   const user = await getCurrentUser();
   if (!user) {
-    // Middleware should handle this, but just in case
-    return null;
+    redirect('/auth/signin');
   }
 
   const { filter = 'business' } = await searchParams;

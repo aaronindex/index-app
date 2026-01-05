@@ -1,24 +1,18 @@
 // middleware.ts
-// Ultra-minimal Edge-safe middleware
-// NO imports except Next.js server types
-// NO cookie parsing, NO JWT, NO dependencies
+// TEMPORARILY DISABLED - handling auth in page components instead
+// This file exists to prevent 404s but does nothing
+// Auth is handled in app/page.tsx and app/home/page.tsx
 
 import { NextResponse, type NextRequest } from 'next/server';
 
 export async function middleware(request: NextRequest) {
-  // Minimal middleware - just pass through
-  // Auth checks happen in page components, not middleware
+  // Pass through - all auth logic moved to page components
   return NextResponse.next({ request });
 }
 
 export const config = {
   matcher: [
-    // Only match specific routes that need middleware
-    // Exclude everything else to minimize bundling
-    '/',
-    '/home',
-    '/auth/:path*',
-    '/projects/:path*',
+    // Match nothing - effectively disable middleware
+    '/__never_match__',
   ],
 };
-
