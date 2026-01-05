@@ -1,10 +1,6 @@
 // app/auth/signin/page.tsx
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { getSupabaseBrowserClient } from '@/lib/supabaseClient';
-
 import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getSupabaseBrowserClient } from '@/lib/supabaseClient';
@@ -132,4 +128,3 @@ export default function SignInPage() {
     </Suspense>
   );
 }
-
