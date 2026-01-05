@@ -1,4 +1,5 @@
 // app/projects/page.tsx
+import { redirect } from 'next/navigation';
 import { getSupabaseServerClient } from '@/lib/supabaseServer';
 import { getCurrentUser } from '@/lib/getUser';
 import Link from 'next/link';
