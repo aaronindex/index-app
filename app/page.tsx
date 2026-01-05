@@ -1,5 +1,8 @@
-import LandingPage from "@/app/components/LandingPage";
-
 export default function Home() {
-  return <LandingPage />;
+  return (
+    <div>
+      <h1>INDEX</h1>
+      <p>Test page</p>
+    </div>
+  );
 }
