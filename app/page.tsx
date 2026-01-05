@@ -2,6 +2,9 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/getUser";
 import LandingPage from "@/app/components/LandingPage";
 
+// Force dynamic rendering since we use cookies() for auth
+export const dynamic = 'force-dynamic';
+
 export default async function Home() {
   // Try to get user, but if it fails (e.g., middleware/auth issues), just show landing page
   let user = null;
