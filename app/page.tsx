@@ -1,25 +1,10 @@
-import { redirect } from "next/navigation";
-import { getCurrentUser } from "@/lib/getUser";
 import LandingPage from "@/app/components/LandingPage";
 
-// Force dynamic rendering since we use cookies() for auth
+// Force dynamic rendering
 export const dynamic = 'force-dynamic';
 
 export default async function Home() {
-  // Try to get user, but if it fails (e.g., middleware/auth issues), just show landing page
-  let user = null;
-  try {
-    user = await getCurrentUser();
-  } catch (error) {
-    // If auth check fails, treat as logged-out and show landing page
-    console.error('Error checking user:', error);
-  }
-
-  // Redirect authenticated users to /home
-  if (user) {
-    redirect('/home');
-  }
-
-  // Show landing page for logged-out users
+  // Temporarily simplified - just show landing page
+  // We'll add auth back once routing is confirmed working
   return <LandingPage />;
 }
