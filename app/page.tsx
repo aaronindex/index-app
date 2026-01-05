@@ -3,7 +3,14 @@ import { getCurrentUser } from "@/lib/getUser";
 import LandingPage from "@/app/components/LandingPage";
 
 export default async function Home() {
-  const user = await getCurrentUser();
+  // Try to get user, but if it fails (e.g., middleware/auth issues), just show landing page
+  let user = null;
+  try {
+    user = await getCurrentUser();
+  } catch (error) {
+    // If auth check fails, treat as logged-out and show landing page
+    console.error('Error checking user:', error);
+  }
 
   // Redirect authenticated users to /home
   if (user) {
