@@ -7,6 +7,15 @@ const nextConfig: NextConfig = {
   experimental: {
     // This prevents Next.js from auto-generating service workers
   },
+  // Ensure root route is handled correctly
+  async rewrites() {
+    return [
+      {
+        source: '/',
+        destination: '/',
+      },
+    ];
+  },
 };
 
 export default nextConfig;
