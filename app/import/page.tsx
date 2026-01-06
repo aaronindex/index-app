@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { getSupabaseBrowserClient } from '@/lib/supabaseClient';
 import { parseChatGPTExport } from '@/lib/parsers/chatgpt';
 import QuickImportModal from './components/QuickImportModal';
+import { trackEvent } from '@/lib/analytics';
 
 interface DetectedConversation {
   id: string;
@@ -185,7 +186,6 @@ export default function ImportPage() {
       }
 
       // Track import started on submit (after determining project, before API call)
-      const { trackEvent } = await import('@/lib/analytics');
       trackEvent('import_started', {
         import_type: 'file_upload',
         conversation_count: selected.length,
@@ -221,7 +221,6 @@ export default function ImportPage() {
         
         // Track limit hit if 429
         if (response.status === 429) {
-          const { trackEvent } = await import('@/lib/analytics');
           trackEvent('limit_hit', {
             limit_type: 'import',
           });
@@ -229,7 +228,6 @@ export default function ImportPage() {
         
         // Track import failed
         const latencyMs = Date.now() - importStartTime;
-        const { trackEvent } = await import('@/lib/analytics');
         trackEvent('import_failed', {
           import_type: 'file_upload',
           import_id: importRecord.id,
@@ -261,7 +259,6 @@ export default function ImportPage() {
                 
                 // Calculate latency
                 const latencyMs = Date.now() - importStartTime;
-                const { trackEvent } = await import('@/lib/analytics');
                 trackEvent('import_completed', {
                   import_type: 'file_upload',
                   import_id: importRecord.id,
@@ -282,7 +279,6 @@ export default function ImportPage() {
               } else if (currentJob.status === 'error') {
                 clearInterval(pollInterval);
                 const latencyMs = Date.now() - importStartTime;
-                const { trackEvent } = await import('@/lib/analytics');
                 trackEvent('import_failed', {
                   import_type: 'file_upload',
                   import_id: importRecord.id,
@@ -308,7 +304,6 @@ export default function ImportPage() {
         clearInterval(pollInterval);
         if (loading) {
           const latencyMs = Date.now() - importStartTime;
-          const { trackEvent } = await import('@/lib/analytics');
           trackEvent('import_failed', {
             import_type: 'file_upload',
             import_id: importRecord.id,
@@ -324,7 +319,6 @@ export default function ImportPage() {
       }, 10 * 60 * 1000);
     } catch (err) {
       const latencyMs = Date.now() - importStartTime;
-      const { trackEvent } = await import('@/lib/analytics');
       trackEvent('import_failed', {
         import_type: 'file_upload',
         latency_ms: latencyMs,

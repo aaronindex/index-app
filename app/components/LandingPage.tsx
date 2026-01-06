@@ -1,13 +1,29 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { useTheme } from 'next-themes';
 import { trackEvent } from '@/lib/analytics';
 import MonitorScreenshotPanel from './landing/MonitorScreenshotPanel';
 import ValueCard from './landing/ValueCard';
 import InviteCodeInput from './landing/InviteCodeInput';
 
 export default function LandingPage() {
+  const { setTheme, theme, resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    // Force light theme for landing page (ignore user's previous theme preference)
+    // This ensures consistent styling regardless of localStorage theme preference
+    if (mounted && resolvedTheme && resolvedTheme !== 'light') {
+      setTheme('light');
+    }
+  }, [mounted, resolvedTheme, setTheme]);
+
   useEffect(() => {
     // Fire landing_page_view analytics event with page context
     if (typeof window !== 'undefined') {
