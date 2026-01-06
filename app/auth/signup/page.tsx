@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { getSupabaseBrowserClient } from '@/lib/supabaseClient';
 import Link from 'next/link';
 import { showError } from '@/lib/error-handling';
+import { trackEvent } from '@/lib/analytics';
 
 function SignUpForm() {
   const router = useRouter();
@@ -54,14 +55,35 @@ function SignUpForm() {
 
       // Create account
       const supabase = getSupabaseBrowserClient();
-      const { error: signUpError } = await supabase.auth.signUp({
+      
+      // Get the app URL for email confirmation redirect
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 
+                     (typeof window !== 'undefined' ? window.location.origin : 'https://indexapp.co');
+      const redirectUrl = `${appUrl}/auth/callback`;
+      
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          emailRedirectTo: redirectUrl,
+        },
       });
 
       if (signUpError) {
         setError(signUpError.message);
         setLoading(false);
+        return;
+      }
+
+      // Check if email confirmation is required
+      // If user is null, it means email confirmation is required
+      if (!signUpData.user) {
+        // Email confirmation required - show message
+        setError(null);
+        setLoading(false);
+        // Show success message instead of error
+        alert('Please check your email to confirm your account. The confirmation link will expire in 24 hours.');
+        router.push('/auth/signin');
         return;
       }
 
@@ -72,13 +94,13 @@ function SignUpForm() {
         body: JSON.stringify({ code: inviteCode }),
       });
 
-      // Fire analytics event
-      if (typeof window !== 'undefined' && (window as any).dataLayer) {
-        (window as any).dataLayer.push({
-          event: 'invite_code_used',
-          invite_code: inviteCode.trim().toUpperCase(),
-        });
-      }
+      // Track successful signup (privacy-safe: no code string)
+      const inviteCodeFromUrl = searchParams.get('code');
+      trackEvent('sign_up_completed', {
+        invite_present: true,
+        invite_length: inviteCode.trim().length,
+        invite_source: inviteCodeFromUrl ? 'url' : 'form',
+      });
 
       // Profile will be auto-created via database trigger
       // Redirect to home

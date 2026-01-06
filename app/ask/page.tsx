@@ -73,6 +73,9 @@ export default function AskPage() {
 
     console.log('[Ask Page] Starting search for:', queryToUse.trim());
 
+    // Track start time for latency
+    const searchStartTime = Date.now();
+
     try {
       const response = await fetch('/api/search', {
         method: 'POST',
@@ -90,6 +93,15 @@ export default function AskPage() {
       if (!response.ok) {
         const errorData = await response.json();
         console.error('[Ask Page] Search error response:', errorData);
+        
+        // Track limit hit if 429
+        if (response.status === 429) {
+          const { trackEvent } = await import('@/lib/analytics');
+          trackEvent('limit_hit', {
+            limit_type: 'ask',
+          });
+        }
+        
         throw new Error(errorData.error || 'Search failed');
       }
 
@@ -100,6 +112,41 @@ export default function AskPage() {
         hasRelatedContent: !!data.relatedContent,
         debug: data.debug,
       });
+      
+      // Calculate latency
+      const latencyMs = Date.now() - searchStartTime;
+      
+      // Track ask query event
+      // Note: Ask page doesn't currently support project-scoped queries
+      // If projectId is added later, extract from request body
+      const { trackEvent } = await import('@/lib/analytics');
+      const hasAnswer = !!data.answer;
+      
+      trackEvent('ask_index_query', {
+        query_length: queryToUse.trim().length,
+        result_count: data.results?.length || 0,
+        latency_ms: latencyMs,
+        has_answer: hasAnswer,
+        scope: 'global', // Ask page is always global scope
+        project_id_present: false,
+      });
+      
+      // Track ask_index_answered event only when answer is present
+      if (hasAnswer) {
+        trackEvent('ask_index_answered', {
+          query_length: queryToUse.trim().length,
+          result_count: data.results?.length || 0,
+          latency_ms: latencyMs,
+          scope: 'global',
+          project_id_present: false,
+        });
+        
+        // Debug logging
+        if (process.env.NEXT_PUBLIC_DEBUG_ANALYTICS === 'true') {
+          console.log('[Analytics] ask_index_answered fired');
+        }
+      }
+      
       setResults(data.results || []);
       setAnswer(data.answer || null);
       setRelatedContent(data.relatedContent || null);

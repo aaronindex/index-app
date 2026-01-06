@@ -92,14 +92,8 @@ export async function POST(request: NextRequest) {
     // Increment limit counter
     await incrementLimit(user.id, 'meaning_object');
 
-    // Fire analytics event
-    if (typeof window !== 'undefined' && (window as any).dataLayer) {
-      (window as any).dataLayer.push({
-        event: 'decision_created',
-        decision_id: decision.id,
-        has_project: !!project_id,
-      });
-    }
+    // Note: Analytics event should be fired client-side after successful creation
+    // This ensures it only fires on actual success and can include UI context
 
     console.log('Decision created successfully:', decision.id);
     return NextResponse.json({ success: true, decision });

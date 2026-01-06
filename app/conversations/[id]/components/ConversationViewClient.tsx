@@ -81,11 +81,27 @@ export default function ConversationViewClient({
         const errorMessage = errorData.error || 'Failed to create highlight';
         showError(errorMessage);
         console.error('Failed to create highlight:', errorData.error);
+        
+        // Track limit hit if 429
+        if (response.status === 429) {
+          const { trackEvent } = await import('@/lib/analytics');
+          trackEvent('limit_hit', {
+            limit_type: 'meaning_object',
+          });
+        }
         return;
       }
 
       const { highlight } = await response.json();
       setHighlights((prev) => [...prev, highlight]);
+      
+      // Track highlight created
+      const { trackEvent } = await import('@/lib/analytics');
+      trackEvent('highlight_created', {
+        highlight_id: highlight.id,
+        has_label: !!highlight.label,
+      });
+      
       showSuccess('Highlight created successfully');
       router.refresh();
     } catch (err) {

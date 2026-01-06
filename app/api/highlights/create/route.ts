@@ -70,14 +70,8 @@ export async function POST(request: NextRequest) {
     // Increment limit counter
     await incrementLimit(user.id, 'meaning_object');
 
-    // Fire analytics event
-    if (typeof window !== 'undefined' && (window as any).dataLayer) {
-      (window as any).dataLayer.push({
-        event: 'highlight_created',
-        highlight_id: highlight.id,
-        has_label: !!label,
-      });
-    }
+    // Note: Analytics event should be fired client-side after successful creation
+    // This ensures it only fires on actual success and can include UI context
 
     return NextResponse.json({ success: true, highlight });
   } catch (error) {

@@ -56,3 +56,12 @@ body {
 .nextjs-toast-root {
   display: none !important;
 }
+
+/* Make all buttons have pointer cursor */
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}

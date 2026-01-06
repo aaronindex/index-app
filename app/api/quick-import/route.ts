@@ -300,14 +300,8 @@ export async function POST(request: NextRequest) {
       // Increment limit counter
       await incrementLimit(user.id, 'import');
 
-      // Fire analytics event
-      if (typeof window !== 'undefined' && (window as any).dataLayer) {
-        (window as any).dataLayer.push({
-          event: 'import_complete',
-          import_type: 'quick_import',
-          conversation_id: result.conversationId,
-        });
-      }
+      // Note: Analytics events are fired client-side to capture latency
+      // and handle failures properly
 
       return NextResponse.json({
         success: true,

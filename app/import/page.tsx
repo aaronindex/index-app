@@ -112,6 +112,17 @@ export default function ImportPage() {
     );
   };
 
+  // Helper function to determine file type from File object
+  const getUploadFileType = (file: File): 'zip' | 'json' | 'unknown' => {
+    const fileName = file.name.toLowerCase();
+    if (fileName.endsWith('.zip')) {
+      return 'zip';
+    } else if (fileName.endsWith('.json')) {
+      return 'json';
+    }
+    return 'unknown';
+  };
+
   const handleImport = async () => {
     if (!file) return;
 
@@ -123,6 +134,9 @@ export default function ImportPage() {
 
     setLoading(true);
     setError(null);
+
+    // Track import start time
+    const importStartTime = Date.now();
 
     try {
       const supabase = getSupabaseBrowserClient();
@@ -170,6 +184,24 @@ export default function ImportPage() {
         };
       }
 
+      // Track import started on submit (after determining project, before API call)
+      const { trackEvent } = await import('@/lib/analytics');
+      trackEvent('import_started', {
+        import_type: 'file_upload',
+        conversation_count: selected.length,
+        has_project: !!finalProjectId || !!newProjectData,
+        size_bytes: file.size || 0,
+        file_type: getUploadFileType(file),
+      });
+      
+      // Debug logging
+      if (process.env.NEXT_PUBLIC_DEBUG_ANALYTICS === 'true') {
+        console.log('[Analytics] import_started (file_upload)', {
+          size_bytes: file.size,
+          file_type: getUploadFileType(file),
+        });
+      }
+
       // Queue the import job
       const response = await fetch('/api/import/process', {
         method: 'POST',
@@ -186,6 +218,26 @@ export default function ImportPage() {
       if (!response.ok) {
         const errorData = await response.json();
         setError(errorData.error || 'Import failed.');
+        
+        // Track limit hit if 429
+        if (response.status === 429) {
+          const { trackEvent } = await import('@/lib/analytics');
+          trackEvent('limit_hit', {
+            limit_type: 'import',
+          });
+        }
+        
+        // Track import failed
+        const latencyMs = Date.now() - importStartTime;
+        const { trackEvent } = await import('@/lib/analytics');
+        trackEvent('import_failed', {
+          import_type: 'file_upload',
+          import_id: importRecord.id,
+          latency_ms: latencyMs,
+          error: errorData.error || 'Import failed',
+          size_bytes: file.size || 0,
+          file_type: getUploadFileType(file),
+        });
         setLoading(false);
         return;
       }
@@ -206,6 +258,21 @@ export default function ImportPage() {
               if (currentJob.status === 'complete') {
                 clearInterval(pollInterval);
                 setLoading(false);
+                
+                // Calculate latency
+                const latencyMs = Date.now() - importStartTime;
+                const { trackEvent } = await import('@/lib/analytics');
+                trackEvent('import_completed', {
+                  import_type: 'file_upload',
+                  import_id: importRecord.id,
+                  job_id: jobId,
+                  latency_ms: latencyMs,
+                  conversation_count: currentJob.counts?.conversations || 0,
+                  message_count: currentJob.counts?.messages || 0,
+                  size_bytes: file.size || 0,
+                  file_type: getUploadFileType(file),
+                });
+                
                 // Redirect to project or unassigned
                 if (finalProjectId) {
                   router.push(`/projects/${finalProjectId}?imported=${currentJob.counts.conversations || 0}`);
@@ -214,6 +281,17 @@ export default function ImportPage() {
                 }
               } else if (currentJob.status === 'error') {
                 clearInterval(pollInterval);
+                const latencyMs = Date.now() - importStartTime;
+                const { trackEvent } = await import('@/lib/analytics');
+                trackEvent('import_failed', {
+                  import_type: 'file_upload',
+                  import_id: importRecord.id,
+                  job_id: jobId,
+                  latency_ms: latencyMs,
+                  error: currentJob.error || 'Import failed',
+                  size_bytes: file.size || 0,
+                  file_type: getUploadFileType(file),
+                });
                 setError(currentJob.error || 'Import failed');
                 setLoading(false);
               }
@@ -229,11 +307,31 @@ export default function ImportPage() {
       setTimeout(() => {
         clearInterval(pollInterval);
         if (loading) {
+          const latencyMs = Date.now() - importStartTime;
+          const { trackEvent } = await import('@/lib/analytics');
+          trackEvent('import_failed', {
+            import_type: 'file_upload',
+            import_id: importRecord.id,
+            job_id: jobId,
+            latency_ms: latencyMs,
+            error: 'Timeout',
+            size_bytes: file.size || 0,
+            file_type: getUploadFileType(file),
+          });
           setError('Import is taking longer than expected. Please check back later.');
           setLoading(false);
         }
       }, 10 * 60 * 1000);
     } catch (err) {
+      const latencyMs = Date.now() - importStartTime;
+      const { trackEvent } = await import('@/lib/analytics');
+      trackEvent('import_failed', {
+        import_type: 'file_upload',
+        latency_ms: latencyMs,
+        error: err instanceof Error ? err.message : 'Import failed',
+        size_bytes: file?.size || 0,
+        file_type: file ? getUploadFileType(file) : 'unknown',
+      });
       setError('Import failed. Please try again.');
       console.error(err);
       setLoading(false);

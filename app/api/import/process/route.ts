@@ -97,13 +97,8 @@ export async function POST(request: NextRequest) {
     // Increment limit counter (only when job is successfully queued)
     await incrementLimit(user.id, 'import');
 
-    // Fire analytics event
-    if (typeof window !== 'undefined' && (window as any).dataLayer) {
-      (window as any).dataLayer.push({
-        event: 'import_start',
-        import_id: importId,
-      });
-    }
+    // Note: Analytics events are fired client-side in import/page.tsx
+    // to capture latency and handle failures
 
     // Return immediately - job will be processed in background
     return NextResponse.json({

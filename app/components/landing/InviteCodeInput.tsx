@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { trackEvent } from '@/lib/analytics';
 
 interface InviteCodeInputProps {
   variant?: 'hero' | 'compact';
@@ -27,6 +28,11 @@ export default function InviteCodeInput({ variant = 'hero', className = '', dark
     setError(null);
     setLoading(true);
 
+    // Track invite code submission
+    trackEvent('invite_code_submitted', {
+      code_length: code.trim().length,
+    });
+
     try {
       // Verify invite code
       const verifyResponse = await fetch('/api/invite-codes/verify', {
@@ -39,14 +45,23 @@ export default function InviteCodeInput({ variant = 'hero', className = '', dark
 
       if (!verifyData.valid) {
         setError(verifyData.error || 'Invalid invite code');
+        trackEvent('invite_code_rejected', {
+          error: verifyData.error || 'Invalid invite code',
+        });
         setLoading(false);
         return;
       }
+
+      // Track accepted invite code (privacy-safe: no code string)
+      trackEvent('invite_code_accepted');
 
       // Redirect to signup with invite code
       router.push(`/auth/signup?code=${encodeURIComponent(code.trim().toUpperCase())}`);
     } catch (err) {
       setError('Failed to verify invite code. Please try again.');
+      trackEvent('invite_code_rejected', {
+        error: 'Network error',
+      });
       setLoading(false);
     }
   };

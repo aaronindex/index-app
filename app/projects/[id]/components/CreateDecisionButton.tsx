@@ -41,8 +41,26 @@ export default function CreateDecisionButton({ projectId, conversationId }: Crea
 
       if (!response.ok) {
         const errorData = await response.json();
+        
+        // Track limit hit if 429
+        if (response.status === 429) {
+          const { trackEvent } = await import('@/lib/analytics');
+          trackEvent('limit_hit', {
+            limit_type: 'meaning_object',
+          });
+        }
+        
         throw new Error(errorData.error || 'Failed to create decision');
       }
+
+      const { decision } = await response.json();
+      
+      // Track decision created
+      const { trackEvent } = await import('@/lib/analytics');
+      trackEvent('decision_created', {
+        decision_id: decision.id,
+        has_project: !!projectId,
+      });
 
       // Reset form and close modal
       setTitle('');

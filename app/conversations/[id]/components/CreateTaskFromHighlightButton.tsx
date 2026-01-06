@@ -46,8 +46,27 @@ export default function CreateTaskFromHighlightButton({
 
       if (!response.ok) {
         const errorData = await response.json();
+        
+        // Track limit hit if 429
+        if (response.status === 429) {
+          const { trackEvent } = await import('@/lib/analytics');
+          trackEvent('limit_hit', {
+            limit_type: 'meaning_object',
+          });
+        }
+        
         throw new Error(errorData.error || 'Failed to create task');
       }
+
+      const { task } = await response.json();
+      
+      // Track task created
+      const { trackEvent } = await import('@/lib/analytics');
+      trackEvent('task_created', {
+        task_id: task.id,
+        has_project: !!projectId,
+        from_highlight: true,
+      });
 
       // Navigate to project tasks tab
       router.push(`/projects/${projectId}?tab=tasks`);

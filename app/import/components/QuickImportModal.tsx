@@ -72,6 +72,9 @@ export default function QuickImportModal({ isOpen, onClose }: QuickImportModalPr
   useEffect(() => {
     if (!jobId) return;
 
+    // Get import start time from closure (set when jobId is created)
+    const importStartTime = Date.now();
+
     const pollInterval = setInterval(async () => {
       try {
         const response = await fetch(`/api/imports/jobs`);
@@ -82,6 +85,19 @@ export default function QuickImportModal({ isOpen, onClose }: QuickImportModalPr
             setJobStatus(currentJob);
             if (currentJob.status === 'complete') {
               clearInterval(pollInterval);
+              
+              // Track import completed
+              const latencyMs = Date.now() - importStartTime;
+              const { trackEvent } = await import('@/lib/analytics');
+              trackEvent('import_completed', {
+                import_type: 'quick_paste',
+                import_id: currentJob.import_id || undefined,
+                job_id: jobId,
+                latency_ms: latencyMs,
+                conversation_count: 1,
+                message_count: currentJob.counts?.messages || 0,
+              });
+              
               // Fetch conversation ID from import
               const supabase = getSupabaseBrowserClient();
               const { data: importData } = await supabase
@@ -108,6 +124,18 @@ export default function QuickImportModal({ isOpen, onClose }: QuickImportModalPr
               }
             } else if (currentJob.status === 'error') {
               clearInterval(pollInterval);
+              
+              // Track import failed
+              const latencyMs = Date.now() - importStartTime;
+              const { trackEvent } = await import('@/lib/analytics');
+              trackEvent('import_failed', {
+                import_type: 'quick_paste',
+                import_id: currentJob.import_id || undefined,
+                job_id: jobId,
+                latency_ms: latencyMs,
+                error: currentJob.error || 'Import failed',
+              });
+              
               setError(currentJob.error || 'Import failed');
               setLoading(false);
             }
@@ -129,6 +157,17 @@ export default function QuickImportModal({ isOpen, onClose }: QuickImportModalPr
 
     setLoading(true);
     setError(null);
+
+    // Track import start time
+    const importStartTime = Date.now();
+
+    // Track import started on submit (before API call)
+    const { trackEvent } = await import('@/lib/analytics');
+    trackEvent('import_started', {
+      import_type: 'quick_paste',
+      chars: transcript.trim().length,
+      has_project: projectAction === 'existing' || projectAction === 'new',
+    });
 
     try {
       const response = await fetch('/api/quick-import', {
@@ -153,14 +192,37 @@ export default function QuickImportModal({ isOpen, onClose }: QuickImportModalPr
       const data = await response.json();
 
       if (!response.ok) {
+        // Track limit hit if 429
+        if (response.status === 429) {
+          const { trackEvent } = await import('@/lib/analytics');
+          trackEvent('limit_hit', {
+            limit_type: 'import',
+          });
+        }
+        
         if (response.status === 409 && data.error === 'duplicate') {
           setError(
             `This conversation already exists. ${data.existingConversationId ? 'Would you like to open it?' : ''}`
           );
           // Could add a link to open existing conversation here
+          const latencyMs = Date.now() - importStartTime;
+          const { trackEvent } = await import('@/lib/analytics');
+          trackEvent('import_failed', {
+            import_type: 'quick_paste',
+            latency_ms: latencyMs,
+            error: 'duplicate',
+          });
           setLoading(false);
           return;
         }
+        
+        const latencyMs = Date.now() - importStartTime;
+        const { trackEvent } = await import('@/lib/analytics');
+        trackEvent('import_failed', {
+          import_type: 'quick_paste',
+          latency_ms: latencyMs,
+          error: data.error || 'Failed to import conversation',
+        });
         setError(data.error || 'Failed to import conversation');
         setLoading(false);
         return;
@@ -168,6 +230,16 @@ export default function QuickImportModal({ isOpen, onClose }: QuickImportModalPr
 
       if (data.processed) {
         // Synchronous processing complete
+        const latencyMs = Date.now() - importStartTime;
+        const { trackEvent } = await import('@/lib/analytics');
+        trackEvent('import_completed', {
+          import_type: 'quick_paste',
+          import_id: data.importId || undefined,
+          latency_ms: latencyMs,
+          conversation_count: 1,
+          message_count: data.messageCount || 0,
+        });
+        
         setSuccess({
           conversationId: data.conversationId,
           title: data.title,
@@ -181,6 +253,13 @@ export default function QuickImportModal({ isOpen, onClose }: QuickImportModalPr
         // Continue polling (handled by useEffect)
       }
     } catch (err) {
+      const latencyMs = Date.now() - importStartTime;
+      const { trackEvent } = await import('@/lib/analytics');
+      trackEvent('import_failed', {
+        import_type: 'quick_paste',
+        latency_ms: latencyMs,
+        error: err instanceof Error ? err.message : 'Failed to import conversation',
+      });
       setError('Failed to import conversation. Please try again.');
       console.error(err);
       setLoading(false);

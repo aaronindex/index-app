@@ -108,6 +108,13 @@ export default function StartChatModal({
           onStatusUpdate('copied');
         }
       }
+      
+      // Track prompt copied event
+      const { trackEvent } = await import('@/lib/analytics');
+      trackEvent('prompt_copied', {
+        target_tool: targetTool,
+        has_run_id: !!currentRunId,
+      });
     } catch (err) {
       console.error('Failed to copy to clipboard:', err);
     }
@@ -167,7 +174,32 @@ export default function StartChatModal({
     setError(null);
 
     try {
+      // Determine object type from contextBlock source
+      // Note: This is approximate - contextBlock.source may not perfectly map to object_type
+      let objectType: 'project' | 'task' | 'decision' = 'project';
+      if (contextBlock.source === 'decision') {
+        objectType = 'decision';
+      }
+      
       const result = await onGenerate(intent, targetTool);
+      
+      // Determine prompt length
+      let promptLength = 0;
+      if (result && typeof result === 'object' && 'promptText' in result) {
+        promptLength = result.promptText.length;
+      } else if (contextBlock.fullContext) {
+        promptLength = contextBlock.fullContext.length;
+      }
+      
+      // Track start chat invoked (after generation to capture actual prompt length)
+      const { trackEvent } = await import('@/lib/analytics');
+      trackEvent('start_chat_invoked', {
+        target_tool: targetTool,
+        intent_type: selectedIntent === 'custom' ? 'custom' : selectedIntent,
+        object_type: objectType,
+        has_project: !!contextBlock.project,
+        prompt_length: promptLength,
+      });
       
       // If onGenerate returns prompt data, use it; otherwise it's handled externally
       if (result && typeof result === 'object' && 'promptText' in result) {

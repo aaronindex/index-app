@@ -83,6 +83,8 @@ function getUserFriendlyErrorMessage(error: ApiError, status: number): string {
     case 422:
       return 'Invalid input. Please check your data and try again.';
     case 429:
+      // Track limit hit (will be called from client-side components)
+      // Note: Specific limit_type should be determined by the calling component
       return 'Too many requests. Please wait a moment and try again.';
     case 500:
     case 502:
