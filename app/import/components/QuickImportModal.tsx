@@ -87,7 +87,7 @@ export default function QuickImportModal({ isOpen, onClose }: QuickImportModalPr
               clearInterval(pollInterval);
               
               // Track import completed
-              const latencyMs = Date.now() - importStartTime;
+              const latencyMs = importStartTime ? Date.now() - importStartTime : 0;
               const { trackEvent } = await import('@/lib/analytics');
               trackEvent('import_completed', {
                 import_type: 'quick_paste',
@@ -126,7 +126,7 @@ export default function QuickImportModal({ isOpen, onClose }: QuickImportModalPr
               clearInterval(pollInterval);
               
               // Track import failed
-              const latencyMs = Date.now() - importStartTime;
+              const latencyMs = importStartTime ? Date.now() - importStartTime : 0;
               const { trackEvent } = await import('@/lib/analytics');
               trackEvent('import_failed', {
                 import_type: 'quick_paste',
@@ -217,7 +217,7 @@ export default function QuickImportModal({ isOpen, onClose }: QuickImportModalPr
           return;
         }
         
-        const latencyMs = Date.now() - importStartTime;
+        const latencyMs = Date.now() - startTime;
         const { trackEvent } = await import('@/lib/analytics');
         trackEvent('import_failed', {
           import_type: 'quick_paste',
@@ -231,7 +231,7 @@ export default function QuickImportModal({ isOpen, onClose }: QuickImportModalPr
 
       if (data.processed) {
         // Synchronous processing complete
-        const latencyMs = Date.now() - importStartTime;
+        const latencyMs = Date.now() - startTime;
         const { trackEvent } = await import('@/lib/analytics');
         trackEvent('import_completed', {
           import_type: 'quick_paste',
@@ -255,7 +255,7 @@ export default function QuickImportModal({ isOpen, onClose }: QuickImportModalPr
         // Continue polling (handled by useEffect)
       }
     } catch (err) {
-      const latencyMs = Date.now() - importStartTime;
+      const latencyMs = startTime ? Date.now() - startTime : 0;
       const { trackEvent } = await import('@/lib/analytics');
       trackEvent('import_failed', {
         import_type: 'quick_paste',

@@ -414,3 +414,61 @@ F2 — Subscription tiers
 F3 — Soft paywall (import count)
 F4 — Usage dashboard
 F5 — Upgrade nudges
+
+==================================================
+PHASE 2.5 — ACTION ORGANIZATION & PLANNING LAYER
+==================================================
+
+Task Co-Creation (signal → action)
+[ ] Auto-generate 1 weighted AI task list per import run
+[ ] Enable full list mutations (add/modify/delete/reorder/regroup)
+    - Instrument: `task_list_generated`, `task_item_mutated`
+[ ] Add Task Seeds (1-line continuation sparks, per Task object)
+    - Mutations supported, no direct Start Chat trigger
+    - Instrument: `task_seed_added`
+
+Temporal Planning Tags
+[ ] Add enum-only temporal tags to Tasks:
+    - `this_week` / `this_month` / `later`
+    - Instrument: `task_horizon_tagged`
+
+Domain Separation (Business vs Personal)
+[ ] Business domain uses **Projects** as buckets
+[ ] Personal domain uses **Themes** as buckets
+[ ] Enforce **no crossover of tasks or search signal** between domains
+[ ] Personal dashboard shows theme-level tasks only
+[ ] Business dashboard shows project-level tasks only
+    - Instrument: `domain_switched`, `dashboard_viewed`
+
+Dashboard Planning Views (minimal magic surface)
+[ ] Build Business Dashboard
+    - Task breakdown: Week / Month / Later
+    - % complete per Project (qualitative bar only)
+    - 1-line **Minimum Next Action** headline
+    - Instrument: `dashboard_project_progressed`, `next_action_viewed`
+[ ] Build Personal Dashboard
+    - Task breakdown: Week / Month / Later
+    - % complete per Theme (qualitative bar only)
+    - 1-line **Minimum Next Action** headline
+    - Instrument: `dashboard_theme_progressed`, `next_action_viewed`
+
+Exports & Continuity
+[ ] Add checklist.md export from:
+    - Project Dashboard
+    - Theme Dashboard
+    - Task object view
+[ ] Ensure exports respect:
+    - Redactions table
+    - Inactive/Dormant flags
+    - Domain silo (business/personal only)
+[ ] Export filename unique per run: `checklist-<timestamp>.md`
+    - Instrument: `checklist_exported`
+
+==================================================
+DEPRECATED (Phase 2.5)
+==================================================
+[x] DEPRECATED: Global Action List (moved to dashboard-local planning only)
+[x] DEPRECATED: Thread Explorer / Mini-Map (superseded by Thought Objects + Gravity nudges)
+[x] DEPRECATED: Theme Map visualization
+[x] DEPRECATED: Branching model
+[x] REMOVED: Any chatbot or micro-chat UI surface
