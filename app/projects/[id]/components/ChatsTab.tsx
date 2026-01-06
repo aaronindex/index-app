@@ -2,6 +2,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import ActiveFilterPills from './ActiveFilterPills';
 import ToggleInactiveButton from './ToggleInactiveButton';
@@ -46,6 +47,7 @@ interface ChatsTabProps {
 type Filter = 'active' | 'all' | 'inactive';
 
 export default function ChatsTab({ conversations, projectId }: ChatsTabProps) {
+  const router = useRouter();
   const [filter, setFilter] = useState<Filter>('active');
 
   const { activeItems, inactiveItems } = useMemo(() => {
@@ -95,7 +97,10 @@ export default function ChatsTab({ conversations, projectId }: ChatsTabProps) {
           <p className="text-zinc-600 dark:text-zinc-400 mb-4">
             No chats in this project yet.
           </p>
-          <button className="px-4 py-2 bg-foreground text-background rounded-lg hover:opacity-90 transition-opacity font-medium text-sm">
+          <button 
+            onClick={() => router.push(`/import?project=${projectId}`)}
+            className="px-4 py-2 bg-foreground text-background rounded-lg hover:opacity-90 transition-opacity font-medium text-sm"
+          >
             Import Chats Into This Project
           </button>
         </div>
@@ -144,7 +149,10 @@ export default function ChatsTab({ conversations, projectId }: ChatsTabProps) {
             ))}
           </div>
           <div className="pt-4 border-t border-[rgb(var(--ring)/0.08)]">
-            <button className="px-4 py-2 bg-[rgb(var(--text))] text-[rgb(var(--bg))] rounded-lg hover:opacity-90 transition-opacity font-medium text-sm">
+            <button 
+              onClick={() => router.push(`/import?project=${projectId}`)}
+              className="px-4 py-2 bg-[rgb(var(--text))] text-[rgb(var(--bg))] rounded-lg hover:opacity-90 transition-opacity font-medium text-sm"
+            >
               Import Chats Into This Project
             </button>
           </div>

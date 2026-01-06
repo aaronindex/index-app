@@ -30,6 +30,7 @@ export default function QuickImportModal({ isOpen, onClose }: QuickImportModalPr
   const [success, setSuccess] = useState<{ conversationId: string; title: string; messageCount: number } | null>(null);
   const [jobId, setJobId] = useState<string | null>(null);
   const [jobStatus, setJobStatus] = useState<any>(null);
+  const [importStartTime, setImportStartTime] = useState<number | null>(null);
 
   // Fetch projects on mount
   useEffect(() => {
@@ -70,17 +71,16 @@ export default function QuickImportModal({ isOpen, onClose }: QuickImportModalPr
 
   // Poll job status if jobId exists
   useEffect(() => {
-    if (!jobId) return;
-
-    // Get import start time from closure (set when jobId is created)
-    const importStartTime = Date.now();
+    if (!jobId || !importStartTime) return;
 
     const pollInterval = setInterval(async () => {
       try {
         const response = await fetch(`/api/imports/jobs`);
         if (response.ok) {
           const data = await response.json();
-          const currentJob = data.jobs?.find((j: any) => j.id === jobId);
+          // Ensure jobs is an array
+          const jobs = Array.isArray(data.jobs) ? data.jobs : [];
+          const currentJob = jobs.find((j: any) => j.id === jobId);
           if (currentJob) {
             setJobStatus(currentJob);
             if (currentJob.status === 'complete') {
@@ -147,7 +147,7 @@ export default function QuickImportModal({ isOpen, onClose }: QuickImportModalPr
     }, 3000);
 
     return () => clearInterval(pollInterval);
-  }, [jobId]);
+  }, [jobId, importStartTime]);
 
   const handleImport = async () => {
     if (!transcript.trim()) {
@@ -159,7 +159,8 @@ export default function QuickImportModal({ isOpen, onClose }: QuickImportModalPr
     setError(null);
 
     // Track import start time
-    const importStartTime = Date.now();
+    const startTime = Date.now();
+    setImportStartTime(startTime);
 
     // Track import started on submit (before API call)
     const { trackEvent } = await import('@/lib/analytics');
@@ -205,7 +206,7 @@ export default function QuickImportModal({ isOpen, onClose }: QuickImportModalPr
             `This conversation already exists. ${data.existingConversationId ? 'Would you like to open it?' : ''}`
           );
           // Could add a link to open existing conversation here
-          const latencyMs = Date.now() - importStartTime;
+          const latencyMs = Date.now() - startTime;
           const { trackEvent } = await import('@/lib/analytics');
           trackEvent('import_failed', {
             import_type: 'quick_paste',
@@ -248,6 +249,7 @@ export default function QuickImportModal({ isOpen, onClose }: QuickImportModalPr
         setLoading(false);
       } else {
         // Queued for background processing
+        // importStartTime already set above
         setJobId(data.jobId);
         setJobStatus({ status: 'queued', step: 'queued' });
         // Continue polling (handled by useEffect)
@@ -281,6 +283,7 @@ export default function QuickImportModal({ isOpen, onClose }: QuickImportModalPr
       setSuccess(null);
       setJobId(null);
       setJobStatus(null);
+      setImportStartTime(null);
       onClose();
     }
   };

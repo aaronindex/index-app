@@ -29,13 +29,50 @@ export default function ImportPage() {
   const [newProjectDescription, setNewProjectDescription] = useState('');
   const [showQuickImport, setShowQuickImport] = useState(false);
 
-  // Check for quick import query param
+  // Check for quick import query param and project pre-selection
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('quick') === 'true') {
       setShowQuickImport(true);
       // Clean up URL
       router.replace('/import', { scroll: false });
+    }
+    
+    // Pre-select project if provided in URL
+    const projectIdFromUrl = params.get('project');
+    if (projectIdFromUrl) {
+      // Fetch projects first, then set the selected project
+      const fetchProjectsAndSelect = async () => {
+        const supabase = getSupabaseBrowserClient();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
+        if (user) {
+          const { data: userProjects, error: projectsError } = await supabase
+            .from('projects')
+            .select('id, name')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false });
+
+          if (projectsError) {
+            console.error('[Import] Error fetching projects:', projectsError);
+            setProjects([]);
+          } else {
+            // Ensure projects is always an array
+            const projectsArray = Array.isArray(userProjects) ? userProjects : [];
+            setProjects(projectsArray);
+            // Check if the project from URL exists in user's projects
+            const projectExists = projectsArray.some(p => p.id === projectIdFromUrl);
+            if (projectExists) {
+              setSelectedProjectId(projectIdFromUrl);
+              setProjectAction('existing');
+            }
+          }
+        }
+      };
+      
+      fetchProjectsAndSelect();
     }
   }, [router]);
 
@@ -89,13 +126,19 @@ export default function ImportPage() {
       } = await supabase.auth.getUser();
 
       if (user) {
-        const { data: userProjects } = await supabase
+        const { data: userProjects, error: projectsError } = await supabase
           .from('projects')
           .select('id, name')
           .eq('user_id', user.id)
           .order('created_at', { ascending: false });
 
-        setProjects(userProjects || []);
+        if (projectsError) {
+          console.error('[Import] Error fetching projects:', projectsError);
+          setProjects([]);
+        } else {
+          // Ensure projects is always an array
+          setProjects(Array.isArray(userProjects) ? userProjects : []);
+        }
       }
 
       setStep('preview');

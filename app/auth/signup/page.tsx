@@ -16,6 +16,7 @@ function SignUpForm() {
   const [inviteCode, setInviteCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [emailSent, setEmailSent] = useState(false);
 
   // Pre-fill invite code from URL if provided
   useEffect(() => {
@@ -29,6 +30,7 @@ function SignUpForm() {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setEmailSent(false);
 
     // Verify invite code first
     if (!inviteCode.trim()) {
@@ -61,6 +63,12 @@ function SignUpForm() {
                      (typeof window !== 'undefined' ? window.location.origin : 'https://indexapp.co');
       const redirectUrl = `${appUrl}/auth/callback`;
       
+      console.log('[Signup] Attempting signup with:', {
+        email,
+        redirectUrl,
+        appUrl,
+      });
+      
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
@@ -69,21 +77,34 @@ function SignUpForm() {
         },
       });
 
+      console.log('[Signup] Signup response:', {
+        user: signUpData?.user?.id,
+        email: signUpData?.user?.email,
+        error: signUpError?.message,
+        requiresConfirmation: !signUpData?.user,
+      });
+
       if (signUpError) {
+        console.error('[Signup] Signup error:', signUpError);
         setError(signUpError.message);
         setLoading(false);
         return;
       }
 
       // Check if email confirmation is required
-      // If user is null, it means email confirmation is required
-      if (!signUpData.user) {
+      // Supabase returns a user object even when email confirmation is required
+      // Check if user exists and if email is confirmed
+      const requiresEmailConfirmation = signUpData.user && !signUpData.user.email_confirmed_at;
+      
+      if (!signUpData.user || requiresEmailConfirmation) {
         // Email confirmation required - show message
+        console.log('[Signup] Email confirmation required - user will receive email', {
+          userId: signUpData.user?.id,
+          emailConfirmed: signUpData.user?.email_confirmed_at,
+        });
         setError(null);
         setLoading(false);
-        // Show success message instead of error
-        alert('Please check your email to confirm your account. The confirmation link will expire in 24 hours.');
-        router.push('/auth/signin');
+        setEmailSent(true);
         return;
       }
 
@@ -113,6 +134,52 @@ function SignUpForm() {
       setLoading(false);
     }
   };
+
+  if (emailSent) {
+    return (
+      <main className="min-h-screen bg-[rgb(var(--bg))] flex items-center justify-center">
+        <div className="max-w-md w-full px-4 sm:px-6 lg:px-8 text-center">
+          <div className="mb-8">
+            <h1 className="font-serif text-3xl font-semibold text-[rgb(var(--text))] mb-2">
+              Check your email
+            </h1>
+            <p className="text-[rgb(var(--muted))] mb-6">
+              We've sent a confirmation link to <strong>{email}</strong>
+            </p>
+          </div>
+
+          <div className="p-4 rounded-xl bg-green-50 dark:bg-green-900/20 ring-1 ring-green-200 dark:ring-green-800 mb-6">
+            <p className="text-sm text-green-800 dark:text-green-400">
+              Click the link in the email to activate your account. The link will expire in 24 hours.
+            </p>
+            <p className="text-xs text-green-700 dark:text-green-500 mt-2">
+              Didn't receive the email? Check your spam folder or try signing up again.
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            <Link
+              href="/auth/signin"
+              className="block px-4 py-2 bg-[rgb(var(--text))] text-[rgb(var(--bg))] rounded-lg hover:opacity-90 transition-opacity font-medium"
+            >
+              Back to Sign In
+            </Link>
+            <button
+              onClick={() => {
+                setEmailSent(false);
+                setEmail('');
+                setPassword('');
+                setInviteCode('');
+              }}
+              className="text-sm text-[rgb(var(--text))] hover:underline opacity-70"
+            >
+              Try a different email
+            </button>
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-[rgb(var(--bg))] flex items-center justify-center">
