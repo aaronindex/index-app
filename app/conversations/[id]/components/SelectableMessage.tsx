@@ -201,8 +201,10 @@ export default function SelectableMessage({
 
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
-      // Don't hide if clicking the button itself
-      if (target.closest('button[data-highlight-button]')) {
+      // Don't hide if clicking the button container or any button inside it
+      const highlightButtonContainer = target.closest('[data-highlight-button]');
+      if (highlightButtonContainer) {
+        // Allow the button's onClick to fire - don't hide
         return;
       }
       // Hide if clicking outside the content area
@@ -212,8 +214,16 @@ export default function SelectableMessage({
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    // Use setTimeout to ensure button onClick fires first (bubbling phase)
+    // This allows the button's onClick handler to execute before we check if we should hide
+    const handleClick = (e: MouseEvent) => {
+      setTimeout(() => {
+        handleClickOutside(e);
+      }, 0);
+    };
+
+    document.addEventListener('click', handleClick); // Use bubbling phase (default)
+    return () => document.removeEventListener('click', handleClick);
   }, [showHighlightButton]);
 
   return (
@@ -236,14 +246,20 @@ export default function SelectableMessage({
           }}
         >
           <button
-            onClick={handleHighlight}
+            onClick={(e) => {
+              e.stopPropagation(); // Prevent event from bubbling to document
+              handleHighlight();
+            }}
             className="px-3 py-1.5 text-xs font-medium bg-foreground text-background rounded-lg shadow-lg hover:opacity-90 transition-opacity"
           >
             Highlight
           </button>
           {onRedact && (
             <button
-              onClick={handleRedact}
+              onClick={(e) => {
+                e.stopPropagation(); // Prevent event from bubbling to document
+                handleRedact();
+              }}
               className="px-3 py-1.5 text-xs font-medium bg-red-600 text-white rounded-lg shadow-lg hover:opacity-90 transition-opacity"
             >
               Redact
