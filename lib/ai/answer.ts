@@ -4,6 +4,12 @@
  */
 
 import { SearchResult } from '@/lib/search';
+import { THINKING_STANCE } from './stance';
+
+export interface FollowUpQuestion {
+  type: 'clarify' | 'decide' | 'commit' | 'deprioritize';
+  text: string;
+}
 
 export interface SynthesizedAnswer {
   answer: string;
@@ -14,7 +20,7 @@ export interface SynthesizedAnswer {
     excerpt: string;
     similarity: number;
   }>;
-  followUpQuestions: string[];
+  followUpQuestions: FollowUpQuestion[];
 }
 
 /**
@@ -32,6 +38,9 @@ export async function synthesizeAnswer(
     };
   }
 
+  // Import stance constants
+  const thinkingStance = THINKING_STANCE;
+
   // Build context from top results (limit to top 5 for token efficiency)
   const topResults = searchResults.slice(0, 5);
   const context = topResults
@@ -43,13 +52,17 @@ ${result.content.substring(0, 500)}${result.content.length > 500 ? '...' : ''}`;
 
   const prompt = `You are an intelligent assistant helping a user understand their own thinking and conversations.
 
+THINKING STANCE:
+${thinkingStance}
+
 The user asked: "${query}"
 
 Based on the following excerpts from their conversations, provide:
 1. A clear, synthesized answer that directly addresses their question
 2. Be specific and cite which conversations/excerpts support your answer
-3. If the information is incomplete or unclear, say so
-4. Write in a helpful, conversational tone as if you're summarizing their own thoughts
+3. If the information is incomplete or unclear, say so explicitly rather than expanding scope
+4. Write in a structured, calm, decisive tone
+5. Prefer reduction over expansion
 
 Conversation excerpts:
 ${context}
@@ -74,7 +87,7 @@ Provide your answer in a clear, well-structured format. Be concise but thorough.
           {
             role: 'system',
             content:
-              'You are a helpful assistant that synthesizes information from a user\'s own conversations. Provide clear, accurate answers based on the provided context. Always cite your sources.',
+              `You are a helpful assistant that synthesizes information from a user's own conversations. Provide clear, accurate answers based on the provided context. Always cite your sources.\n\nTHINKING STANCE:\n${thinkingStance}`,
           },
           {
             role: 'user',
@@ -98,29 +111,41 @@ Provide your answer in a clear, well-structured format. Be concise but thorough.
       throw new Error('No answer in OpenAI response');
     }
 
-    // Generate actionable follow-up questions
-    // These should be prompts that can be converted into branches, tasks, decisions, or highlights
-    const followUpPrompt = `Based on the user's question "${query}" and the answer provided below, generate 2-3 actionable follow-up prompts. These should be phrased as prompts the user could realistically act on, not just questions to search.
+    // Generate constrained follow-up questions using taxonomy
+    // Follow-ups must be one of: clarify, decide, commit, deprioritize
+    const followUpPrompt = `Based on the user's question "${query}" and the answer provided below, generate 2-4 follow-up prompts using ONLY these categories:
+
+THINKING STANCE:
+${thinkingStance}
 
 Answer provided:
 ${answer}
 
-Each prompt should be:
-- Actionable (could become a branch conversation, task, decision, or highlight)
-- Specific to the context and answer
-- Phrased as a prompt or question that invites exploration or action
+FOLLOW-UP TAXONOMY (choose one type per prompt):
+- "clarify": Questions that seek to resolve uncertainty or ambiguity
+- "decide": Questions that require a decision between options
+- "commit": Questions that lead to concrete next actions or commitments
+- "deprioritize": Questions that help identify what can be set aside
 
-Examples of good prompts:
-- "What decision does this insight imply for [Project]?"
-- "What assumptions might be wrong here?"
-- "How should I prioritize the next steps?"
-- "What are the risks I haven't considered?"
+RULES:
+- No brainstorming or exploration prompts
+- No open-ended "what else?" questions
+- Each prompt must be phrased to convert cleanly into a Task or Decision
+- Maximum 4 follow-ups total
 
-Return only a JSON object with a "questions" array of prompt strings, no other text.
+Return ONLY a JSON object with this exact structure:
+{
+  "followUps": [
+    {"type": "clarify", "text": "What specific uncertainty needs resolution?"},
+    {"type": "decide", "text": "What decision does this require?"},
+    {"type": "commit", "text": "What concrete action should be taken?"},
+    {"type": "deprioritize", "text": "What can be set aside?"}
+  ]
+}
 
-Example format: {"questions": ["Prompt 1?", "Prompt 2?", "Prompt 3?"]}`;
+Example format: {"followUps": [{"type": "decide", "text": "Should I prioritize X or Y?"}, {"type": "commit", "text": "What are the next 3 concrete steps?"}]}`;
 
-    let followUpQuestions: string[] = [];
+    let followUpQuestions: FollowUpQuestion[] = [];
     try {
       const followUpResponse = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
@@ -133,7 +158,7 @@ Example format: {"questions": ["Prompt 1?", "Prompt 2?", "Prompt 3?"]}`;
           messages: [
             {
               role: 'system',
-              content: 'You are a helpful assistant. Return only valid JSON arrays.',
+              content: `You are a helpful assistant. Return only valid JSON objects with the exact structure specified. Follow the thinking stance constraints.`,
             },
             {
               role: 'user',
@@ -141,8 +166,8 @@ Example format: {"questions": ["Prompt 1?", "Prompt 2?", "Prompt 3?"]}`;
             },
           ],
           response_format: { type: 'json_object' },
-          temperature: 0.8,
-          max_tokens: 200,
+          temperature: 0.7,
+          max_tokens: 300,
         }),
       });
 
@@ -152,30 +177,31 @@ Example format: {"questions": ["Prompt 1?", "Prompt 2?", "Prompt 3?"]}`;
         if (followUpContent) {
           try {
             const parsed = JSON.parse(followUpContent);
-            // Handle both {questions: [...]} and [...] formats
-            followUpQuestions = Array.isArray(parsed)
-              ? parsed
-              : Array.isArray(parsed.questions)
-              ? parsed.questions
-              : [];
-          } catch {
-            // If parsing fails, generate simple follow-ups
-            followUpQuestions = [
-              `Tell me more about this`,
-              `What else did I discuss related to this?`,
-              `What are the implications of this?`,
-            ];
+            // Parse follow-ups with type and text
+            if (parsed.followUps && Array.isArray(parsed.followUps)) {
+              followUpQuestions = parsed.followUps
+                .filter((f: any) => {
+                  // Validate type is one of the allowed values
+                  const validTypes = ['clarify', 'decide', 'commit', 'deprioritize'];
+                  return validTypes.includes(f.type) && f.text && typeof f.text === 'string';
+                })
+                .map((f: any) => ({
+                  type: f.type as 'clarify' | 'decide' | 'commit' | 'deprioritize',
+                  text: f.text,
+                }))
+                .slice(0, 4); // Limit to 4
+            }
+          } catch (parseError) {
+            console.error('Error parsing follow-up questions:', parseError);
+            // Fallback: provide empty array (no follow-ups if parsing fails)
+            followUpQuestions = [];
           }
         }
       }
     } catch (followUpError) {
       console.error('Error generating follow-up questions:', followUpError);
-      // Provide default follow-ups if generation fails
-      followUpQuestions = [
-        `Tell me more about this`,
-        `What else did I discuss related to this?`,
-        `What are the implications of this?`,
-      ];
+      // Fallback: provide empty array (no follow-ups if generation fails)
+      followUpQuestions = [];
     }
 
     // Build citations from search results
@@ -207,11 +233,7 @@ Example format: {"questions": ["Prompt 1?", "Prompt 2?", "Prompt 3?"]}`;
         excerpt: result.content.substring(0, 200) + (result.content.length > 200 ? '...' : ''),
         similarity: result.similarity,
       })),
-      followUpQuestions: [
-        `Tell me more about this`,
-        `What else did I discuss related to this?`,
-        `What are the implications of this?`,
-      ],
+      followUpQuestions: [],
     };
   }
 }

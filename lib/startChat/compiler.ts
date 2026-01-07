@@ -5,6 +5,7 @@
  */
 
 import { getSupabaseServerClient } from '@/lib/supabaseServer';
+import { START_CHAT_CONSTRAINTS } from '@/lib/ai/stance';
 
 export interface ContextRef {
   type: 'task' | 'decision' | 'highlight' | 'conversation';
@@ -366,6 +367,9 @@ export async function compileTaskStartChatPacket(
 
   let prompt = '';
 
+  // Add system constraints at the top
+  prompt += `${START_CHAT_CONSTRAINTS}\n\n`;
+
   prompt += `TASK: ${task.title}\n\n`;
 
   if (task.description) {
@@ -549,6 +553,9 @@ export async function compileDecisionStartChatPacket(
 
   // Build Continuity Packet
   let prompt = '';
+
+  // 0. System Constraints (at the top)
+  prompt += `${START_CHAT_CONSTRAINTS}\n\n`;
 
   // 1. Decision Context
   prompt += `DECISION TO RE-EVALUATE\n`;

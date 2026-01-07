@@ -419,56 +419,166 @@ F5 — Upgrade nudges
 PHASE 2.5 — ACTION ORGANIZATION & PLANNING LAYER
 ==================================================
 
-Task Co-Creation (signal → action)
-[ ] Auto-generate 1 weighted AI task list per import run
-[ ] Enable full list mutations (add/modify/delete/reorder/regroup)
-    - Instrument: `task_list_generated`, `task_item_mutated`
-[ ] Add Task Seeds (1-line continuation sparks, per Task object)
-    - Mutations supported, no direct Start Chat trigger
-    - Instrument: `task_seed_added`
+Purpose:
+Translate insight into forward motion without introducing branching,
+recursive thinking, or task-manager bloat. This layer supports
+*orientation and commitment*, not ideation.
 
-Temporal Planning Tags
-[ ] Add enum-only temporal tags to Tasks:
-    - `this_week` / `this_month` / `later`
+Core Principles:
+- Tasks and Decisions are the only forward-action objects.
+- No new chat or branching surfaces are introduced.
+- Planning is qualitative and horizon-based, not calendar-based.
+- Business and Personal domains are strictly siloed.
+- AI suggests structure; users retain final authority.
+
+--------------------------------------------------
+2.5.1 — Task Co-Creation (Signal → Action)
+--------------------------------------------------
+
+[ ] Auto-generate a small, weighted AI task list per import run
+    - Source signals: highlights, Ask Index output, unresolved decisions
+    - Limit output to 3–5 tasks maximum
+    - Tasks must always be user-editable
+    - Instrument: `task_list_generated`
+
+[ ] Enable full task list mutation
+    - Add / edit / delete
+    - Reorder
+    - Move between horizon buckets
+    - Instrument: `task_item_mutated`
+
+--------------------------------------------------
+2.5.2 — Temporal Horizon Tags (Lightweight Planning)
+--------------------------------------------------
+
+Purpose:
+Provide a sense of “when” without schedules, dates, or deadlines.
+
+[ ] Add enum-only horizon tags to Tasks:
+    - `this_week`
+    - `this_month`
+    - `later`
     - Instrument: `task_horizon_tagged`
 
-Domain Separation (Business vs Personal)
-[ ] Business domain uses **Projects** as buckets
-[ ] Personal domain uses **Themes** as buckets
-[ ] Enforce **no crossover of tasks or search signal** between domains
-[ ] Personal dashboard shows theme-level tasks only
-[ ] Business dashboard shows project-level tasks only
+[ ] Add enum-only horizon tags to Decisions:
+    - `this_week`
+    - `this_month`
+    - `later`
+    - Instrument: `decision_horizon_tagged`
+
+Rules:
+- One horizon tag per item
+- No calendar integration
+- Horizon affects grouping and surfacing only
+
+--------------------------------------------------
+2.5.3 — Pinned Notes (Orientation Anchors)
+--------------------------------------------------
+
+Purpose:
+Allow minimal, user-authored grounding per container.
+
+[ ] Allow one pinned note per:
+    - Project (Business domain)
+    - Theme (Personal domain)
+    - Instrument: `bucket_note_pinned`
+
+Rules:
+- One note max per container
+- Manual edits only
+- No AI mutation
+- Used for framing, not accumulation
+
+--------------------------------------------------
+2.5.4 — Domain Separation (Business vs Personal)
+--------------------------------------------------
+
+Rules:
+- Business domain uses **Projects** as containers
+- Personal domain uses **Themes** as containers
+- No crossover of:
+    - Tasks
+    - Decisions
+    - Search results
+    - Start Chat context
+    - Exports
+
+[ ] Business dashboard shows project-level items only
+[ ] Personal dashboard shows theme-level items only
     - Instrument: `domain_switched`, `dashboard_viewed`
 
-Dashboard Planning Views (minimal magic surface)
-[ ] Build Business Dashboard
-    - Task breakdown: Week / Month / Later
-    - % complete per Project (qualitative bar only)
-    - 1-line **Minimum Next Action** headline
+--------------------------------------------------
+2.5.5 — Dashboard Planning Views (Orientation Surfaces)
+--------------------------------------------------
+
+Purpose:
+Provide a calm planning surface focused on “what matters next,”
+not productivity metrics.
+
+[ ] Business Dashboard
+    - Tasks grouped by horizon (Week / Month / Later)
+    - Qualitative progress per Project (no numeric precision)
+    - Single “Minimum Next Action” headline
     - Instrument: `dashboard_project_progressed`, `next_action_viewed`
-[ ] Build Personal Dashboard
-    - Task breakdown: Week / Month / Later
-    - % complete per Theme (qualitative bar only)
-    - 1-line **Minimum Next Action** headline
+
+[ ] Personal Dashboard
+    - Tasks grouped by horizon (Week / Month / Later)
+    - Qualitative progress per Theme
+    - Single “Minimum Next Action” headline
     - Instrument: `dashboard_theme_progressed`, `next_action_viewed`
 
-Exports & Continuity
-[ ] Add checklist.md export from:
+--------------------------------------------------
+2.5.6 — Exports & Continuity
+--------------------------------------------------
+
+[ ] Enable checklist.md export from:
     - Project Dashboard
     - Theme Dashboard
-    - Task object view
+    - Task detail view
+
 [ ] Ensure exports respect:
-    - Redactions table
-    - Inactive/Dormant flags
-    - Domain silo (business/personal only)
-[ ] Export filename unique per run: `checklist-<timestamp>.md`
+    - Redactions
+    - Inactive / Dormant flags
+    - Domain silo (Business or Personal only)
+
+[ ] Export filename format:
+    - `checklist-<timestamp>.md`
     - Instrument: `checklist_exported`
 
+--------------------------------------------------
+2.5.7 — Tools (System-Level Verbs Only)
+--------------------------------------------------
+
+Existing (Implemented):
+[x] Weekly Digest generator
+[x] Context Pack clipboard export
+[x] External Start Chat from Task / Decision only
+[x] Redactions suppress surfaced content and exports
+[x] Inactive / Dormant flags
+
+To Prototype (Evaluate or Discard):
+[ ] Re-Orient — 1-line project/theme context rehydration
+    - Instrument: `reorient_viewed`
+
+[ ] Decision Log — scoped decision history with rationale
+    - Instrument: `decision_log_viewed`
+
+[ ] Start Chat intents (verbs only):
+    - `Clarify` / `Shape` / `Fix` / `Challenge`
+    - Must originate from Task or Decision
+    - Must respect Redactions + Inactive flags
+    - Instrument: `start_chat_invoked`
+
+
 ==================================================
-DEPRECATED (Phase 2.5)
+DEPRECATED / REMOVED (Conceptual Corrections)
 ==================================================
-[x] DEPRECATED: Global Action List (moved to dashboard-local planning only)
-[x] DEPRECATED: Thread Explorer / Mini-Map (superseded by Thought Objects + Gravity nudges)
-[x] DEPRECATED: Theme Map visualization
-[x] DEPRECATED: Branching model
-[x] REMOVED: Any chatbot or micro-chat UI surface
+
+[x] Branching model (replaced by thought-object model)
+[x] Task Seeds (removed due to recursive ideation risk)
+[x] Global Action List (superseded by dashboard-local views)
+[x] Thread Explorer / Mini-Map visualization
+[x] Theme Map visualization
+[x] Micro-chat UI surfaces
+
+

@@ -15,6 +15,11 @@ interface SearchResult {
   similarity: number;
 }
 
+interface FollowUpQuestion {
+  type: 'clarify' | 'decide' | 'commit' | 'deprioritize';
+  text: string;
+}
+
 interface SynthesizedAnswer {
   answer: string;
   citations: Array<{
@@ -24,7 +29,7 @@ interface SynthesizedAnswer {
     excerpt: string;
     similarity: number;
   }>;
-  followUpQuestions: string[];
+  followUpQuestions: FollowUpQuestion[];
 }
 
 export default function AskPage() {
@@ -254,13 +259,14 @@ export default function AskPage() {
                     {answer.followUpQuestions.map((question, idx) => (
                       <FollowUpQuestion
                         key={idx}
-                        prompt={question}
+                        prompt={question.text}
+                        type={question.type}
                         conversationIds={answer.citations.map((c) => c.conversation_id)}
                         answerContext={answer.answer}
                         sourceQuery={query}
                         onConvert={() => {
                           // Refresh to show new items
-                          window.location.reload();
+                          router.refresh();
                         }}
                       />
                     ))}

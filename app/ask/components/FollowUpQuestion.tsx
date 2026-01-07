@@ -8,6 +8,7 @@ import { generateContextFromSearchResult } from '@/lib/contextGenerator';
 
 interface FollowUpQuestionProps {
   prompt: string;
+  type?: 'clarify' | 'decide' | 'commit' | 'deprioritize';
   conversationIds: string[];
   answerContext: string;
   sourceQuery: string;
@@ -16,11 +17,18 @@ interface FollowUpQuestionProps {
 
 export default function FollowUpQuestion({
   prompt,
+  type,
   conversationIds,
   answerContext,
   sourceQuery,
   onConvert,
 }: FollowUpQuestionProps) {
+  const typeLabels: Record<string, string> = {
+    clarify: 'Clarify',
+    decide: 'Decide',
+    commit: 'Commit',
+    deprioritize: 'Deprioritize',
+  };
   const router = useRouter();
   const [converting, setConverting] = useState<string | null>(null);
   const [isChatModalOpen, setIsChatModalOpen] = useState(false);
@@ -78,7 +86,14 @@ export default function FollowUpQuestion({
   return (
     <>
       <div className="p-3 bg-zinc-50 dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-800">
-        <p className="text-sm text-foreground mb-3">{prompt}</p>
+        <div className="flex items-start gap-2 mb-2">
+          {type && (
+            <span className="px-2 py-0.5 text-xs font-medium rounded-md bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 whitespace-nowrap">
+              {typeLabels[type] || type}
+            </span>
+          )}
+          <p className="text-sm text-foreground flex-1">{prompt}</p>
+        </div>
         <div className="flex flex-wrap gap-2">
           <button
             onClick={() => handleConvert('task')}

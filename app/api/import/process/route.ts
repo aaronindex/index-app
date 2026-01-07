@@ -36,8 +36,26 @@ export async function POST(request: NextRequest) {
 
     const supabase = await getSupabaseServerClient();
 
+    // Normalize fileData to array (handle different JSON structures)
+    let conversationArray: any[] = [];
+    if (Array.isArray(fileData)) {
+      conversationArray = fileData;
+    } else if (fileData && typeof fileData === 'object' && Array.isArray(fileData.conversations)) {
+      conversationArray = fileData.conversations;
+    } else if (fileData && typeof fileData === 'object' && (fileData.mapping || fileData.title || fileData.id || fileData.conversation_id)) {
+      // Single conversation object
+      conversationArray = [fileData];
+    } else {
+      return NextResponse.json({ error: 'Invalid file format: expected array of conversations or object with conversations property' }, { status: 400 });
+    }
+
     // Generate dedupe hash
-    const firstConversation = fileData.find((conv: any) => selectedConversationIds.includes(conv.id));
+    // Match conversations by ID (handle both conversation_id and id fields)
+    const firstConversation = conversationArray.find((conv: any) => {
+      if (!conv || typeof conv !== 'object') return false;
+      const convId = conv.conversation_id || conv.id;
+      return convId && selectedConversationIds.includes(convId);
+    });
     const dedupeHash = firstConversation
       ? generateDedupeHash(user.id, firstConversation.title || '', JSON.stringify(firstConversation).substring(0, 120))
       : crypto.createHash('sha256').update(`${user.id}:${importId}:${Date.now()}`).digest('hex');
@@ -56,11 +74,11 @@ export async function POST(request: NextRequest) {
       .eq('id', importId)
       .eq('user_id', user.id);
 
-    // Create job with full payload
+    // Create job with full payload (use normalized array)
     const jobPayload = {
       import_id: importId,
       user_id: user.id,
-      file_data: fileData,
+      file_data: conversationArray, // Use normalized array instead of raw fileData
       selected_conversation_ids: selectedConversationIds,
       project_id: projectId || null,
       new_project: newProject || null,

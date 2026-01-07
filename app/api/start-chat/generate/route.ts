@@ -30,6 +30,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Enforce Start Chat origin constraints: only task, decision, or project allowed
+    if (originType !== 'project' && originType !== 'task' && originType !== 'decision') {
+      return NextResponse.json(
+        { error: 'Invalid originType. Start Chat is only available from Tasks, Decisions, or Projects.' },
+        { status: 400 }
+      );
+    }
+
+    // Reject highlight_id or conversation_id attempts
+    if (originType === 'highlight' || originType === 'conversation') {
+      return NextResponse.json(
+        { error: 'Start Chat is not available from Highlights or Conversations. Convert to a Task or Decision first.' },
+        { status: 400 }
+      );
+    }
+
     if (originType === 'project' && !intent) {
       return NextResponse.json(
         { error: 'Intent is required for project-level Start Chat' },

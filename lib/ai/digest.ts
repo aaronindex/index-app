@@ -3,6 +3,8 @@
  * Weekly digest generation using OpenAI
  */
 
+import { THINKING_STANCE } from './stance';
+
 interface ConversationSummary {
   id: string;
   title: string | null;
@@ -102,16 +104,19 @@ ${decisions.map((d) => `- "${d.title}"${d.content ? `: ${d.content.substring(0, 
 
   const prompt = `You are analyzing a week of AI conversations from ${weekStart.toLocaleDateString()} to ${weekEnd.toLocaleDateString()}.
 
+THINKING STANCE:
+${THINKING_STANCE}
+
 Conversations this week:
 ${conversationContext}${tasksContext}${decisionsContext}${changeCountsText}
 
 Generate a comprehensive weekly digest with a multi-section narrative structure:
 
-1. **Summary** (2-3 paragraphs): Main themes, insights, progress, and action items from the week
-2. **What Changed** (1 paragraph narrative): A narrative description of what changed this week, highlighting key activities and progress
-3. **Top Themes** (3-5 themes): Major themes with weights (0-1 scale) and brief descriptions
-4. **Open Loops** (unresolved items): Unresolved questions, incomplete thoughts, or follow-ups needed, with priority levels (high/medium/low)
-5. **Recommended Next Steps** (3-5 actions): Specific, actionable next steps with reasons and priority levels
+1. **Summary** (2-3 paragraphs): Main themes, insights, progress, and action items from the week. Avoid speculative language. Emphasize what changed, what remains open, and what deserves attention next.
+2. **What Changed** (1 paragraph narrative): A narrative description of what changed this week, highlighting key activities and progress. Be concrete and specific.
+3. **Top Themes** (3-5 themes): Major themes with weights (0-1 scale) and brief descriptions. Focus on patterns that matter, not exploration.
+4. **Open Loops** (unresolved items): Unresolved questions, incomplete thoughts, or follow-ups needed, with priority levels (high/medium/low). Surface uncertainty explicitly rather than expanding scope.
+5. **Recommended Next Steps** (3-5 actions): Specific, actionable next steps with reasons and priority levels. Prefer reduction over expansion.
 
 ${tasks && tasks.length > 0 ? 'Note: Include any open or in-progress tasks in the summary, open loops, and recommended next steps.' : ''}
 
@@ -158,7 +163,7 @@ Be concise but insightful. Focus on patterns, actionable insights, and helping t
         messages: [
           {
             role: 'system',
-            content: 'You are an intelligent assistant that helps users understand patterns in their thinking and work. Return only valid JSON.',
+            content: `You are an intelligent assistant that helps users understand patterns in their thinking and work. Return only valid JSON.\n\nTHINKING STANCE:\n${THINKING_STANCE}`,
           },
           {
             role: 'user',

@@ -12,23 +12,40 @@ export async function GET(request: NextRequest) {
 
     const supabase = await getSupabaseServerClient();
 
-    // 1. Priority Items: Open tasks and open decisions
-    // Include AI-extracted insights (commitments, blockers, open loops) which are stored as tasks
+    // 1. Priority Items: Priority tasks and priority decisions first
+    // Stance-based ordering: Priority > Open > Everything else
     // Default: exclude inactive items and personal projects
-    const { data: allTasks } = await supabase
+    
+    // Get priority tasks first
+    const { data: priorityTasks } = await supabase
       .from('tasks')
-      .select('id, title, description, status, project_id, conversation_id, created_at, source_query, projects(name, is_personal)')
+      .select('id, title, description, status, project_id, conversation_id, created_at, updated_at, source_query, projects(name, is_personal)')
+      .eq('user_id', user.id)
+      .eq('is_inactive', false)
+      .eq('status', 'priority')
+      .order('created_at', { ascending: false })
+      .limit(10);
+
+    // Get open/in_progress tasks (excluding priority, which we already have)
+    const { data: openTasksData } = await supabase
+      .from('tasks')
+      .select('id, title, description, status, project_id, conversation_id, created_at, updated_at, source_query, projects(name, is_personal)')
       .eq('user_id', user.id)
       .eq('is_inactive', false)
       .in('status', ['open', 'in_progress'])
-      .order('created_at', { ascending: false })
+      .order('updated_at', { ascending: true }) // Oldest updated first (stuck signals)
       .limit(20);
 
-    // Filter out tasks from personal projects
-    const openTasks = allTasks?.filter((t: any) => !(t.projects as any)?.is_personal).slice(0, 10) || [];
+    // Filter out tasks from personal projects and combine/order
+    const priorityTasksFiltered = priorityTasks?.filter((t: any) => !(t.projects as any)?.is_personal) || [];
+    const openTasksFiltered = openTasksData?.filter((t: any) => !(t.projects as any)?.is_personal) || [];
+    
+    // Combine: Priority first, then open tasks (oldest updated first = stuck signals)
+    const allTasks = [...priorityTasksFiltered, ...openTasksFiltered].slice(0, 10);
 
-    // Get decisions (assuming they don't have a status field, so we'll get recent ones)
-    // Default: exclude inactive items
+    // Get decisions without resolution (open loops)
+    // Decisions don't have a status field, so we get recent ones
+    // Stance: prioritize decisions that might need follow-up
     const { data: recentDecisions } = await supabase
       .from('decisions')
       .select('id, title, content, conversation_id, created_at, conversations(title)')
@@ -55,34 +72,58 @@ export async function GET(request: NextRequest) {
       .limit(1)
       .single();
 
-    // 5. Recent conversations for "things to revisit" (conversations with no recent activity but have highlights)
+    // 5. Recent conversations for "things to revisit" (conversations with no recent activity but have highlights/tasks/decisions)
+    // Stance: Only surface conversations with thought-objects (highlights, tasks, decisions)
     // Default: exclude inactive conversations
-    const { data: conversationsWithHighlights } = await supabase
+    const { data: allConversations } = await supabase
       .from('conversations')
       .select('id, title, created_at, started_at, ended_at')
       .eq('user_id', user.id)
       .eq('is_inactive', false)
       .order('created_at', { ascending: false })
-      .limit(20);
+      .limit(50); // Get more to filter
 
-    // Get highlights for these conversations
-    const conversationIds = conversationsWithHighlights?.map((c) => c.id) || [];
+    const conversationIds = allConversations?.map((c) => c.id) || [];
+    
+    // Get highlights, tasks, and decisions for these conversations
     const { data: allHighlights } = await supabase
       .from('highlights')
       .select('conversation_id, created_at')
       .in('conversation_id', conversationIds)
       .eq('user_id', user.id);
 
-    // Find conversations that haven't been updated recently but have highlights
+    const { data: allTasksForConvs } = await supabase
+      .from('tasks')
+      .select('conversation_id, created_at')
+      .in('conversation_id', conversationIds)
+      .eq('user_id', user.id)
+      .eq('is_inactive', false);
+
+    const { data: allDecisionsForConvs } = await supabase
+      .from('decisions')
+      .select('conversation_id, created_at')
+      .in('conversation_id', conversationIds)
+      .eq('user_id', user.id)
+      .eq('is_inactive', false);
+
+    // Find conversations that have thought-objects (highlights, tasks, or decisions)
+    // Stance: Only show conversations with meaning objects, not raw conversations
     const now = new Date();
     const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
     
-    const thingsToRevisit = conversationsWithHighlights
+    const thingsToRevisit = allConversations
       ?.filter((conv) => {
         const convHighlights = allHighlights?.filter((h) => h.conversation_id === conv.id) || [];
-        const hasHighlights = convHighlights.length > 0;
+        const convTasks = allTasksForConvs?.filter((t) => t.conversation_id === conv.id) || [];
+        const convDecisions = allDecisionsForConvs?.filter((d) => d.conversation_id === conv.id) || [];
+        
+        // Must have at least one thought-object
+        const hasThoughtObjects = convHighlights.length > 0 || convTasks.length > 0 || convDecisions.length > 0;
+        
+        // Prefer older conversations (stuck signals)
         const isOld = new Date(conv.created_at) < twoWeeksAgo;
-        return hasHighlights && isOld;
+        
+        return hasThoughtObjects && isOld;
       })
       .slice(0, 3)
       .map((conv) => ({
@@ -109,7 +150,7 @@ export async function GET(request: NextRequest) {
       hasConversations: (conversationCount || 0) > 0,
       hasProjects: (projectCount || 0) > 0,
       priorityItems: {
-        tasks: openTasks?.map((t: any) => ({
+        tasks: allTasks?.map((t: any) => ({
           id: t.id,
           title: t.title,
           description: t.description,
