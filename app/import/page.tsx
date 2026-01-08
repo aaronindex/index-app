@@ -285,9 +285,40 @@ export default function ImportPage() {
         return;
       }
 
-      // Job queued - start polling for status
+      // Check if import was processed synchronously (no job created)
       const result = await response.json();
+      
+      // If import completed synchronously, skip polling and redirect
+      if (result.status === 'complete' && !result.jobId) {
+        const latencyMs = Date.now() - importStartTime;
+        trackEvent('import_completed', {
+          import_type: 'file_upload',
+          import_id: importRecord.id,
+          latency_ms: latencyMs,
+          conversation_count: result.conversationIds?.length || 1,
+          message_count: 0, // Not available in sync response
+          size_bytes: file.size || 0,
+          file_type: getUploadFileType(file),
+        });
+        
+        setLoading(false);
+        
+        // Redirect to project or unassigned
+        if (finalProjectId) {
+          router.push(`/projects/${finalProjectId}?imported=${result.conversationIds?.length || 1}`);
+        } else {
+          router.push(`/unassigned?imported=${result.conversationIds?.length || 1}`);
+        }
+        return;
+      }
+      
+      // Otherwise, job was queued - start polling for status
       const jobId = result.jobId;
+      if (!jobId) {
+        setError('Import response missing job ID. Please try again.');
+        setLoading(false);
+        return;
+      }
       
       // Poll for job completion
       const maxPolls = 600; // 600 * 3s = 30 minutes max (for large imports)
