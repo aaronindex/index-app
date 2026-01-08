@@ -6,6 +6,7 @@ import Nav from "./components/Nav";
 import { ThemeProvider } from "./components/ThemeProvider";
 import ErrorNotificationContainer from "./components/ErrorNotification";
 import ErrorBoundary from "./components/ErrorBoundary";
+import FeedbackModal from "./components/FeedbackModal";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -99,6 +100,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
             <Nav />
             {children}
             <ErrorNotificationContainer />
+            <FeedbackModal />
           </ErrorBoundary>
         </ThemeProvider>
       </body>

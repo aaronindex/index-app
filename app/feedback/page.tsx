@@ -137,17 +137,28 @@ export default function FeedbackPage() {
           </div>
         </form>
 
-        <div className="mt-8 p-4 rounded-lg bg-[rgb(var(--surface2))]">
-          <p className="text-sm text-[rgb(var(--muted))]">
-            <strong className="text-[rgb(var(--text))]">Prefer email?</strong> You can also send feedback
-            directly to{' '}
-            <a
-              href="mailto:hello@indexapp.co?subject=Alpha Feedback"
-              className="text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] underline"
-            >
-              hello@indexapp.co
-            </a>
-          </p>
+        <div className="mt-8 space-y-4">
+          <div className="p-4 rounded-lg bg-[rgb(var(--surface2))]">
+            <p className="text-sm text-[rgb(var(--muted))] mb-3">
+              <strong className="text-[rgb(var(--text))]">Other ways to share feedback:</strong>
+            </p>
+            <div className="flex flex-col gap-2">
+              <a
+                href="https://form.typeform.com/to/aFmO1cgp"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-[rgb(var(--text))] hover:opacity-80 transition-opacity underline"
+              >
+                Share feedback via Typeform
+              </a>
+              <a
+                href="mailto:hello@indexapp.co?subject=Alpha Feedback"
+                className="text-sm text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] underline"
+              >
+                Email us at hello@indexapp.co
+              </a>
+            </div>
+          </div>
         </div>
       </div>
     </main>
