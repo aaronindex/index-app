@@ -237,14 +237,14 @@ export default function LandingPage() {
       </section>
 
       {/* 6) FOOTER */}
-      <footer className="w-full py-8 border-t border-[#121211]/10 dark:border-[#FAF8F6]/10">
+      <footer className="w-full py-12 border-t border-[#121211]/10 dark:border-[#FAF8F6]/10 bg-white dark:bg-[#121211]">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 text-sm text-[#121211] dark:text-[#FAF8F6] opacity-60">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 text-sm">
             <a
               href="https://form.typeform.com/to/aFmO1cgp"
               target="_blank"
               rel="noopener noreferrer"
-              className="hover:opacity-100 transition-opacity"
+              className="text-[#121211] dark:text-[#FAF8F6] hover:opacity-80 transition-opacity underline"
             >
               Share feedback
             </a>

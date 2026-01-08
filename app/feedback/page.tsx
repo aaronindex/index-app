@@ -142,10 +142,10 @@ export default function FeedbackPage() {
             <strong className="text-[rgb(var(--text))]">Prefer email?</strong> You can also send feedback
             directly to{' '}
             <a
-              href="mailto:aaron@indexapp.co?subject=Alpha Feedback"
+              href="mailto:hello@indexapp.co?subject=Alpha Feedback"
               className="text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] underline"
             >
-              aaron@indexapp.co
+              hello@indexapp.co
             </a>
           </p>
         </div>

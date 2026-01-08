@@ -395,7 +395,7 @@ export default function MagicHomeScreen() {
               href="https://form.typeform.com/to/aFmO1cgp"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] transition-colors underline"
+              className="inline-block text-sm text-[rgb(var(--text))] hover:opacity-80 transition-opacity underline font-medium"
             >
               Share feedback
             </a>
