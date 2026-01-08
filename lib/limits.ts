@@ -22,8 +22,20 @@ export interface LimitCheckResult {
 
 /**
  * Check if user can perform an import
+ * 
+ * TEMPORARY FOR ALPHA: Limits disabled for testing
+ * TODO: Re-enable limits when adding payment tiers
  */
 export async function checkImportLimit(userId: string): Promise<LimitCheckResult> {
+  // ALPHA MODE: Always allow imports
+  return {
+    allowed: true,
+    remaining: 999,
+    limit: 999,
+  };
+
+  // Original limit check (disabled for alpha)
+  /*
   const supabase = await getSupabaseServerClient();
 
   const { data: profile, error } = await supabase
@@ -58,6 +70,7 @@ export async function checkImportLimit(userId: string): Promise<LimitCheckResult
       ? undefined
       : `Import limit reached. You can import ${FREE_USER_LIMITS.importsPer24h} files per 24 hours.`,
   };
+  */
 }
 
 /**
