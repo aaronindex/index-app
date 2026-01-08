@@ -480,38 +480,26 @@ async function processChunkMessagesStep(
         .delete()
         .in('message_id', messageIds);
 
-      const { error: chunksError } = await supabase
+      // Insert chunks and get IDs back in one query (much faster than fetching one-by-one)
+      const { data: insertedChunks, error: chunksError } = await supabase
         .from('message_chunks')
-        .insert(chunksToInsert);
+        .insert(chunksToInsert)
+        .select('id');
 
       if (chunksError) {
         return { nextStep: null, error: `Failed to insert chunks: ${chunksError.message}` };
       }
 
       progress.counts.chunks = allChunks.length;
-    }
+      progress.percent = 70;
 
-    progress.percent = 70;
-
-    // Store chunk IDs for embedding step
-    if (allChunks.length > 0) {
-      // Fetch inserted chunk IDs
-      const chunkIds: string[] = [];
-      for (const chunk of allChunks) {
-        const { data: chunkData } = await supabase
-          .from('message_chunks')
-          .select('id')
-          .eq('message_id', chunk.message_id)
-          .eq('chunk_index', chunk.chunk_index)
-          .single();
-
-        if (chunkData) {
-          chunkIds.push(chunkData.id);
-        }
+      // Store chunk IDs for embedding step (from insert response - much faster!)
+      if (insertedChunks && insertedChunks.length > 0) {
+        const chunkIds = insertedChunks.map((c: any) => c.id);
+        (payload as any).chunk_ids = chunkIds;
       }
-
-      // Store in payload for embedding step
-      (payload as any).chunk_ids = chunkIds;
+    } else {
+      progress.percent = 70;
     }
 
     return { nextStep: 'embed_chunks', error: null, payload };

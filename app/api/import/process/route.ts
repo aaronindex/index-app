@@ -117,29 +117,14 @@ export async function POST(request: NextRequest) {
 
     // Trigger immediate job processing (fire-and-forget, non-blocking)
     // This starts processing right away instead of waiting for cron
-    // Process first few steps in background (up to 3 steps to avoid timeout)
+    // Process first step only to get it started (cron will continue)
     // Don't await to avoid blocking the response
     (async () => {
       try {
-        let stepCount = 0;
-        let nextStep: string | null = 'queued';
-        let error: string | null = null;
-        
-        // Process up to 3 steps immediately (or until complete/error)
-        // This gets parsing and conversation insertion started right away
-        while (nextStep && stepCount < 3 && !error) {
-          const result = await processImportJobStep(job.id);
-          nextStep = result.nextStep;
-          error = result.error;
-          stepCount++;
-          
-          // If job is complete or has error, stop
-          if (!nextStep || error) {
-            break;
-          }
-        }
-        
-        console.log(`[Import] Processed ${stepCount} step(s) immediately. Next step: ${nextStep || 'complete'}, Error: ${error || 'none'}`);
+        // Just process the first step to get it started
+        // Cron will continue with subsequent steps
+        const result = await processImportJobStep(job.id);
+        console.log(`[Import] Processed initial step. Next step: ${result.nextStep || 'complete'}, Error: ${result.error || 'none'}`);
       } catch (err) {
         // Silently fail - cron will pick it up if this fails
         console.log('[Import] Immediate processing failed (cron will handle it):', err instanceof Error ? err.message : 'Unknown error');

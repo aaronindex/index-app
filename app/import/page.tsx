@@ -290,7 +290,7 @@ export default function ImportPage() {
       const jobId = result.jobId;
       
       // Poll for job completion
-      const maxPolls = 200; // 200 * 3s = 10 minutes max
+      const maxPolls = 600; // 600 * 3s = 30 minutes max (for large imports)
       
       let localPollCount = 0;
       const pollInterval = setInterval(async () => {
