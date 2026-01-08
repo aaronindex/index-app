@@ -89,14 +89,14 @@ export async function GET(request: NextRequest) {
 
     const supabase = await getSupabaseServerClient();
 
-    // Find next queued job (oldest first, not locked or locked > 5 minutes ago)
+    // Find next pending job at any step (oldest first, not locked or locked > 5 minutes ago)
+    // This processes jobs that are in progress, not just queued
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
 
     const { data: job, error: jobError } = await supabase
       .from('jobs')
       .select('id, type, step, status')
       .eq('status', 'pending')
-      .eq('step', 'queued')
       .or(`locked_at.is.null,locked_at.lt.${fiveMinutesAgo}`)
       .order('created_at', { ascending: true })
       .limit(1)
