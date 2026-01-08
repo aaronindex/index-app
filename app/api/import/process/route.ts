@@ -3,7 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabaseServer';
 import { getCurrentUser } from '@/lib/getUser';
-import { generateDedupeHash } from '@/lib/jobs/importProcessor';
+import { generateDedupeHash, processImportJobStep } from '@/lib/jobs/importProcessor';
 import { checkImportLimit, incrementLimit } from '@/lib/limits';
 import crypto from 'crypto';
 
@@ -115,11 +115,41 @@ export async function POST(request: NextRequest) {
     // Increment limit counter (only when job is successfully queued)
     await incrementLimit(user.id, 'import');
 
+    // Trigger immediate job processing (fire-and-forget, non-blocking)
+    // This starts processing right away instead of waiting for cron
+    // Process first few steps in background (up to 3 steps to avoid timeout)
+    // Don't await to avoid blocking the response
+    (async () => {
+      try {
+        let stepCount = 0;
+        let nextStep: string | null = 'queued';
+        let error: string | null = null;
+        
+        // Process up to 3 steps immediately (or until complete/error)
+        // This gets parsing and conversation insertion started right away
+        while (nextStep && stepCount < 3 && !error) {
+          const result = await processImportJobStep(job.id);
+          nextStep = result.nextStep;
+          error = result.error;
+          stepCount++;
+          
+          // If job is complete or has error, stop
+          if (!nextStep || error) {
+            break;
+          }
+        }
+        
+        console.log(`[Import] Processed ${stepCount} step(s) immediately. Next step: ${nextStep || 'complete'}, Error: ${error || 'none'}`);
+      } catch (err) {
+        // Silently fail - cron will pick it up if this fails
+        console.log('[Import] Immediate processing failed (cron will handle it):', err instanceof Error ? err.message : 'Unknown error');
+      }
+    })();
+
     // Note: Analytics events are fired client-side in import/page.tsx
     // to capture latency and handle failures
-    // Note: Job will be processed by cron job (runs every minute) or can be manually triggered
 
-    // Return immediately - job will be processed in background
+    // Return immediately - job processing has been triggered
     return NextResponse.json({
       success: true,
       jobId: job.id,
