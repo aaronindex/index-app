@@ -387,6 +387,19 @@ export default function MagicHomeScreen() {
       {!data.hasConversations && !data.hasProjects && (
         <div className="py-12">
           <OnboardingFlow />
+          <div className="max-w-2xl mx-auto mt-8 text-center">
+            <p className="text-sm text-[rgb(var(--muted))] mb-3">
+              Help shape the future of INDEX
+            </p>
+            <a
+              href="https://form.typeform.com/to/aFmO1cgp"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] transition-colors underline"
+            >
+              Share feedback
+            </a>
+          </div>
         </div>
       )}
 

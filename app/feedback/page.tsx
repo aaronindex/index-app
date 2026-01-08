@@ -4,11 +4,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 
-type FeedbackType = 'bug' | 'feature' | 'improvement' | 'question' | 'other';
-
 export default function FeedbackPage() {
-  const [feedbackType, setFeedbackType] = useState<FeedbackType>('improvement');
-  const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -16,8 +12,8 @@ export default function FeedbackPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!subject.trim() || !message.trim()) {
-      setError('Please fill in both subject and message');
+    if (!message.trim()) {
+      setError('Please enter your feedback');
       return;
     }
 
@@ -25,12 +21,18 @@ export default function FeedbackPage() {
     setError(null);
 
     try {
+      // Fire feedback_submitted analytics event
+      const { trackEvent } = await import('@/lib/analytics');
+      trackEvent('feedback_submitted', {
+        message_length: message.trim().length,
+      });
+
       const response = await fetch('/api/feedback', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          type: feedbackType,
-          subject: subject.trim(),
+          type: 'other', // Default type for simplified form
+          subject: 'In-app feedback',
           message: message.trim(),
         }),
       });
@@ -41,7 +43,6 @@ export default function FeedbackPage() {
       }
 
       setSubmitted(true);
-      setSubject('');
       setMessage('');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to submit feedback');
@@ -67,7 +68,6 @@ export default function FeedbackPage() {
               <button
                 onClick={() => {
                   setSubmitted(false);
-                  setFeedbackType('improvement');
                 }}
                 className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
               >
@@ -104,51 +104,14 @@ export default function FeedbackPage() {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block text-sm font-medium text-[rgb(var(--text))] mb-2">
-              Type of Feedback
-            </label>
-            <select
-              value={feedbackType}
-              onChange={(e) => setFeedbackType(e.target.value as FeedbackType)}
-              className="w-full px-4 py-2 border border-[rgb(var(--ring)/0.12)] rounded-lg bg-[rgb(var(--surface))] text-[rgb(var(--text))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--ring)/0.2)]"
-            >
-              <option value="improvement">Improvement / Suggestion</option>
-              <option value="bug">Bug Report</option>
-              <option value="feature">Feature Request</option>
-              <option value="question">Question</option>
-              <option value="other">Other</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-[rgb(var(--text))] mb-2">
-              Subject
-            </label>
-            <input
-              type="text"
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-              placeholder="Brief description of your feedback"
-              className="w-full px-4 py-2 border border-[rgb(var(--ring)/0.12)] rounded-lg bg-[rgb(var(--surface))] text-[rgb(var(--text))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--ring)/0.2)]"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-[rgb(var(--text))] mb-2">
-              Message
-            </label>
             <textarea
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              placeholder="Tell us what's on your mind..."
+              placeholder="What's feeling fuzzy or frustrating right now?"
               rows={8}
               className="w-full px-4 py-2 border border-[rgb(var(--ring)/0.12)] rounded-lg bg-[rgb(var(--surface))] text-[rgb(var(--text))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--ring)/0.2)] resize-none"
               required
             />
-            <p className="text-xs text-[rgb(var(--muted))] mt-2">
-              Include details about what you were doing, what you expected, and what happened.
-            </p>
           </div>
 
           {error && (
@@ -160,7 +123,7 @@ export default function FeedbackPage() {
           <div className="flex gap-3">
             <button
               type="submit"
-              disabled={submitting || !subject.trim() || !message.trim()}
+              disabled={submitting || !message.trim()}
               className="px-6 py-3 bg-[rgb(var(--text))] text-[rgb(var(--bg))] rounded-lg hover:opacity-90 transition-opacity font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {submitting ? 'Submitting...' : 'Submit Feedback'}
