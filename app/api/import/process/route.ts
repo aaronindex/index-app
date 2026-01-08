@@ -83,11 +83,9 @@ export async function POST(request: NextRequest) {
       estimatedChunks <= 500;
 
     if (shouldProcessSync) {
-      // Process synchronously - much faster for small imports
+      // Process synchronously - much faster for small-to-medium imports
       const { chunkText } = await import('@/lib/chunking');
       const { embedTexts } = await import('@/lib/ai/embeddings');
-      
-      const conv = conversationsToImport[0];
       
       // Handle project creation if needed
       let finalProjectId = projectId;
@@ -108,143 +106,150 @@ export async function POST(request: NextRequest) {
         finalProjectId = newProjectData.id;
       }
 
+      // Process all conversations synchronously
+      const conversationIds: string[] = [];
+      let totalMessagesInserted = 0;
+      let totalChunksInserted = 0;
+      let totalEmbedded = 0;
+
       // Update import status
       await supabase
         .from('imports')
         .update({
           status: 'processing',
           progress_json: {
-            percent: 20,
-            counts: { conversations: 1, messages: 0, chunks: 0, embedded: 0 },
+            percent: 10,
+            counts: { conversations: 0, messages: 0, chunks: 0, embedded: 0 },
           },
         })
         .eq('id', importId);
 
-      // Create conversation
-      const startedAt = conv.startedAt instanceof Date ? conv.startedAt : new Date(conv.startedAt || Date.now());
-      const endedAt = conv.endedAt instanceof Date ? conv.endedAt : (conv.endedAt ? new Date(conv.endedAt) : null);
-      
-      const { data: conversation, error: convError } = await supabase
-        .from('conversations')
-        .insert({
-          user_id: user.id,
-          import_id: importId,
-          title: conv.title,
-          source: 'chatgpt',
-          started_at: startedAt.toISOString(),
-          ended_at: endedAt?.toISOString() || null,
-        })
-        .select()
-        .single();
+      // Process each conversation
+      for (let i = 0; i < conversationsToImport.length; i++) {
+        const conv = conversationsToImport[i];
+        const progressPercent = 10 + Math.floor((i / conversationsToImport.length) * 80);
 
-      if (convError || !conversation) {
-        await supabase.from('imports').update({ status: 'error', error_message: convError?.message || 'Failed to create conversation' }).eq('id', importId);
-        return NextResponse.json({ error: `Failed to create conversation: ${convError?.message || 'Unknown error'}` }, { status: 500 });
-      }
+        // Create conversation
+        const startedAt = conv.startedAt instanceof Date ? conv.startedAt : new Date(conv.startedAt || Date.now());
+        const endedAt = conv.endedAt instanceof Date ? conv.endedAt : (conv.endedAt ? new Date(conv.endedAt) : null);
+        
+        const { data: conversation, error: convError } = await supabase
+          .from('conversations')
+          .insert({
+            user_id: user.id,
+            import_id: importId,
+            title: conv.title,
+            source: 'chatgpt',
+            started_at: startedAt.toISOString(),
+            ended_at: endedAt?.toISOString() || null,
+          })
+          .select()
+          .single();
 
-      // Link to project if specified
-      if (finalProjectId) {
-        await supabase.from('project_conversations').upsert({
-          project_id: finalProjectId,
-          conversation_id: conversation.id,
-        });
-      }
-
-      // Insert messages
-      const messagesToInsert = conv.messages.map((msg: any, index: number) => ({
-        conversation_id: conversation.id,
-        role: msg.role,
-        content: msg.content,
-        index_in_conversation: index,
-        source_message_id: msg.source_message_id || null,
-        raw_payload: msg.raw_payload || null,
-      }));
-
-      const { error: messagesError } = await supabase.from('messages').insert(messagesToInsert);
-      if (messagesError) {
-        await supabase.from('imports').update({ status: 'error', error_message: messagesError.message }).eq('id', importId);
-        return NextResponse.json({ error: `Failed to insert messages: ${messagesError.message}` }, { status: 500 });
-      }
-
-      await supabase.from('imports').update({
-        progress_json: {
-          percent: 50,
-          counts: { conversations: 1, messages: messagesToInsert.length, chunks: 0, embedded: 0 },
-        },
-      }).eq('id', importId);
-
-      // Chunk and embed
-      const allChunks: Array<{ message_id: string; conversation_id: string; content: string; chunk_index: number }> = [];
-      const { data: messages } = await supabase
-        .from('messages')
-        .select('id, content')
-        .eq('conversation_id', conversation.id)
-        .order('index_in_conversation');
-
-      if (messages) {
-        for (const message of messages) {
-          if (!message.content || message.content.trim().length === 0) continue;
-          const chunks = chunkText(message.content);
-          for (const chunk of chunks) {
-            allChunks.push({
-              message_id: message.id,
-              conversation_id: conversation.id,
-              content: chunk.content,
-              chunk_index: chunk.chunkIndex,
-            });
-          }
+        if (convError || !conversation) {
+          await supabase.from('imports').update({ status: 'error', error_message: convError?.message || 'Failed to create conversation' }).eq('id', importId);
+          return NextResponse.json({ error: `Failed to create conversation: ${convError?.message || 'Unknown error'}` }, { status: 500 });
         }
 
-        if (allChunks.length > 0) {
-          const chunksToInsert = allChunks.map((chunk) => ({
-            user_id: user.id,
-            conversation_id: chunk.conversation_id,
-            message_id: chunk.message_id,
-            content: chunk.content,
-            chunk_index: chunk.chunk_index,
-          }));
+        conversationIds.push(conversation.id);
 
-          const { data: insertedChunks, error: chunksError } = await supabase
-            .from('message_chunks')
-            .insert(chunksToInsert)
-            .select();
+        // Link to project if specified
+        if (finalProjectId) {
+          await supabase.from('project_conversations').upsert({
+            project_id: finalProjectId,
+            conversation_id: conversation.id,
+          });
+        }
 
-          if (chunksError || !insertedChunks) {
-            await supabase.from('imports').update({ status: 'error', error_message: chunksError?.message || 'Failed to insert chunks' }).eq('id', importId);
-            return NextResponse.json({ error: `Failed to insert chunks: ${chunksError?.message || 'Unknown error'}` }, { status: 500 });
+        // Insert messages
+        const messagesToInsert = conv.messages.map((msg: any, index: number) => ({
+          conversation_id: conversation.id,
+          role: msg.role,
+          content: msg.content,
+          index_in_conversation: index,
+          source_message_id: msg.source_message_id || null,
+          raw_payload: msg.raw_payload || null,
+        }));
+
+        const { error: messagesError } = await supabase.from('messages').insert(messagesToInsert);
+        if (messagesError) {
+          await supabase.from('imports').update({ status: 'error', error_message: messagesError.message }).eq('id', importId);
+          return NextResponse.json({ error: `Failed to insert messages: ${messagesError.message}` }, { status: 500 });
+        }
+
+        totalMessagesInserted += messagesToInsert.length;
+
+        await supabase.from('imports').update({
+          progress_json: {
+            percent: progressPercent,
+            counts: { conversations: i + 1, messages: totalMessagesInserted, chunks: totalChunksInserted, embedded: totalEmbedded },
+          },
+        }).eq('id', importId);
+
+        // Chunk and embed for this conversation
+        const { data: messages } = await supabase
+          .from('messages')
+          .select('id, content')
+          .eq('conversation_id', conversation.id)
+          .order('index_in_conversation');
+
+        if (messages && messages.length > 0) {
+          const allChunks: Array<{ message_id: string; conversation_id: string; content: string; chunk_index: number }> = [];
+          
+          for (const message of messages) {
+            if (!message.content || message.content.trim().length === 0) continue;
+            const chunks = chunkText(message.content);
+            for (const chunk of chunks) {
+              allChunks.push({
+                message_id: message.id,
+                conversation_id: conversation.id,
+                content: chunk.content,
+                chunk_index: chunk.chunkIndex,
+              });
+            }
           }
 
-          await supabase.from('imports').update({
-            progress_json: {
-              percent: 70,
-              counts: { conversations: 1, messages: messagesToInsert.length, chunks: insertedChunks.length, embedded: 0 },
-            },
-          }).eq('id', importId);
+          if (allChunks.length > 0) {
+            const chunksToInsert = allChunks.map((chunk) => ({
+              user_id: user.id,
+              conversation_id: chunk.conversation_id,
+              message_id: chunk.message_id,
+              content: chunk.content,
+              chunk_index: chunk.chunk_index,
+            }));
 
-          // Embed chunks
-          const chunkContents = insertedChunks.map((c: any) => c.content);
-          const embeddings = await embedTexts(chunkContents);
+            const { data: insertedChunks, error: chunksError } = await supabase
+              .from('message_chunks')
+              .insert(chunksToInsert)
+              .select();
 
-          const embeddingsToInsert = insertedChunks.map((chunk: any, idx: number) => ({
-            chunk_id: chunk.id,
-            embedding: embeddings[idx],
-          }));
+            if (chunksError || !insertedChunks) {
+              await supabase.from('imports').update({ status: 'error', error_message: chunksError?.message || 'Failed to insert chunks' }).eq('id', importId);
+              return NextResponse.json({ error: `Failed to insert chunks: ${chunksError?.message || 'Unknown error'}` }, { status: 500 });
+            }
 
-          const { error: embeddingsError } = await supabase
-            .from('message_chunk_embeddings')
-            .insert(embeddingsToInsert);
+            totalChunksInserted += insertedChunks.length;
 
-          if (embeddingsError) {
-            await supabase.from('imports').update({ status: 'error', error_message: embeddingsError.message }).eq('id', importId);
-            return NextResponse.json({ error: `Failed to insert embeddings: ${embeddingsError.message}` }, { status: 500 });
+            // Embed chunks in batches
+            const chunkContents = insertedChunks.map((c: any) => c.content);
+            const embeddings = await embedTexts(chunkContents);
+
+            const embeddingsToInsert = insertedChunks.map((chunk: any, idx: number) => ({
+              chunk_id: chunk.id,
+              embedding: embeddings[idx],
+            }));
+
+            const { error: embeddingsError } = await supabase
+              .from('message_chunk_embeddings')
+              .insert(embeddingsToInsert);
+
+            if (embeddingsError) {
+              await supabase.from('imports').update({ status: 'error', error_message: embeddingsError.message }).eq('id', importId);
+              return NextResponse.json({ error: `Failed to insert embeddings: ${embeddingsError.message}` }, { status: 500 });
+            }
+
+            totalEmbedded += insertedChunks.length;
           }
-
-          await supabase.from('imports').update({
-            progress_json: {
-              percent: 100,
-              counts: { conversations: 1, messages: messagesToInsert.length, chunks: insertedChunks.length, embedded: insertedChunks.length },
-            },
-          }).eq('id', importId);
         }
       }
 
@@ -254,6 +259,10 @@ export async function POST(request: NextRequest) {
         .update({
           status: 'complete',
           processed_at: new Date().toISOString(),
+          progress_json: {
+            percent: 100,
+            counts: { conversations: conversationIds.length, messages: totalMessagesInserted, chunks: totalChunksInserted, embedded: totalEmbedded },
+          },
         })
         .eq('id', importId);
 
@@ -263,7 +272,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: true,
         importId,
-        conversationId: conversation.id,
+        conversationIds,
         status: 'complete',
         message: 'Import completed',
       });
