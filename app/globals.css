@@ -67,14 +67,14 @@ body {
   }
 }
 
+.cookie-notice-slide-up {
+  animation: slideUp 0.3s ease-out;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  @keyframes slideUp {
-    from {
-      opacity: 0;
-    }
-    to {
-      opacity: 1;
-    }
+  .cookie-notice-slide-up {
+    animation: none;
+    opacity: 1;
   }
 }
 

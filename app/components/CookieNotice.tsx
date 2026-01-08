@@ -32,7 +32,7 @@ export default function CookieNotice() {
 
   return (
     <div
-      className="fixed bottom-0 left-0 right-0 z-50 bg-[rgb(var(--surface))] border-t border-[rgb(var(--ring)/0.12)] shadow-lg animate-[slideUp_0.3s_ease-out]"
+      className="fixed bottom-0 left-0 right-0 z-50 bg-[rgb(var(--surface))] border-t border-[rgb(var(--ring)/0.12)] shadow-lg cookie-notice-slide-up"
       role="banner"
       aria-live="polite"
     >
