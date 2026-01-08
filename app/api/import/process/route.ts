@@ -117,6 +117,7 @@ export async function POST(request: NextRequest) {
 
     // Note: Analytics events are fired client-side in import/page.tsx
     // to capture latency and handle failures
+    // Note: Job will be processed by cron job (runs every minute) or can be manually triggered
 
     // Return immediately - job will be processed in background
     return NextResponse.json({

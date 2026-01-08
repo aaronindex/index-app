@@ -28,6 +28,8 @@ export default function ImportPage() {
   const [newProjectName, setNewProjectName] = useState('');
   const [newProjectDescription, setNewProjectDescription] = useState('');
   const [showQuickImport, setShowQuickImport] = useState(false);
+  const [jobStatus, setJobStatus] = useState<any>(null);
+  const [pollCount, setPollCount] = useState(0);
 
   // Check for quick import query param and project pre-selection
   useEffect(() => {
@@ -288,77 +290,127 @@ export default function ImportPage() {
       const jobId = result.jobId;
       
       // Poll for job completion
+      const maxPolls = 200; // 200 * 3s = 10 minutes max
+      
+      let localPollCount = 0;
       const pollInterval = setInterval(async () => {
+        localPollCount++;
+        setPollCount(localPollCount);
+        
         try {
           const jobsResponse = await fetch('/api/imports/jobs');
-          if (jobsResponse.ok) {
-            const jobsData = await jobsResponse.json();
-            const currentJob = jobsData.jobs?.find((j: any) => j.id === jobId);
-            
-            if (currentJob) {
-              if (currentJob.status === 'complete') {
-                clearInterval(pollInterval);
-                setLoading(false);
-                
-                // Calculate latency
-                const latencyMs = Date.now() - importStartTime;
-                trackEvent('import_completed', {
-                  import_type: 'file_upload',
-                  import_id: importRecord.id,
-                  job_id: jobId,
-                  latency_ms: latencyMs,
-                  conversation_count: currentJob.counts?.conversations || 0,
-                  message_count: currentJob.counts?.messages || 0,
-                  size_bytes: file.size || 0,
-                  file_type: getUploadFileType(file),
-                });
-                
-                // Redirect to project or unassigned
-                if (finalProjectId) {
-                  router.push(`/projects/${finalProjectId}?imported=${currentJob.counts.conversations || 0}`);
-                } else {
-                  router.push(`/unassigned?imported=${currentJob.counts.conversations || 0}`);
-                }
-              } else if (currentJob.status === 'error') {
-                clearInterval(pollInterval);
-                const latencyMs = Date.now() - importStartTime;
-                trackEvent('import_failed', {
-                  import_type: 'file_upload',
-                  import_id: importRecord.id,
-                  job_id: jobId,
-                  latency_ms: latencyMs,
-                  error: currentJob.error || 'Import failed',
-                  size_bytes: file.size || 0,
-                  file_type: getUploadFileType(file),
-                });
-                setError(currentJob.error || 'Import failed');
-                setLoading(false);
-              }
-              // Otherwise continue polling
+          if (!jobsResponse.ok) {
+            console.error('[Import] Failed to fetch job status:', jobsResponse.status);
+            if (localPollCount >= maxPolls) {
+              clearInterval(pollInterval);
+              setError('Failed to check import status. Please refresh the page.');
+              setLoading(false);
             }
+            return;
           }
+          
+          const jobsData = await jobsResponse.json();
+          const jobs = Array.isArray(jobsData.jobs) ? jobsData.jobs : [];
+          const currentJob = jobs.find((j: any) => j.id === jobId);
+          
+          if (!currentJob) {
+            // Job not found - might still be creating or there's a delay
+            console.warn('[Import] Job not found in list, poll count:', localPollCount);
+            if (localPollCount >= 10) {
+              // After 30 seconds, if job still not found, show error
+              clearInterval(pollInterval);
+              setError('Import job not found. Please try importing again.');
+              setLoading(false);
+            }
+            return;
+          }
+          
+          // Update job status for UI feedback
+          setJobStatus(currentJob);
+          
+          // Log progress for debugging
+          if (localPollCount % 10 === 0) {
+            console.log('[Import] Job status:', {
+              step: currentJob.step,
+              status: currentJob.status,
+              percent: currentJob.percent,
+              counts: currentJob.counts,
+            });
+          }
+          
+          if (currentJob.status === 'complete') {
+            clearInterval(pollInterval);
+            setLoading(false);
+            
+            // Calculate latency
+            const latencyMs = Date.now() - importStartTime;
+            trackEvent('import_completed', {
+              import_type: 'file_upload',
+              import_id: importRecord.id,
+              job_id: jobId,
+              latency_ms: latencyMs,
+              conversation_count: currentJob.counts?.conversations || 0,
+              message_count: currentJob.counts?.messages || 0,
+              size_bytes: file.size || 0,
+              file_type: getUploadFileType(file),
+            });
+            
+            // Redirect to project or unassigned
+            if (finalProjectId) {
+              router.push(`/projects/${finalProjectId}?imported=${currentJob.counts?.conversations || 0}`);
+            } else {
+              router.push(`/unassigned?imported=${currentJob.counts?.conversations || 0}`);
+            }
+          } else if (currentJob.status === 'error') {
+            clearInterval(pollInterval);
+            const latencyMs = Date.now() - importStartTime;
+            trackEvent('import_failed', {
+              import_type: 'file_upload',
+              import_id: importRecord.id,
+              job_id: jobId,
+              latency_ms: latencyMs,
+              error: currentJob.error || 'Import failed',
+              size_bytes: file.size || 0,
+              file_type: getUploadFileType(file),
+            });
+            setError(currentJob.error || 'Import failed');
+            setLoading(false);
+          }
+          // Otherwise continue polling (status is 'pending' or in progress)
         } catch (err) {
-          console.error('Error polling job status:', err);
+          console.error('[Import] Error polling job status:', err);
+          localPollCount++;
+          setPollCount(localPollCount);
+          if (localPollCount >= maxPolls) {
+            clearInterval(pollInterval);
+            setError('Error checking import status. Please refresh the page.');
+            setLoading(false);
+          }
         }
       }, 3000); // Poll every 3 seconds
 
       // Stop polling after 10 minutes (safety timeout)
+      // Note: pollCount check in the interval also handles this, but this is a backup
       setTimeout(() => {
         clearInterval(pollInterval);
-        if (loading) {
-          const latencyMs = Date.now() - importStartTime;
-          trackEvent('import_failed', {
-            import_type: 'file_upload',
-            import_id: importRecord.id,
-            job_id: jobId,
-            latency_ms: latencyMs,
-            error: 'Timeout',
-            size_bytes: file.size || 0,
-            file_type: getUploadFileType(file),
-          });
-          setError('Import is taking longer than expected. Please check back later.');
-          setLoading(false);
-        }
+        // Only show error if still loading (pollInterval might have already cleared)
+        setLoading((prevLoading) => {
+          if (prevLoading) {
+            const latencyMs = Date.now() - importStartTime;
+            trackEvent('import_failed', {
+              import_type: 'file_upload',
+              import_id: importRecord.id,
+              job_id: jobId,
+              latency_ms: latencyMs,
+              error: 'Timeout',
+              size_bytes: file.size || 0,
+              file_type: getUploadFileType(file),
+            });
+            setError('Import is taking longer than expected. Please check back later or try refreshing the page.');
+            return false;
+          }
+          return prevLoading;
+        });
       }, 10 * 60 * 1000);
     } catch (err) {
       const latencyMs = Date.now() - importStartTime;
@@ -551,20 +603,36 @@ export default function ImportPage() {
               </div>
             </div>
 
-            <div className="flex gap-4 pt-4">
-              <button
-                onClick={() => setStep('upload')}
-                className="px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors font-medium"
-              >
-                Back
-              </button>
-              <button
-                onClick={handleImport}
-                disabled={loading}
-                className="px-6 py-2 bg-foreground text-background rounded-lg hover:opacity-90 transition-opacity font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loading ? 'Importing...' : 'Import Selected'}
-              </button>
+            <div className="space-y-3">
+              <div className="flex gap-4 pt-4">
+                <button
+                  onClick={() => setStep('upload')}
+                  className="px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors font-medium"
+                >
+                  Back
+                </button>
+                <button
+                  onClick={handleImport}
+                  disabled={loading}
+                  className="px-6 py-2 bg-foreground text-background rounded-lg hover:opacity-90 transition-opacity font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loading ? (
+                    jobStatus ? (
+                      `Importing... ${jobStatus.stepLabel || jobStatus.step || 'Processing'} (${jobStatus.percent || 0}%)`
+                    ) : (
+                      'Importing...'
+                    )
+                  ) : (
+                    'Import Selected'
+                  )}
+                </button>
+              </div>
+              {loading && jobStatus && (
+                <div className="text-sm text-[rgb(var(--muted))] pl-2">
+                  {jobStatus.countStr && <p>{jobStatus.countStr}</p>}
+                  {jobStatus.stepLabel && <p className="text-xs mt-1">Step: {jobStatus.stepLabel}</p>}
+                </div>
+              )}
             </div>
           </div>
         )}
