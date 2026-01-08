@@ -282,6 +282,18 @@ async function processInsertConversationsStep(
       if (existing) {
         conversation = existing;
       } else {
+        // Handle startedAt/endedAt - they might be Date objects or ISO strings (from JSON serialization)
+        const startedAt = parsedConv.startedAt instanceof Date 
+          ? parsedConv.startedAt 
+          : parsedConv.startedAt 
+            ? new Date(parsedConv.startedAt) 
+            : new Date();
+        const endedAt = parsedConv.endedAt instanceof Date 
+          ? parsedConv.endedAt 
+          : parsedConv.endedAt 
+            ? new Date(parsedConv.endedAt) 
+            : null;
+
         const { data: newConv, error: convError } = await supabase
           .from('conversations')
           .insert({
@@ -289,8 +301,8 @@ async function processInsertConversationsStep(
             import_id: payload.import_id,
             title: parsedConv.title,
             source: 'chatgpt',
-            started_at: parsedConv.startedAt.toISOString(),
-            ended_at: parsedConv.endedAt?.toISOString() || null,
+            started_at: startedAt.toISOString(),
+            ended_at: endedAt?.toISOString() || null,
           })
           .select()
           .single();
