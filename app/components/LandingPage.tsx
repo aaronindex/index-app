@@ -7,6 +7,8 @@ import { trackEvent } from '@/lib/analytics';
 import MonitorScreenshotPanel from './landing/MonitorScreenshotPanel';
 import ValueCard from './landing/ValueCard';
 import InviteCodeInput from './landing/InviteCodeInput';
+import Footer from './Footer';
+import CookieNotice from './CookieNotice';
 
 export default function LandingPage() {
   const { setTheme, theme, resolvedTheme } = useTheme();
@@ -42,7 +44,8 @@ export default function LandingPage() {
   }, []);
 
   return (
-    <main className="min-h-screen bg-[#FAF8F6] dark:bg-[#121211]">
+    <>
+      <main className="min-h-screen bg-[#FAF8F6] dark:bg-[#121211]">
       {/* 1) HERO SECTION */}
       <section className="w-full py-20 sm:py-28 relative overflow-hidden bg-[#121211]">
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -235,6 +238,9 @@ export default function LandingPage() {
           </p>
         </div>
       </section>
-    </main>
+      </main>
+      <Footer />
+      <CookieNotice />
+    </>
   );
 }

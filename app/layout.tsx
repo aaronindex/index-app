@@ -7,6 +7,8 @@ import { ThemeProvider } from "./components/ThemeProvider";
 import ErrorNotificationContainer from "./components/ErrorNotification";
 import ErrorBoundary from "./components/ErrorBoundary";
 import FeedbackModal from "./components/FeedbackModal";
+import Footer from "./components/Footer";
+import CookieNotice from "./components/CookieNotice";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -98,9 +100,15 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
         >
           <ErrorBoundary>
             <Nav />
-            {children}
+            <div className="flex flex-col min-h-screen">
+              <main className="flex-1">
+                {children}
+              </main>
+              <Footer />
+            </div>
             <ErrorNotificationContainer />
             <FeedbackModal />
+            <CookieNotice />
           </ErrorBoundary>
         </ThemeProvider>
       </body>

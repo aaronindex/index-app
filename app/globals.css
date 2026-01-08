@@ -57,6 +57,27 @@ body {
   display: none !important;
 }
 
+/* Cookie notice animation (respects prefers-reduced-motion) */
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+}
+
 /* Make all buttons have pointer cursor */
 button {
   cursor: pointer;
