@@ -73,12 +73,14 @@ export async function POST(request: NextRequest) {
     // Estimate chunks (rough: ~500 chars per chunk)
     const estimatedChunks = Math.ceil(totalChars / 500);
 
-    // Process synchronously for small imports (like quick import does)
-    // Threshold: <= 1 conversation, <= 50 messages, <= 150 chunks
+    // Process synchronously for small-to-medium imports
+    // Threshold: <= 10 conversations AND <= 200 messages AND <= 500 chunks
+    // This covers most typical use cases (1-10 conversations) while still being fast
+    // Only queue for truly large imports (many conversations or very long conversations)
     const shouldProcessSync = 
-      conversationsToImport.length === 1 && 
-      totalMessages <= 50 && 
-      estimatedChunks <= 150;
+      conversationsToImport.length <= 10 && 
+      totalMessages <= 200 && 
+      estimatedChunks <= 500;
 
     if (shouldProcessSync) {
       // Process synchronously - much faster for small imports
