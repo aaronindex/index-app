@@ -129,20 +129,27 @@ export async function GET(request: NextRequest) {
 
     // Get project info for conversations to revisit
     const revisitConvIds = conversationsToRevisit.map((c) => c.id);
-    const { data: projectConversations } = await supabase
-      .from('project_conversations')
-      .select('conversation_id, project_id, projects(name)')
-      .in('conversation_id', revisitConvIds);
+    let projectMap = new Map<string, { project_id: string; project_name: string }>();
+    
+    if (revisitConvIds.length > 0) {
+      const { data: projectConversations, error: projectConvError } = await supabase
+        .from('project_conversations')
+        .select('conversation_id, project_id, projects(name)')
+        .in('conversation_id', revisitConvIds);
 
-    const projectMap = new Map<string, { project_id: string; project_name: string }>();
-    projectConversations?.forEach((pc: any) => {
-      if (pc.project_id && pc.projects) {
-        projectMap.set(pc.conversation_id, {
-          project_id: pc.project_id,
-          project_name: pc.projects.name,
+      if (projectConvError) {
+        console.error('Error fetching project conversations:', projectConvError);
+      } else {
+        projectConversations?.forEach((pc: any) => {
+          if (pc.project_id && pc.projects) {
+            projectMap.set(pc.conversation_id, {
+              project_id: pc.project_id,
+              project_name: pc.projects.name,
+            });
+          }
         });
       }
-    });
+    }
 
     const thingsToRevisit = conversationsToRevisit.map((conv) => {
       const projectInfo = projectMap.get(conv.id);
@@ -175,51 +182,56 @@ export async function GET(request: NextRequest) {
       .eq('id', user.id)
       .single();
 
-    return NextResponse.json({
-      success: true,
-      hasConversations: (conversationCount || 0) > 0,
-      hasProjects: (projectCount || 0) > 0,
-      priorityItems: {
-        tasks: allTasks?.map((t: any) => ({
-          id: t.id,
-          title: t.title,
-          description: t.description,
-          status: t.status,
-          project_id: t.project_id,
-          project_name: (t.projects as any)?.name || null,
-          conversation_id: t.conversation_id,
-          created_at: t.created_at,
-        })) || [],
-        decisions: recentDecisions?.map((d: any) => ({
-          id: d.id,
-          title: d.title,
-          content: d.content,
-          conversation_id: d.conversation_id,
-          conversation_title: (d.conversations as any)?.title || null,
-          project_id: d.project_id || null,
-          project_name: (d.projects as any)?.name || null,
-          created_at: d.created_at,
-        })) || [],
-      },
-      latestInsights: recentHighlights?.map((h: any) => ({
-        id: h.id,
-        content: h.content,
-        label: h.label,
-        conversation_id: h.conversation_id,
-        conversation_title: (h.conversations as any)?.title || null,
-        created_at: h.created_at,
-      })) || [],
-      thingsToRevisit,
-      latestDigest: latestDigest ? {
-        id: latestDigest.id,
-        week_start: latestDigest.week_start,
-        week_end: latestDigest.week_end,
-        summary: latestDigest.summary,
-        top_themes: latestDigest.top_themes,
-        open_loops: latestDigest.open_loops,
-      } : null,
-      weekly_digest_enabled: profile?.weekly_digest_enabled ?? true,
-    });
+    try {
+      return NextResponse.json({
+        success: true,
+        hasConversations: (conversationCount || 0) > 0,
+        hasProjects: (projectCount || 0) > 0,
+        priorityItems: {
+          tasks: (allTasks || []).map((t: any) => ({
+            id: t.id,
+            title: t.title || 'Untitled Task',
+            description: t.description || null,
+            status: t.status || 'open',
+            project_id: t.project_id || null,
+            project_name: (t.projects as any)?.name || null,
+            conversation_id: t.conversation_id || null,
+            created_at: t.created_at,
+          })),
+          decisions: (recentDecisions || []).map((d: any) => ({
+            id: d.id,
+            title: d.title || 'Untitled Decision',
+            content: d.content || null,
+            conversation_id: d.conversation_id || null,
+            conversation_title: (d.conversations as any)?.title || null,
+            project_id: d.project_id || null,
+            project_name: (d.projects as any)?.name || null,
+            created_at: d.created_at,
+          })),
+        },
+        latestInsights: (recentHighlights || []).map((h: any) => ({
+          id: h.id,
+          content: h.content,
+          label: h.label,
+          conversation_id: h.conversation_id,
+          conversation_title: (h.conversations as any)?.title || null,
+          created_at: h.created_at,
+        })),
+        thingsToRevisit: thingsToRevisit || [],
+        latestDigest: latestDigest ? {
+          id: latestDigest.id,
+          week_start: latestDigest.week_start,
+          week_end: latestDigest.week_end,
+          summary: latestDigest.summary,
+          top_themes: latestDigest.top_themes,
+          open_loops: latestDigest.open_loops,
+        } : null,
+        weekly_digest_enabled: profile?.weekly_digest_enabled ?? true,
+      });
+    } catch (jsonError) {
+      console.error('Error serializing response:', jsonError);
+      throw jsonError;
+    }
   } catch (error) {
     console.error('Home data API error:', error);
     return NextResponse.json(
