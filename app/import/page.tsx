@@ -5,7 +5,8 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSupabaseBrowserClient } from '@/lib/supabaseClient';
 import { parseChatGPTExport } from '@/lib/parsers/chatgpt';
-import QuickImportModal from './components/QuickImportModal';
+import { parseTranscript } from '@/lib/parsers/transcript';
+import Card from '@/app/components/ui/Card';
 import { trackEvent } from '@/lib/analytics';
 
 interface DetectedConversation {
@@ -18,11 +19,14 @@ interface DetectedConversation {
 export default function ImportPage() {
   const router = useRouter();
   const [step, setStep] = useState<'upload' | 'preview' | 'assign'>('upload');
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   // Update page title
   useEffect(() => {
     document.title = 'Import | INDEX';
   }, []);
+
+  // File upload state
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -32,56 +36,245 @@ export default function ImportPage() {
   const [projectAction, setProjectAction] = useState<'none' | 'existing' | 'new'>('none');
   const [newProjectName, setNewProjectName] = useState('');
   const [newProjectDescription, setNewProjectDescription] = useState('');
-  const [showQuickImport, setShowQuickImport] = useState(false);
   const [jobStatus, setJobStatus] = useState<any>(null);
   const [pollCount, setPollCount] = useState(0);
 
-  // Check for quick import query param and project pre-selection
+  // Quick Import state
+  const [quickTranscript, setQuickTranscript] = useState('');
+  const [quickTitle, setQuickTitle] = useState('');
+  const [quickProjectId, setQuickProjectId] = useState<string>('');
+  const [quickProjectAction, setQuickProjectAction] = useState<'none' | 'existing' | 'new'>('none');
+  const [quickNewProjectName, setQuickNewProjectName] = useState('');
+  const [quickNewProjectDescription, setQuickNewProjectDescription] = useState('');
+  const [quickSwapRoles, setQuickSwapRoles] = useState(false);
+  const [quickTreatAsSingleBlock, setQuickTreatAsSingleBlock] = useState(false);
+  const [quickParsedInfo, setQuickParsedInfo] = useState<{ userCount: number; assistantCount: number } | null>(null);
+  const [quickLoading, setQuickLoading] = useState(false);
+  const [quickError, setQuickError] = useState<string | null>(null);
+  const [quickSuccess, setQuickSuccess] = useState<{ conversationId: string; title: string; messageCount: number } | null>(null);
+  const [quickJobId, setQuickJobId] = useState<string | null>(null);
+  const [quickJobStatus, setQuickJobStatus] = useState<any>(null);
+  const [quickImportStartTime, setQuickImportStartTime] = useState<number | null>(null);
+
+  // Fetch projects on mount
+  useEffect(() => {
+    const fetchProjects = async () => {
+      const supabase = getSupabaseBrowserClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (user) {
+        const { data: userProjects } = await supabase
+          .from('projects')
+          .select('id, name')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
+
+        setProjects(userProjects || []);
+      }
+    };
+
+    fetchProjects();
+  }, []);
+
+  // Check for project pre-selection from URL
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get('quick') === 'true') {
-      setShowQuickImport(true);
-      // Clean up URL
-      router.replace('/import', { scroll: false });
-    }
-    
-    // Pre-select project if provided in URL
     const projectIdFromUrl = params.get('project');
-    if (projectIdFromUrl) {
-      // Fetch projects first, then set the selected project
-      const fetchProjectsAndSelect = async () => {
-        const supabase = getSupabaseBrowserClient();
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
+    if (projectIdFromUrl && projects.length > 0) {
+      const projectExists = projects.some(p => p.id === projectIdFromUrl);
+      if (projectExists) {
+        setQuickProjectId(projectIdFromUrl);
+        setQuickProjectAction('existing');
+      }
+    }
+  }, [projects]);
 
-        if (user) {
-          const { data: userProjects, error: projectsError } = await supabase
-            .from('projects')
-            .select('id, name')
-            .eq('user_id', user.id)
-            .order('created_at', { ascending: false });
+  // Parse quick import transcript on change
+  useEffect(() => {
+    if (quickTranscript.trim()) {
+      const parsed = parseTranscript(quickTranscript, { swapRoles: quickSwapRoles, treatAsSingleBlock: quickTreatAsSingleBlock });
+      setQuickParsedInfo({
+        userCount: parsed.userCount,
+        assistantCount: parsed.assistantCount,
+      });
+    } else {
+      setQuickParsedInfo(null);
+    }
+  }, [quickTranscript, quickSwapRoles, quickTreatAsSingleBlock]);
 
-          if (projectsError) {
-            console.error('[Import] Error fetching projects:', projectsError);
-            setProjects([]);
-          } else {
-            // Ensure projects is always an array
-            const projectsArray = Array.isArray(userProjects) ? userProjects : [];
-            setProjects(projectsArray);
-            // Check if the project from URL exists in user's projects
-            const projectExists = projectsArray.some(p => p.id === projectIdFromUrl);
-            if (projectExists) {
-              setSelectedProjectId(projectIdFromUrl);
-              setProjectAction('existing');
+  // Poll quick import job status
+  useEffect(() => {
+    if (!quickJobId || !quickImportStartTime) return;
+
+    const pollInterval = setInterval(async () => {
+      try {
+        const response = await fetch(`/api/imports/jobs`);
+        if (response.ok) {
+          const data = await response.json();
+          const jobs = Array.isArray(data.jobs) ? data.jobs : [];
+          const currentJob = jobs.find((j: any) => j.id === quickJobId);
+          if (currentJob) {
+            setQuickJobStatus(currentJob);
+            if (currentJob.status === 'complete') {
+              clearInterval(pollInterval);
+              const latencyMs = quickImportStartTime ? Date.now() - quickImportStartTime : 0;
+              trackEvent('import_completed', {
+                import_type: 'quick_paste',
+                import_id: currentJob.import_id || undefined,
+                job_id: quickJobId,
+                latency_ms: latencyMs,
+                conversation_count: 1,
+                message_count: currentJob.counts?.messages || 0,
+              });
+              
+              const supabase = getSupabaseBrowserClient();
+              const { data: importData } = await supabase
+                .from('imports')
+                .select('id')
+                .eq('id', currentJob.import_id || '')
+                .single();
+
+              if (importData) {
+                const { data: convData } = await supabase
+                  .from('conversations')
+                  .select('id, title')
+                  .eq('import_id', importData.id)
+                  .single();
+
+                if (convData) {
+                  setQuickSuccess({
+                    conversationId: convData.id,
+                    title: convData.title || 'Untitled',
+                    messageCount: currentJob.counts?.messages || 0,
+                  });
+                  setQuickLoading(false);
+                }
+              }
+            } else if (currentJob.status === 'error') {
+              clearInterval(pollInterval);
+              const latencyMs = quickImportStartTime ? Date.now() - quickImportStartTime : 0;
+              trackEvent('import_failed', {
+                import_type: 'quick_paste',
+                import_id: currentJob.import_id || undefined,
+                job_id: quickJobId,
+                latency_ms: latencyMs,
+                error: currentJob.error || 'Import failed',
+              });
+              setQuickError(currentJob.error || 'Import failed');
+              setQuickLoading(false);
             }
           }
         }
-      };
-      
-      fetchProjectsAndSelect();
+      } catch (err) {
+        console.error('Error polling job status:', err);
+      }
+    }, 3000);
+
+    return () => clearInterval(pollInterval);
+  }, [quickJobId, quickImportStartTime]);
+
+  const handleQuickImport = async () => {
+    if (!quickTranscript.trim()) {
+      setQuickError('Please paste a transcript');
+      return;
     }
-  }, [router]);
+
+    setQuickLoading(true);
+    setQuickError(null);
+
+    const startTime = Date.now();
+    setQuickImportStartTime(startTime);
+
+    trackEvent('import_started', {
+      import_type: 'quick_paste',
+      chars: quickTranscript.trim().length,
+      has_project: quickProjectAction === 'existing' || quickProjectAction === 'new',
+    });
+
+    try {
+      const response = await fetch('/api/quick-import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          transcript: quickTranscript.trim(),
+          title: quickTitle.trim() || undefined,
+          projectId: quickProjectAction === 'existing' ? quickProjectId : undefined,
+          newProject:
+            quickProjectAction === 'new' && quickNewProjectName.trim()
+              ? {
+                  name: quickNewProjectName.trim(),
+                  description: quickNewProjectDescription.trim() || undefined,
+                }
+              : undefined,
+          swapRoles: quickSwapRoles,
+          treatAsSingleBlock: quickTreatAsSingleBlock,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (response.status === 429) {
+          trackEvent('limit_hit', { limit_type: 'import' });
+        }
+        
+        if (response.status === 409 && data.error === 'duplicate') {
+          setQuickError(`This conversation already exists.`);
+          const latencyMs = Date.now() - startTime;
+          trackEvent('import_failed', {
+            import_type: 'quick_paste',
+            latency_ms: latencyMs,
+            error: 'duplicate',
+          });
+          setQuickLoading(false);
+          return;
+        }
+        
+        const latencyMs = Date.now() - startTime;
+        trackEvent('import_failed', {
+          import_type: 'quick_paste',
+          latency_ms: latencyMs,
+          error: data.error || 'Failed to import conversation',
+        });
+        setQuickError(data.error || 'Failed to import conversation');
+        setQuickLoading(false);
+        return;
+      }
+
+      if (data.processed) {
+        const latencyMs = Date.now() - startTime;
+        trackEvent('import_completed', {
+          import_type: 'quick_paste',
+          import_id: data.importId || undefined,
+          latency_ms: latencyMs,
+          conversation_count: 1,
+          message_count: data.messageCount || 0,
+        });
+        
+        setQuickSuccess({
+          conversationId: data.conversationId,
+          title: data.title,
+          messageCount: data.messageCount,
+        });
+        setQuickLoading(false);
+      } else {
+        setQuickJobId(data.jobId);
+        setQuickJobStatus({ status: 'queued', step: 'queued' });
+      }
+    } catch (err) {
+      const latencyMs = startTime ? Date.now() - startTime : 0;
+      trackEvent('import_failed', {
+        import_type: 'quick_paste',
+        latency_ms: latencyMs,
+        error: err instanceof Error ? err.message : 'Failed to import conversation',
+      });
+      setQuickError('Failed to import conversation. Please try again.');
+      console.error(err);
+      setQuickLoading(false);
+    }
+  };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -97,21 +290,14 @@ export default function ImportPage() {
     setLoading(true);
 
     try {
-      // Read and parse the file
       const text = await selectedFile.text();
       const data = JSON.parse(text);
 
-      console.log('[Import] File parsed successfully. Root type:', Array.isArray(data) ? 'array' : typeof data);
-      console.log('[Import] Root keys:', typeof data === 'object' && data !== null ? Object.keys(data) : 'N/A');
-
-      // Parse conversations using the parser
       const parsedConversations = parseChatGPTExport(data);
-      
-      console.log('[Import] Parsed conversations:', parsedConversations.length);
       
       if (parsedConversations.length === 0) {
         setError(
-          'No conversations detected in the file. Please ensure it is a valid ChatGPT export. Check the browser console for details.'
+          'No conversations detected in the file. Please ensure it is a valid ChatGPT export.'
         );
         setLoading(false);
         return;
@@ -126,7 +312,6 @@ export default function ImportPage() {
         }))
       );
 
-      // Fetch user's projects
       const supabase = getSupabaseBrowserClient();
       const {
         data: { user },
@@ -143,7 +328,6 @@ export default function ImportPage() {
           console.error('[Import] Error fetching projects:', projectsError);
           setProjects([]);
         } else {
-          // Ensure projects is always an array
           setProjects(Array.isArray(userProjects) ? userProjects : []);
         }
       }
@@ -163,7 +347,6 @@ export default function ImportPage() {
     );
   };
 
-  // Helper function to determine file type from File object
   const getUploadFileType = (file: File): 'zip' | 'json' | 'unknown' => {
     const fileName = file.name.toLowerCase();
     if (fileName.endsWith('.zip')) {
@@ -186,7 +369,6 @@ export default function ImportPage() {
     setLoading(true);
     setError(null);
 
-    // Track import start time
     const importStartTime = Date.now();
 
     try {
@@ -201,11 +383,9 @@ export default function ImportPage() {
         return;
       }
 
-      // Upload file to Supabase Storage (or process directly)
       const fileText = await file.text();
       const fileData = JSON.parse(fileText);
 
-      // Create import record
       const { data: importRecord, error: importError } = await supabase
         .from('imports')
         .insert({
@@ -222,7 +402,6 @@ export default function ImportPage() {
         return;
       }
 
-      // Determine project assignment
       let finalProjectId: string | null = null;
       let newProjectData: { name: string; description: string } | null = null;
 
@@ -235,7 +414,6 @@ export default function ImportPage() {
         };
       }
 
-      // Track import started on submit (after determining project, before API call)
       trackEvent('import_started', {
         import_type: 'file_upload',
         conversation_count: selected.length,
@@ -243,16 +421,7 @@ export default function ImportPage() {
         size_bytes: file.size || 0,
         file_type: getUploadFileType(file),
       });
-      
-      // Debug logging
-      if (process.env.NEXT_PUBLIC_DEBUG_ANALYTICS === 'true') {
-        console.log('[Analytics] import_started (file_upload)', {
-          size_bytes: file.size,
-          file_type: getUploadFileType(file),
-        });
-      }
 
-      // Queue the import job
       const response = await fetch('/api/import/process', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -269,14 +438,10 @@ export default function ImportPage() {
         const errorData = await response.json();
         setError(errorData.error || 'Import failed.');
         
-        // Track limit hit if 429
         if (response.status === 429) {
-          trackEvent('limit_hit', {
-            limit_type: 'import',
-          });
+          trackEvent('limit_hit', { limit_type: 'import' });
         }
         
-        // Track import failed
         const latencyMs = Date.now() - importStartTime;
         trackEvent('import_failed', {
           import_type: 'file_upload',
@@ -290,10 +455,8 @@ export default function ImportPage() {
         return;
       }
 
-      // Check if import was processed synchronously (no job created)
       const result = await response.json();
       
-      // If import completed synchronously, skip polling and redirect
       if (result.status === 'complete' && !result.jobId) {
         const latencyMs = Date.now() - importStartTime;
         trackEvent('import_completed', {
@@ -301,14 +464,13 @@ export default function ImportPage() {
           import_id: importRecord.id,
           latency_ms: latencyMs,
           conversation_count: result.conversationIds?.length || 1,
-          message_count: 0, // Not available in sync response
+          message_count: 0,
           size_bytes: file.size || 0,
           file_type: getUploadFileType(file),
         });
         
         setLoading(false);
         
-        // Redirect to project or unassigned
         if (finalProjectId) {
           router.push(`/projects/${finalProjectId}?imported=${result.conversationIds?.length || 1}`);
         } else {
@@ -317,7 +479,6 @@ export default function ImportPage() {
         return;
       }
       
-      // Otherwise, job was queued - start polling for status
       const jobId = result.jobId;
       if (!jobId) {
         setError('Import response missing job ID. Please try again.');
@@ -325,9 +486,7 @@ export default function ImportPage() {
         return;
       }
       
-      // Poll for job completion
-      const maxPolls = 600; // 600 * 3s = 30 minutes max (for large imports)
-      
+      const maxPolls = 600;
       let localPollCount = 0;
       const pollInterval = setInterval(async () => {
         localPollCount++;
@@ -350,10 +509,8 @@ export default function ImportPage() {
           const currentJob = jobs.find((j: any) => j.id === jobId);
           
           if (!currentJob) {
-            // Job not found - might still be creating or there's a delay
             console.warn('[Import] Job not found in list, poll count:', localPollCount);
             if (localPollCount >= 10) {
-              // After 30 seconds, if job still not found, show error
               clearInterval(pollInterval);
               setError('Import job not found. Please try importing again.');
               setLoading(false);
@@ -361,24 +518,12 @@ export default function ImportPage() {
             return;
           }
           
-          // Update job status for UI feedback
           setJobStatus(currentJob);
-          
-          // Log progress for debugging
-          if (localPollCount % 10 === 0) {
-            console.log('[Import] Job status:', {
-              step: currentJob.step,
-              status: currentJob.status,
-              percent: currentJob.percent,
-              counts: currentJob.counts,
-            });
-          }
           
           if (currentJob.status === 'complete') {
             clearInterval(pollInterval);
             setLoading(false);
             
-            // Calculate latency
             const latencyMs = Date.now() - importStartTime;
             trackEvent('import_completed', {
               import_type: 'file_upload',
@@ -391,7 +536,6 @@ export default function ImportPage() {
               file_type: getUploadFileType(file),
             });
             
-            // Redirect to project or unassigned
             if (finalProjectId) {
               router.push(`/projects/${finalProjectId}?imported=${currentJob.counts?.conversations || 0}`);
             } else {
@@ -412,7 +556,6 @@ export default function ImportPage() {
             setError(currentJob.error || 'Import failed');
             setLoading(false);
           }
-          // Otherwise continue polling (status is 'pending' or in progress)
         } catch (err) {
           console.error('[Import] Error polling job status:', err);
           localPollCount++;
@@ -423,13 +566,10 @@ export default function ImportPage() {
             setLoading(false);
           }
         }
-      }, 3000); // Poll every 3 seconds
+      }, 3000);
 
-      // Stop polling after 10 minutes (safety timeout)
-      // Note: pollCount check in the interval also handles this, but this is a backup
       setTimeout(() => {
         clearInterval(pollInterval);
-        // Only show error if still loading (pollInterval might have already cleared)
         setLoading((prevLoading) => {
           if (prevLoading) {
             const latencyMs = Date.now() - importStartTime;
@@ -468,49 +608,276 @@ export default function ImportPage() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <h1 className="font-serif text-3xl font-semibold text-[rgb(var(--text))] mb-8">Import Conversations</h1>
 
-        {error && (
+        {(error || quickError) && (
           <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-            <p className="text-red-800 dark:text-red-400">{error}</p>
+            <p className="text-red-800 dark:text-red-400">{error || quickError}</p>
           </div>
         )}
 
         {step === 'upload' && (
-          <div className="space-y-6">
+          <div className="space-y-8">
+            {/* Primary: Quick Import Section */}
             <div>
-              <h2 className="text-xl font-medium text-foreground mb-4">Step 1 — Choose Source</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="border-2 border-dashed border-zinc-300 dark:border-zinc-700 rounded-lg p-8 text-center">
-                  <input
-                    type="file"
-                    accept=".json"
-                    onChange={handleFileSelect}
-                    className="hidden"
-                    id="file-upload"
-                    disabled={loading}
-                  />
-                  <label
-                    htmlFor="file-upload"
-                    className="cursor-pointer inline-block px-6 py-3 bg-foreground text-background rounded-lg hover:opacity-90 transition-opacity font-medium"
-                  >
-                    {loading ? 'Processing...' : 'Upload ChatGPT Export (JSON)'}
-                  </label>
-                  <p className="mt-4 text-sm text-zinc-600 dark:text-zinc-400">
-                    Select a JSON file exported from ChatGPT
-                  </p>
-                </div>
-                <div className="border-2 border-dashed border-zinc-300 dark:border-zinc-700 rounded-lg p-8 text-center">
-                  <button
-                    onClick={() => setShowQuickImport(true)}
-                    className="px-6 py-3 bg-foreground text-background rounded-lg hover:opacity-90 transition-opacity font-medium"
-                    disabled={loading}
-                  >
-                    Quick Import (Paste One Conversation)
-                  </button>
-                  <p className="mt-4 text-sm text-zinc-600 dark:text-zinc-400">
-                    Paste a single conversation transcript
-                  </p>
-                </div>
+              <div className="mb-4">
+                <h2 className="text-2xl font-semibold text-[rgb(var(--text))] mb-2">Quick Import (Recommended)</h2>
+                <p className="text-[rgb(var(--muted))]">
+                  Paste one conversation transcript from ChatGPT, Claude, Cursor, or any other AI chat tool. 
+                  Indexes immediately — perfect for first run, testing, or importing a single project thread.
+                </p>
               </div>
+
+              {quickSuccess ? (
+                <Card className="p-6">
+                  <div className="space-y-4">
+                    <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                      <p className="text-green-800 dark:text-green-400 font-medium">Conversation imported successfully!</p>
+                      <p className="text-sm text-green-700 dark:text-green-500 mt-1">
+                        {quickSuccess.messageCount} messages imported
+                      </p>
+                    </div>
+                    <div className="flex gap-3">
+                      <button
+                        onClick={() => {
+                          router.push(`/conversations/${quickSuccess.conversationId}`);
+                          setQuickSuccess(null);
+                          setQuickTranscript('');
+                          setQuickTitle('');
+                        }}
+                        className="px-4 py-2 bg-[rgb(var(--text))] text-[rgb(var(--bg))] rounded-lg hover:opacity-90 transition-opacity font-medium"
+                      >
+                        Open Conversation
+                      </button>
+                      <button
+                        onClick={() => {
+                          setQuickSuccess(null);
+                          setQuickTranscript('');
+                          setQuickTitle('');
+                        }}
+                        className="px-4 py-2 border border-[rgb(var(--ring)/0.12)] rounded-lg hover:bg-[rgb(var(--surface2))] transition-colors font-medium"
+                      >
+                        Import Another
+                      </button>
+                    </div>
+                  </div>
+                </Card>
+              ) : (
+                <Card className="p-6">
+                  <div className="space-y-6">
+                    {quickJobStatus && quickJobStatus.status !== 'complete' && (
+                      <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                        <p className="text-blue-800 dark:text-blue-400 text-sm font-medium">
+                          Import queued — processing in background
+                        </p>
+                        {quickJobStatus.step && (
+                          <p className="text-xs text-blue-700 dark:text-blue-500 mt-1">
+                            Step: {quickJobStatus.step} ({quickJobStatus.percent || 0}%)
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    <div>
+                      <label className="block text-sm font-medium text-[rgb(var(--text))] mb-2">
+                        Paste Chat Transcript
+                      </label>
+                      <textarea
+                        value={quickTranscript}
+                        onChange={(e) => setQuickTranscript(e.target.value)}
+                        placeholder="User: Hello&#10;Assistant: Hi there&#10;User: How are you?"
+                        className="w-full h-48 p-3 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-[rgb(var(--surface))] text-[rgb(var(--text))] font-mono text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[rgb(var(--ring)/0.2)]"
+                        disabled={quickLoading}
+                      />
+                      {quickParsedInfo && (
+                        <p className="mt-2 text-xs text-[rgb(var(--muted))]">
+                          Detected: {quickParsedInfo.userCount} User / {quickParsedInfo.assistantCount} Assistant
+                        </p>
+                      )}
+                      <div className="mt-2 flex gap-4">
+                        <label className="flex items-center gap-2 text-xs text-[rgb(var(--muted))] cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={quickSwapRoles}
+                            onChange={(e) => setQuickSwapRoles(e.target.checked)}
+                            className="w-3 h-3"
+                            disabled={quickLoading}
+                          />
+                          Swap roles
+                        </label>
+                        <label className="flex items-center gap-2 text-xs text-[rgb(var(--muted))] cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={quickTreatAsSingleBlock}
+                            onChange={(e) => setQuickTreatAsSingleBlock(e.target.checked)}
+                            className="w-3 h-3"
+                            disabled={quickLoading}
+                          />
+                          Treat as single block
+                        </label>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-[rgb(var(--text))] mb-2">
+                        Title (optional, auto-generated if empty)
+                      </label>
+                      <input
+                        type="text"
+                        value={quickTitle}
+                        onChange={(e) => setQuickTitle(e.target.value)}
+                        placeholder="Auto-generated from first message"
+                        className="w-full p-3 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-[rgb(var(--surface))] text-[rgb(var(--text))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--ring)/0.2)]"
+                        disabled={quickLoading}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-[rgb(var(--text))] mb-2">
+                        Assign to Project (optional)
+                      </label>
+                      <div className="space-y-3">
+                        <label className="flex items-center gap-2">
+                          <input
+                            type="radio"
+                            name="quickProjectAction"
+                            value="none"
+                            checked={quickProjectAction === 'none'}
+                            onChange={() => setQuickProjectAction('none')}
+                            className="w-4 h-4"
+                            disabled={quickLoading}
+                          />
+                          <span className="text-sm text-[rgb(var(--text))]">Unassigned</span>
+                        </label>
+                        <label className="flex items-center gap-2">
+                          <input
+                            type="radio"
+                            name="quickProjectAction"
+                            value="existing"
+                            checked={quickProjectAction === 'existing'}
+                            onChange={() => setQuickProjectAction('existing')}
+                            className="w-4 h-4"
+                            disabled={quickLoading}
+                          />
+                          <span className="text-sm text-[rgb(var(--text))]">Existing Project</span>
+                        </label>
+                        {quickProjectAction === 'existing' && (
+                          <select
+                            value={quickProjectId}
+                            onChange={(e) => setQuickProjectId(e.target.value)}
+                            className="w-full p-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-[rgb(var(--surface))] text-[rgb(var(--text))] text-sm focus:outline-none focus:ring-2 focus:ring-[rgb(var(--ring)/0.2)]"
+                            disabled={quickLoading}
+                          >
+                            <option value="">Select a project</option>
+                            {projects.map((project) => (
+                              <option key={project.id} value={project.id}>
+                                {project.name}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                        <label className="flex items-center gap-2">
+                          <input
+                            type="radio"
+                            name="quickProjectAction"
+                            value="new"
+                            checked={quickProjectAction === 'new'}
+                            onChange={() => setQuickProjectAction('new')}
+                            className="w-4 h-4"
+                            disabled={quickLoading}
+                          />
+                          <span className="text-sm text-[rgb(var(--text))]">Create New Project</span>
+                        </label>
+                        {quickProjectAction === 'new' && (
+                          <div className="space-y-2 ml-6">
+                            <input
+                              type="text"
+                              value={quickNewProjectName}
+                              onChange={(e) => setQuickNewProjectName(e.target.value)}
+                              placeholder="Project name"
+                              className="w-full p-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-[rgb(var(--surface))] text-[rgb(var(--text))] text-sm focus:outline-none focus:ring-2 focus:ring-[rgb(var(--ring)/0.2)]"
+                              disabled={quickLoading}
+                            />
+                            <textarea
+                              value={quickNewProjectDescription}
+                              onChange={(e) => setQuickNewProjectDescription(e.target.value)}
+                              placeholder="Description (optional)"
+                              className="w-full p-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-[rgb(var(--surface))] text-[rgb(var(--text))] text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[rgb(var(--ring)/0.2)]"
+                              rows={2}
+                              disabled={quickLoading}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex gap-3 justify-end pt-2">
+                      <button
+                        onClick={handleQuickImport}
+                        disabled={quickLoading || !quickTranscript.trim()}
+                        className="px-6 py-3 bg-[rgb(var(--text))] text-[rgb(var(--bg))] rounded-lg hover:opacity-90 transition-opacity font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {quickLoading ? 'Importing...' : 'Paste a conversation'}
+                      </button>
+                    </div>
+                  </div>
+                </Card>
+              )}
+            </div>
+
+            {/* Secondary: Advanced Import Section */}
+            <div>
+              <button
+                onClick={() => setShowAdvanced(!showAdvanced)}
+                className="w-full flex items-center justify-between p-4 border border-[rgb(var(--ring)/0.12)] rounded-lg hover:bg-[rgb(var(--surface2))] transition-colors text-left"
+              >
+                <div>
+                  <h2 className="text-xl font-medium text-[rgb(var(--text))] mb-1">Import ChatGPT Export (Advanced)</h2>
+                  <p className="text-sm text-[rgb(var(--muted))]">
+                    Best for importing many conversations at once. Can take longer with queued background processing.
+                  </p>
+                </div>
+                <span className="text-[rgb(var(--muted))] text-2xl">{showAdvanced ? '−' : '+'}</span>
+              </button>
+
+              {showAdvanced && (
+                <Card className="p-6 mt-4">
+                  <div className="space-y-6">
+                    <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                      <p className="text-sm text-blue-800 dark:text-blue-400">
+                        <strong>If you just want to try INDEX, start with Quick Import above.</strong> You can always do a full import later. Large exports may take a while; you can leave the tab open or come back.
+                      </p>
+                    </div>
+
+                    <div>
+                      <h3 className="text-sm font-semibold text-[rgb(var(--text))] mb-3">How to export from ChatGPT</h3>
+                      <ol className="space-y-2 text-sm text-[rgb(var(--muted))] list-decimal list-inside">
+                        <li>In ChatGPT, go to <strong>Settings → Data Controls → Export Data</strong></li>
+                        <li>Download the ZIP, then extract and upload the <code className="bg-[rgb(var(--surface2))] px-1.5 py-0.5 rounded text-xs">conversations.json</code> file</li>
+                        <li>INDEX will process your import in the background</li>
+                      </ol>
+                    </div>
+
+                    <div>
+                      <p className="text-sm text-[rgb(var(--muted))] mb-4">
+                        You can assign conversations to projects during import or later from the Projects/Unassigned views.
+                      </p>
+                      <input
+                        type="file"
+                        accept=".json"
+                        onChange={handleFileSelect}
+                        className="hidden"
+                        id="file-upload"
+                        disabled={loading}
+                      />
+                      <label
+                        htmlFor="file-upload"
+                        className="cursor-pointer inline-block px-6 py-3 bg-[rgb(var(--text))] text-[rgb(var(--bg))] rounded-lg hover:opacity-90 transition-opacity font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {loading ? 'Processing...' : 'Upload ChatGPT Export (JSON)'}
+                      </label>
+                    </div>
+                  </div>
+                </Card>
+              )}
             </div>
           </div>
         )}
@@ -518,7 +885,7 @@ export default function ImportPage() {
         {step === 'preview' && (
           <div className="space-y-6">
             <div>
-              <h2 className="text-xl font-medium text-foreground mb-4">
+              <h2 className="text-xl font-medium text-[rgb(var(--text))] mb-4">
                 Step 2 — Preview ({detectedConversations.length} conversations detected)
               </h2>
               <div className="space-y-3">
@@ -534,8 +901,8 @@ export default function ImportPage() {
                       className="w-4 h-4"
                     />
                     <div className="flex-1">
-                      <p className="font-medium text-foreground">{conv.title}</p>
-                      <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                      <p className="font-medium text-[rgb(var(--text))]">{conv.title}</p>
+                      <p className="text-sm text-[rgb(var(--muted))]">
                         {conv.messageCount} messages
                       </p>
                     </div>
@@ -545,7 +912,7 @@ export default function ImportPage() {
             </div>
 
             <div>
-              <h2 className="text-xl font-medium text-foreground mb-4">Step 3 — Assign to Project</h2>
+              <h2 className="text-xl font-medium text-[rgb(var(--text))] mb-4">Step 3 — Assign to Project</h2>
               
               <div className="space-y-4">
                 <div className="space-y-2">
@@ -561,7 +928,7 @@ export default function ImportPage() {
                       }}
                       className="w-4 h-4"
                     />
-                    <span className="text-sm text-foreground">Leave unassigned</span>
+                    <span className="text-sm text-[rgb(var(--text))]">Leave unassigned</span>
                   </label>
                   
                   <label className="flex items-center gap-2">
@@ -573,7 +940,7 @@ export default function ImportPage() {
                       onChange={() => setProjectAction('existing')}
                       className="w-4 h-4"
                     />
-                    <span className="text-sm text-foreground">Assign to existing project</span>
+                    <span className="text-sm text-[rgb(var(--text))]">Assign to existing project</span>
                   </label>
                   
                   <label className="flex items-center gap-2">
@@ -588,7 +955,7 @@ export default function ImportPage() {
                       }}
                       className="w-4 h-4"
                     />
-                    <span className="text-sm text-foreground">Create new project</span>
+                    <span className="text-sm text-[rgb(var(--text))]">Create new project</span>
                   </label>
                 </div>
 
@@ -596,7 +963,7 @@ export default function ImportPage() {
                   <select
                     value={selectedProjectId}
                     onChange={(e) => setSelectedProjectId(e.target.value)}
-                    className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-900 text-foreground focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:focus:ring-zinc-400"
+                    className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-900 text-[rgb(var(--text))] focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:focus:ring-zinc-400"
                   >
                     <option value="">Select a project...</option>
                     {projects.map((project) => (
@@ -610,7 +977,7 @@ export default function ImportPage() {
                 {projectAction === 'new' && (
                   <div className="space-y-3">
                     <div>
-                      <label className="block text-sm font-medium text-foreground mb-2">
+                      <label className="block text-sm font-medium text-[rgb(var(--text))] mb-2">
                         Project Name *
                       </label>
                       <input
@@ -618,12 +985,12 @@ export default function ImportPage() {
                         value={newProjectName}
                         onChange={(e) => setNewProjectName(e.target.value)}
                         placeholder="My New Project"
-                        className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-900 text-foreground focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:focus:ring-zinc-400"
+                        className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-900 text-[rgb(var(--text))] focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:focus:ring-zinc-400"
                         required
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-foreground mb-2">
+                      <label className="block text-sm font-medium text-[rgb(var(--text))] mb-2">
                         Description (optional)
                       </label>
                       <textarea
@@ -631,7 +998,7 @@ export default function ImportPage() {
                         onChange={(e) => setNewProjectDescription(e.target.value)}
                         placeholder="What is this project about?"
                         rows={2}
-                        className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-900 text-foreground focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:focus:ring-zinc-400"
+                        className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-900 text-[rgb(var(--text))] focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:focus:ring-zinc-400"
                       />
                     </div>
                   </div>
@@ -650,7 +1017,7 @@ export default function ImportPage() {
                 <button
                   onClick={handleImport}
                   disabled={loading}
-                  className="px-6 py-2 bg-foreground text-background rounded-lg hover:opacity-90 transition-opacity font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-6 py-2 bg-[rgb(var(--text))] text-[rgb(var(--bg))] rounded-lg hover:opacity-90 transition-opacity font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? (
                     jobStatus ? (
@@ -673,8 +1040,6 @@ export default function ImportPage() {
           </div>
         )}
       </div>
-      <QuickImportModal isOpen={showQuickImport} onClose={() => setShowQuickImport(false)} />
     </main>
   );
 }
-
