@@ -1,7 +1,7 @@
 // app/components/MagicHomeScreen.tsx
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import OnboardingFlow from './OnboardingFlow';
@@ -90,14 +90,15 @@ export default function MagicHomeScreen() {
     }
   };
 
-  const formatDate = (dateString: string) => {
+  const formatDate = useCallback((dateString: string | null | undefined) => {
+    if (!dateString) return 'Recently';
     try {
       const date = new Date(dateString);
       return date.toLocaleDateString();
     } catch {
       return 'Recently';
     }
-  };
+  }, []);
 
   if (loading) {
     return (
@@ -159,6 +160,8 @@ export default function MagicHomeScreen() {
 
   // Group priority items and revisit items by project
   const groupedByProject = useMemo(() => {
+    if (!data) return {};
+    
     const groups: Record<string, {
       project_id: string | null;
       project_name: string | null;
@@ -174,7 +177,7 @@ export default function MagicHomeScreen() {
     }> = {};
 
     // Add priority tasks
-    data.priorityItems.tasks.slice(0, 5).forEach((task) => {
+    (data.priorityItems?.tasks || []).slice(0, 5).forEach((task) => {
       const projectKey = task.project_id || 'unassigned';
       if (!groups[projectKey]) {
         groups[projectKey] = {
@@ -213,7 +216,7 @@ export default function MagicHomeScreen() {
     });
 
     // Add priority decisions
-    data.priorityItems.decisions.slice(0, 2).forEach((decision) => {
+    (data.priorityItems?.decisions || []).slice(0, 2).forEach((decision) => {
       const projectKey = decision.project_id || 'unassigned';
       if (!groups[projectKey]) {
         groups[projectKey] = {
@@ -235,7 +238,7 @@ export default function MagicHomeScreen() {
     });
 
     // Add revisit items
-    data.thingsToRevisit.forEach((revisit) => {
+    (data.thingsToRevisit || []).forEach((revisit) => {
       const projectKey = revisit.project_id || 'unassigned';
       if (!groups[projectKey]) {
         groups[projectKey] = {
@@ -269,7 +272,7 @@ export default function MagicHomeScreen() {
     });
 
     return groups;
-  }, [data.priorityItems, data.thingsToRevisit]);
+  }, [data, formatDate]);
 
   const hasUnifiedItems = Object.keys(groupedByProject).length > 0 && 
     Object.values(groupedByProject).some((g) => g.items.length > 0);
