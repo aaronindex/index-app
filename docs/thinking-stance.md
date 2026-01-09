@@ -1,95 +1,249 @@
-# thinking-stance.md
+# thinking-stance.md  
 ## INDEX — How We Think
 
-This document captures the *stance* that governs INDEX.
-It defines how we evaluate ideas, when we say no, and what “good” feels like.
-It is not exhaustive and should change rarely.
+This document defines the **thinking stance** of INDEX.
+
+It governs how INDEX reasons, what it surfaces, what it suppresses,  
+and how we decide what belongs — or does not.
+
+This is not a feature list.  
+This is the operating discipline behind the product.
+
+It should change rarely.
 
 ---
 
-## Core Orientation
+## Core Stance (Non-Negotiable)
 
-- We optimize for **clarity over cleverness**.
-- We prefer **containment over expansion**.
-- We value **orientation over exploration**.
-- We bias toward **subtraction, not addition**.
-- We treat focus as a finite resource.
+INDEX exists to help people **think cleaner, not more**.
 
-INDEX exists to *reduce cognitive entropy*, not create more of it.
+INDEX is not where thinking happens —
+it’s where thinking is made usable.
 
----
+We favor:
+- clarity over cleverness  
+- containment over expansion  
+- decisions and commitments over speculation  
+- reduction over accumulation  
+- orientation over exploration  
 
-## On AI
-
-- AI is a **supporting intelligence**, not the driver.
-- AI may suggest, but the user decides.
-- We distrust features that originate from AI suggestion alone unless grounded in lived pain.
-- We avoid chat-first UX patterns.
-- We avoid recursive ideation loops (“AI mush”).
-
-If a feature increases ideation without increasing clarity, it is suspect.
+INDEX exists to **reduce cognitive entropy**, not create more of it.
 
 ---
 
-## On Structure
+## What INDEX Actively Avoids (Anti-Goals)
 
-- Projects (Business) and Themes (Personal) are the only containers.
-- Highlights, Tasks, and Decisions are the atomic units of meaning.
-- Branching is a UI artifact, not a cognitive primitive.
-- We do not multiply threads to feel productive.
+INDEX is explicitly designed to resist:
+
+- Recursive ideation loops (“AI mush”)
+- Branching for its own sake
+- Chat-first or conversation-centric workflows
+- Infinite follow-ups disguised as insight
+- Activity that feels productive but resolves nothing
+
+If a feature increases thinking volume without increasing clarity,  
+it is suspect by default.
+
+---
+
+## Conversations vs Thought Objects
+
+INDEX distinguishes sharply between **input** and **meaning**.
+
+- Conversations are raw input.
+- Thought Objects are distilled meaning.
+
+The only atomic units of meaning in INDEX are:
+- **Highlights** (what matters)
+- **Tasks** (what must be done)
+- **Decisions** (what must be chosen)
+
+INDEX does not preserve conversations to continue them.  
+It preserves conversations to **extract meaning from them**.
+
+This is why:
+- Branching is removed
+- Start Chat is constrained
+- Ask Index is reductive, not exploratory
+
+---
+
+## Structure Is Opinionated
+
+Structure exists to *reduce load*, not to model reality perfectly.
+
+- **Projects** are the sole containers for business work.
+- **Themes** are the sole containers for personal reflection.
+- There is no crossover of signal between domains.
+- We do not multiply containers to create the illusion of progress.
 
 If a structure exists, it must earn its keep.
 
 ---
 
-## On Action
+## Action Is Qualitative, Not Managerial
 
-- Tasks and Decisions represent commitment.
+INDEX is not a task manager.
+
+- Tasks and Decisions represent **commitment**, not scheduling.
 - Planning is qualitative, not calendar-driven.
-- “Next action” matters more than “total progress.”
-- We avoid task-manager bloat.
+- “Minimum next action” matters more than total progress.
+- Numeric precision is avoided in favor of judgment.
 
-INDEX helps users orient toward action — it does not manage execution.
+INDEX helps users **orient toward action**.  
+It does not manage execution for them.
 
 ---
 
-## On Start Chat
+## Start Chat Is an Escape Hatch
 
-- Start Chat is an escape hatch, not a default.
-- It is rare, bounded, and intentional.
-- It exists to resolve uncertainty, not to continue thinking endlessly.
-- It must never become a substitute for structuring thought.
+Start Chat exists to support **deliberate resolution**, not exploration.
+
+- It is rare.
+- It is bounded.
+- It is intentional.
+- It always exports context; it never imports conversation.
+
+Start Chat is allowed only from:
+- Tasks
+- Decisions
+- Project-level deliberate thinking
+
+It must never become a substitute for structuring thought inside INDEX.
 
 If Start Chat increases chaos, it is misused.
 
 ---
 
-## On UX
+## AI Is a Constraint, Not a Driver
 
-- Calm beats busy.
-- Fewer options beat flexible systems.
-- Defaults should be strong.
-- Surfaces should invite judgment, not reaction.
+AI in INDEX is a **supporting intelligence**, not the protagonist.
 
-INDEX should feel like a *thinking environment*, not a dashboard.
+- AI may suggest; the user decides.
+- AI must reduce, not expand.
+- AI should surface uncertainty explicitly, not resolve it by ideation.
+- Follow-ups must force a move (clarify, decide, commit, deprioritize).
+
+We distrust features that originate from AI suggestion alone  
+unless grounded in lived user pain.
 
 ---
 
-## On Trust
+## Surfacing & Suppression Are Features
 
-- Private by default.
-- No performative sharing.
-- No social pressure.
-- No dark patterns.
+Visibility in INDEX is opinionated by design.
 
-Users must feel safe putting their real thinking here.
+INDEX prioritizes:
+- unresolved over recent  
+- linked over isolated  
+- active over inactive  
+- priority over completeness  
+
+INDEX suppresses aggressively in order to preserve clarity.
+
+If something disappears, it is because it no longer deserves attention.
+
+---
+
+## The Role INDEX Plays
+
+INDEX is not:
+- a facilitator
+- a therapist
+- a brainstorm partner
+- a social surface
+
+INDEX behaves like a calm, firm operator:
+- It keeps thinking from drifting.
+- It refuses to escalate prematurely.
+- It surfaces what still matters.
+- It says “this is unresolved” without drama.
+
+---
+
+## Guardrail for Future Features
+
+Every new feature must pass this test:
+
+- Does it reduce cognitive load?
+- Does it collapse or expand thinking?
+- Does it introduce a new surface for recursion?
+- Can the same outcome be achieved with fewer affordances?
+
+If the answer is unclear, the feature does not belong.
 
 ---
 
 ## Final Test
 
-Before building or keeping a feature, ask:
+Before building, keeping, or shipping anything, ask:
 
-> Does this reduce confusion, or does it merely create activity?
+> Does this help the user think cleaner —  
+> or does it merely create activity?
 
-If it does not reduce confusion, it does not belong.
+If it merely creates activity, it does not belong in INDEX.
+
+
+---
+
+## How This Document Is Used
+
+This document is not aspirational.  
+It is operational.
+
+### 1. As a Design Gate
+Before building or keeping any feature, this document is consulted first.
+
+If a feature:
+- expands thinking without increasing clarity
+- introduces recursion or branching
+- creates a new surface for idle exploration
+
+it is rejected or redesigned until it conforms.
+
+### 2. As an AI Constraint Layer
+All AI behavior in INDEX must conform to this stance.
+
+This includes:
+- Ask Index synthesis
+- Follow-up generation
+- Weekly Digest narration
+- Start Chat context packs
+
+AI is constrained to:
+- reduce
+- label uncertainty
+- force decisions or commitments
+- avoid speculative expansion
+
+If AI behavior drifts, the fix happens here first — not in UI.
+
+### 3. As a UX Filter
+UI affordances are evaluated against this stance.
+
+If an affordance:
+- invites reaction over judgment
+- encourages “just one more thought”
+- creates optionality without responsibility
+
+it is removed or made intentionally inconvenient.
+
+### 4. As a Product Decision Tiebreaker
+When tradeoffs arise, this stance wins.
+
+INDEX chooses:
+- fewer features over flexibility
+- strong defaults over configurability
+- suppression over completeness
+
+Even when this frustrates some users.
+
+### 5. As a Long-Term Constraint
+This document is allowed to change rarely.
+
+If it changes:
+- the product must change with it
+- existing features may need removal
+- complexity is paid down immediately
+
+This is intentional.

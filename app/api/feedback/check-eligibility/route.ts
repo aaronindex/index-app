@@ -23,8 +23,7 @@ export async function GET(request: NextRequest) {
       supabase
         .from('projects')
         .select('id', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-        .eq('is_personal', false),
+        .eq('user_id', user.id),
       supabase
         .from('conversations')
         .select('id', { count: 'exact', head: true })

@@ -8,6 +8,7 @@ import OnboardingFlow from './OnboardingFlow';
 import Card from './ui/Card';
 import SectionHeader from './ui/SectionHeader';
 import { showError } from './ErrorNotification';
+import GenerateDigestButton from '../tools/components/GenerateDigestButton';
 
 interface HomeData {
   hasConversations: boolean;
@@ -170,17 +171,6 @@ export default function MagicHomeScreen() {
           </Link>
         </Card>
 
-        <Card hover className="p-6 bg-gradient-to-br from-[rgb(var(--surface2))] to-[rgb(var(--surface))]">
-          <Link href="/tools" className="block">
-            <div className="flex items-center gap-3 mb-2">
-              <span className="text-2xl">🛠️</span>
-              <h3 className="text-lg font-semibold text-[rgb(var(--text))]">Tools</h3>
-            </div>
-            <p className="text-sm text-[rgb(var(--muted))]">
-              Generate digests, manage your data, and more
-            </p>
-          </Link>
-        </Card>
       </div>
 
       {/* Priority Items */}
@@ -367,21 +357,16 @@ export default function MagicHomeScreen() {
         </div>
       )}
 
-      {/* Digest Preview - No digest yet but has conversations */}
-      {!data.latestDigest && data.hasConversations && (
+      {/* Weekly Digest Section */}
+      <div>
+        <SectionHeader>Weekly Digest</SectionHeader>
         <Card className="p-6 bg-gradient-to-br from-[rgb(var(--surface2))] to-[rgb(var(--surface))]">
-          <h2 className="font-serif text-xl font-semibold text-[rgb(var(--text))] mb-2">Weekly Digest</h2>
-          <p className="text-[rgb(var(--text))] mb-4">
-            Get a weekly summary of what changed in your INDEX: new conversations, insights, decisions, and recommended next steps.
+          <p className="text-sm text-[rgb(var(--muted))] mb-4">
+            Collapse your week into what still matters.
           </p>
-          <Link
-            href="/tools"
-            className="inline-block px-4 py-2 bg-[rgb(var(--text))] text-[rgb(var(--bg))] rounded-lg hover:opacity-90 transition-opacity font-medium text-sm"
-          >
-            Generate Your First Digest →
-          </Link>
+          <GenerateDigestButton />
         </Card>
-      )}
+      </div>
 
       {/* Empty State - Onboarding Flow */}
       {!data.hasConversations && !data.hasProjects && (

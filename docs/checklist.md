@@ -280,6 +280,7 @@ B2 — Thread Explorer (Mini-Map)
 [ ] Future: Project-level relationship visualization
 
 B3 — Theme Map ("The Field" v1)
+[ ] DEPRECATED - Removed in favor of helping users maintain focus (goal of INDEX) instead of "exploring"
 [ ] Clustered theme cards
 [ ] Density-based sizing
 [ ] Connection lines

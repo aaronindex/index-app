@@ -104,15 +104,8 @@ export default function CommandPalette({ isOpen: externalIsOpen, onClose: extern
       label: 'Generate Digest',
       description: 'Create weekly digest',
       action: () => {
-        router.push('/tools');
+        router.push('/home');
         setIsOpen(false);
-        // Focus the generate digest button if it exists
-        setTimeout(() => {
-          const digestButton = document.querySelector('[data-generate-digest]') as HTMLButtonElement;
-          if (digestButton) {
-            digestButton.focus();
-          }
-        }, 100);
       },
     },
     {

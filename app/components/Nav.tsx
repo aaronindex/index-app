@@ -88,7 +88,6 @@ export default function Nav() {
     { href: '/unassigned', label: 'Unassigned' },
     { href: '/ask', label: 'Ask' },
     { href: '/import', label: 'Import' },
-    { href: '/tools', label: 'Tools' },
   ];
 
   // Show nothing while loading

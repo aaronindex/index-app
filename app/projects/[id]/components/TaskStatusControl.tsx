@@ -11,29 +11,49 @@ interface TaskStatusControlProps {
   currentStatus: TaskStatus;
 }
 
-const STATUS_OPTIONS: Array<{ value: TaskStatus; label: string; color: string }> = [
+// Map internal statuses to 3 display statuses
+const getDisplayStatus = (status: TaskStatus): 'open' | 'priority' | 'complete' => {
+  if (status === 'priority') return 'priority';
+  if (status === 'complete' || status === 'cancelled') return 'complete';
+  return 'open'; // open, in_progress, dormant all map to 'open'
+};
+
+// Map display status back to internal status (preserve original if possible)
+const getInternalStatus = (displayStatus: 'open' | 'priority' | 'complete', currentStatus: TaskStatus): TaskStatus => {
+  if (displayStatus === 'priority') return 'priority';
+  if (displayStatus === 'complete') {
+    // If currently complete or cancelled, keep cancelled; otherwise set to complete
+    return currentStatus === 'cancelled' ? 'cancelled' : 'complete';
+  }
+  // For 'open', preserve in_progress or dormant if they were set, otherwise use open
+  if (currentStatus === 'in_progress' || currentStatus === 'dormant') {
+    return currentStatus;
+  }
+  return 'open';
+};
+
+const STATUS_OPTIONS: Array<{ value: 'open' | 'priority' | 'complete'; label: string; color: string }> = [
   { value: 'open', label: 'Open', color: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400' },
-  { value: 'in_progress', label: 'In Progress', color: 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400' },
-  { value: 'complete', label: 'Complete', color: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400' },
   { value: 'priority', label: 'Priority', color: 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400' },
-  { value: 'dormant', label: 'Dormant', color: 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400' },
-  { value: 'cancelled', label: 'Cancelled', color: 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400' },
+  { value: 'complete', label: 'Complete', color: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400' },
 ];
 
 export default function TaskStatusControl({ taskId, currentStatus }: TaskStatusControlProps) {
   const router = useRouter();
-  const [status, setStatus] = useState<TaskStatus>(currentStatus);
+  const [displayStatus, setDisplayStatus] = useState<'open' | 'priority' | 'complete'>(getDisplayStatus(currentStatus));
   const [updating, setUpdating] = useState(false);
 
-  const handleStatusChange = async (newStatus: TaskStatus) => {
-    if (newStatus === status) return;
+  const handleStatusChange = async (newDisplayStatus: 'open' | 'priority' | 'complete') => {
+    if (newDisplayStatus === displayStatus) return;
+
+    const newInternalStatus = getInternalStatus(newDisplayStatus, currentStatus);
 
     setUpdating(true);
     try {
       const response = await fetch(`/api/tasks/${taskId}/update-status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({ status: newInternalStatus }),
       });
 
       if (!response.ok) {
@@ -41,24 +61,24 @@ export default function TaskStatusControl({ taskId, currentStatus }: TaskStatusC
         throw new Error(errorData.error || 'Failed to update status');
       }
 
-      setStatus(newStatus);
+      setDisplayStatus(newDisplayStatus);
       router.refresh();
     } catch (err) {
       console.error('Failed to update task status:', err);
       // Revert on error
-      setStatus(currentStatus);
+      setDisplayStatus(getDisplayStatus(currentStatus));
     } finally {
       setUpdating(false);
     }
   };
 
-  const currentOption = STATUS_OPTIONS.find((opt) => opt.value === status);
+  const currentOption = STATUS_OPTIONS.find((opt) => opt.value === displayStatus);
 
   return (
     <div className="relative">
       <select
-        value={status}
-        onChange={(e) => handleStatusChange(e.target.value as TaskStatus)}
+        value={displayStatus}
+        onChange={(e) => handleStatusChange(e.target.value as 'open' | 'priority' | 'complete')}
         disabled={updating}
         className={`
           px-2 py-1 text-xs font-medium rounded border border-zinc-300 dark:border-zinc-700

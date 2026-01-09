@@ -48,12 +48,8 @@ export default async function ProjectsPage({
     .select('id, name, status, is_personal')
     .eq('user_id', user.id);
 
-  // Apply filter: business (default), personal, or all
-  if (filter === 'business') {
-    query = query.eq('is_personal', false);
-  } else if (filter === 'personal') {
-    query = query.eq('is_personal', true);
-  }
+  // No filtering - show all projects
+  // Users can create 1 project per client or 1 personal project if they want
   // 'all' means no filter
 
   const { data, error } = await query.order('created_at', { ascending: false });
@@ -94,11 +90,6 @@ export default async function ProjectsPage({
                       <h2 className="font-serif text-xl font-medium text-[rgb(var(--text))]">
                         {project.name}
                       </h2>
-                      {project.is_personal && (
-                        <span className="px-2 py-0.5 text-xs font-medium rounded-md bg-[rgb(var(--surface2))] text-[rgb(var(--muted))]">
-                          Personal
-                        </span>
-                      )}
                     </div>
                     <StatusPill status={project.status} />
                   </div>

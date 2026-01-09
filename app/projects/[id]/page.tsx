@@ -12,7 +12,6 @@ import TasksTab from './components/TasksTab';
 import LibraryTab from './components/LibraryTab';
 import DeleteProjectButton from './components/DeleteProjectButton';
 import ProjectStartChatButton from './components/ProjectStartChatButton';
-import TogglePersonalButton from './components/TogglePersonalButton';
 
 type Status = 'priority' | 'open' | 'complete' | 'dormant';
 
@@ -186,7 +185,7 @@ export default async function ProjectDetailPage({
       // Query tasks for this project (include inactive for filtering)
       const { data: tasks } = await supabase
         .from('tasks')
-        .select('id, title, description, status, conversation_id, created_at, is_inactive')
+        .select('id, title, description, status, horizon, conversation_id, created_at, is_inactive')
         .eq('project_id', id)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
@@ -205,6 +204,7 @@ export default async function ProjectDetailPage({
           title: task.title,
           description: task.description,
           status: task.status,
+          horizon: task.horizon,
           conversation_title: task.conversation_id
             ? conversationMap.get(task.conversation_id) || null
             : null,
@@ -246,15 +246,9 @@ export default async function ProjectDetailPage({
               <h1 className="font-serif text-3xl font-semibold text-[rgb(var(--text))]">
                 {project.name}
               </h1>
-              {project.is_personal && (
-                <span className="px-2 py-0.5 text-xs font-medium rounded-md bg-[rgb(var(--surface2))] text-[rgb(var(--muted))]">
-                  Personal
-                </span>
-              )}
             </div>
             <div className="flex items-center gap-3">
               <StatusPill status={project.status} />
-              <TogglePersonalButton projectId={id} isPersonal={project.is_personal || false} />
               <ProjectStartChatButton projectId={id} projectName={project.name} />
               <DeleteProjectButton projectId={id} projectName={project.name} />
             </div>

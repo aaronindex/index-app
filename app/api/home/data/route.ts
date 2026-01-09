@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     // Get priority tasks first
     const { data: priorityTasks } = await supabase
       .from('tasks')
-      .select('id, title, description, status, project_id, conversation_id, created_at, updated_at, source_query, projects(name, is_personal)')
+      .select('id, title, description, status, project_id, conversation_id, created_at, updated_at, source_query, projects(name)')
       .eq('user_id', user.id)
       .eq('is_inactive', false)
       .eq('status', 'priority')
@@ -29,16 +29,16 @@ export async function GET(request: NextRequest) {
     // Get open/in_progress tasks (excluding priority, which we already have)
     const { data: openTasksData } = await supabase
       .from('tasks')
-      .select('id, title, description, status, project_id, conversation_id, created_at, updated_at, source_query, projects(name, is_personal)')
+      .select('id, title, description, status, project_id, conversation_id, created_at, updated_at, source_query, projects(name)')
       .eq('user_id', user.id)
       .eq('is_inactive', false)
       .in('status', ['open', 'in_progress'])
       .order('updated_at', { ascending: true }) // Oldest updated first (stuck signals)
       .limit(20);
 
-    // Filter out tasks from personal projects and combine/order
-    const priorityTasksFiltered = priorityTasks?.filter((t: any) => !(t.projects as any)?.is_personal) || [];
-    const openTasksFiltered = openTasksData?.filter((t: any) => !(t.projects as any)?.is_personal) || [];
+    // Combine and order tasks (no personal filtering - all projects shown)
+    const priorityTasksFiltered = priorityTasks || [];
+    const openTasksFiltered = openTasksData || [];
     
     // Combine: Priority first, then open tasks (oldest updated first = stuck signals)
     const allTasks = [...priorityTasksFiltered, ...openTasksFiltered].slice(0, 10);
