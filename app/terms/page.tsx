@@ -5,17 +5,8 @@ export default function TermsPage() {
   return (
     <main className="min-h-screen bg-[rgb(var(--bg))]">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="mb-8">
-          <h1 className="font-serif text-3xl sm:text-4xl font-semibold text-[rgb(var(--text))] mb-4">
-            Terms of Use
-          </h1>
-          <p className="text-sm text-[rgb(var(--muted))]">
-            Last updated: {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
-          </p>
-        </div>
-
         <div className="prose prose-sm max-w-none text-[rgb(var(--text))]">
-          <h1 className="font-serif text-3xl font-semibold text-[rgb(var(--text))] mb-4">Terms of Use — INDEX</h1>
+          <h1 className="font-serif text-3xl sm:text-4xl font-semibold text-[rgb(var(--text))] mb-4">Terms of Use — INDEX</h1>
           
           <p className="text-[rgb(var(--muted))] mb-6">
             <strong>Effective Date:</strong> January 8, 2026
