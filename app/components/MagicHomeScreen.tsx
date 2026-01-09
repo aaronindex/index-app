@@ -195,11 +195,6 @@ export default function MagicHomeScreen() {
     return groups;
   }, [data, formatDate]);
 
-  const hasUnifiedItems = Object.keys(groupedByProject).length > 0 && 
-    Object.values(groupedByProject).some((g) => g.items.length > 0);
-
-  const hasInsights = (data?.latestInsights?.length || 0) > 0;
-
   useEffect(() => {
     fetchHomeData();
   }, []);
