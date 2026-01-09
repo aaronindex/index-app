@@ -2,12 +2,17 @@
   "name": "index-app",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=18.17.0",
+    "npm": ">=9.0.0"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "cleanup": "node scripts/cleanup-test-data.js"
+    "cleanup": "node scripts/cleanup-test-data.js",
+    "preinstall": "node -e \"if(process.version.match(/^v(1[89]|[2-9]\\d)/) === null) { console.error('❌ Node.js 18.17+ required. Current: ' + process.version); process.exit(1); }\""
   },
   "dependencies": {
     "@supabase/ssr": "^0.8.0",

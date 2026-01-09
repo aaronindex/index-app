@@ -2,6 +2,15 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
+### Prerequisites
+
+- **Node.js 18.17+** (Node 20 recommended - specified in `.nvmrc`)
+- **npm 9+**
+
+The project includes automatic Node version switching via `.nvmrc`. If you're using `nvm`, it will automatically switch to the correct version when you `cd` into the project directory.
+
+To manually switch: `nvm use` (reads from `.nvmrc`)
+
 ### Environment Variables
 
 Before running the app, you need to set up environment variables. See [`docs/environment-variables.md`](./docs/environment-variables.md) for detailed instructions.

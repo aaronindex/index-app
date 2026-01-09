@@ -198,13 +198,7 @@ export default function MagicHomeScreen() {
   const hasUnifiedItems = Object.keys(groupedByProject).length > 0 && 
     Object.values(groupedByProject).some((g) => g.items.length > 0);
 
-  const hasInsights = (data?.latestInsights?.length || 0) > 0;
-
-  useEffect(() => {
-    fetchHomeData();
-  }, []);
-
-  const fetchHomeData = async () => {
+  const fetchHomeData = useCallback(async () => {
     try {
       const response = await fetch('/api/home/data');
       if (!response.ok) {
@@ -228,74 +222,16 @@ export default function MagicHomeScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchHomeData();
+  }, [fetchHomeData]);
 
   // Early returns after all hooks
   if (loading) {
     return (
       <div className="space-y-8">
-        {/* Quick Commands Skeleton */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {[1, 2].map((i) => (
-            <div
-              key={i}
-              className="p-6 rounded-xl bg-gradient-to-br from-[rgb(var(--surface2))] to-[rgb(var(--surface))] ring-1 ring-[rgb(var(--ring)/0.08)] animate-pulse"
-            >
-              <div className="h-6 bg-[rgb(var(--surface2))] rounded w-1/3 mb-2"></div>
-              <div className="h-4 bg-[rgb(var(--surface2))] rounded w-2/3"></div>
-            </div>
-          ))}
-        </div>
-        {/* Content Skeleton */}
-        <div className="space-y-4">
-          <div className="h-7 bg-[rgb(var(--surface2))] rounded w-1/4 animate-pulse"></div>
-          {[1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className="p-4 rounded-xl bg-[rgb(var(--surface))] ring-1 ring-[rgb(var(--ring)/0.08)] animate-pulse"
-            >
-              <div className="h-5 bg-[rgb(var(--surface2))] rounded w-3/4 mb-2"></div>
-              <div className="h-4 bg-[rgb(var(--surface2))] rounded w-full"></div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="text-center py-12">
-        <div className="max-w-md mx-auto p-6 rounded-xl bg-red-50 dark:bg-red-900/20 ring-1 ring-red-200 dark:ring-red-800">
-          <p className="text-red-800 dark:text-red-400 mb-4">{error}</p>
-          <button
-            onClick={() => {
-              setError(null);
-              setLoading(true);
-              fetchHomeData();
-            }}
-            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:opacity-90 transition-opacity font-medium"
-          >
-            Try Again
-          </button>
-        </div>
-      </div>
-    );
-  }
-    return (
-      <div className="space-y-8">
-        {/* Quick Commands Skeleton */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {[1, 2].map((i) => (
-            <div
-              key={i}
-              className="p-6 rounded-xl bg-gradient-to-br from-[rgb(var(--surface2))] to-[rgb(var(--surface))] ring-1 ring-[rgb(var(--ring)/0.08)] animate-pulse"
-            >
-              <div className="h-6 bg-[rgb(var(--surface2))] rounded w-1/3 mb-2"></div>
-              <div className="h-4 bg-[rgb(var(--surface2))] rounded w-2/3"></div>
-            </div>
-          ))}
-        </div>
         {/* Content Skeleton */}
         <div className="space-y-4">
           <div className="h-7 bg-[rgb(var(--surface2))] rounded w-1/4 animate-pulse"></div>
@@ -339,7 +275,7 @@ export default function MagicHomeScreen() {
 
   return (
     <div className="space-y-8">
-      {/* Unified Priority List: "What still deserves attention" */}
+      {/* Primary: Unified Priority List */}
       {hasUnifiedItems ? (
         <div>
           <SectionHeader>What still deserves attention</SectionHeader>
@@ -387,50 +323,11 @@ export default function MagicHomeScreen() {
         </div>
       )}
 
-      {/* Latest Insights */}
-      {hasInsights && (
-        <div>
-          <SectionHeader action={
-            <Link
-              href="/projects"
-              className="text-sm text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] transition-colors"
-            >
-              View all →
-            </Link>
-          }>
-            Latest Insights
-          </SectionHeader>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {data.latestInsights.slice(0, 6).map((insight) => (
-              <Card key={insight.id} hover>
-                <Link
-                  href={`/conversations/${insight.conversation_id}`}
-                  className="block p-4"
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-xs text-[rgb(var(--muted))]">
-                      {insight.conversation_title || 'Untitled'}
-                    </span>
-                  </div>
-                  <h3 className="font-medium text-[rgb(var(--text))] mb-1">
-                    {insight.label || insight.content.substring(0, 60) + '...'}
-                  </h3>
-                  <p className="text-sm text-[rgb(var(--muted))] line-clamp-2">
-                    {insight.content}
-                  </p>
-                </Link>
-              </Card>
-            ))}
-          </div>
-        </div>
-      )}
-
-
-      {/* Consolidated Weekly Digest Section */}
+      {/* Secondary: Weekly Digest */}
       <div>
         <SectionHeader>Weekly Digest</SectionHeader>
         <Card className="p-6 bg-gradient-to-br from-[rgb(var(--surface2))] to-[rgb(var(--surface))]">
-          <p className="text-sm text-[rgb(var(--muted))] mb-4 italic">
+          <p className="text-sm text-[rgb(var(--muted))] mb-4">
             Collapse your week into what still matters.
           </p>
           {data.latestDigest ? (
@@ -466,7 +363,7 @@ export default function MagicHomeScreen() {
       )}
 
       {/* Partial Empty State - Has conversations but no content yet */}
-      {data.hasConversations && !hasUnifiedItems && !hasInsights && !data.latestDigest && (
+      {data.hasConversations && !hasUnifiedItems && !data.latestDigest && (
         <div className="max-w-2xl mx-auto text-center py-12">
           <Card className="p-8 bg-gradient-to-br from-[rgb(var(--surface2))] to-[rgb(var(--surface))]">
             <h3 className="font-serif text-xl font-semibold text-[rgb(var(--text))] mb-3">
