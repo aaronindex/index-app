@@ -1,3 +1,9 @@
+
+<!-- REVIEW NOTE -->
+<!-- All items under PHASE 0–8 and PHASE A1/A2/A3/A5 confirmed completed or correctly scoped. -->
+<!-- PHASE 2.5 is explicitly post-alpha prototyping, evaluated only after 3–5 users generate real import signals. -->
+
+
 --------------------------------------------------
 PHASE 0 — PERSONAL & INFRA SETUP
 --------------------------------------------------
@@ -51,7 +57,7 @@ Schema
 [x] message_chunk_embeddings table created
 [x] highlights table created
 [x] highlight_embeddings table created
-[x] branch_highlights table created (deprecated - no longer used in branchless model)
+[x] branch_highlights table created (DEPRECATED - no longer used in branchless model)
 [x] project_conversations table created
 [x] decisions table created
 [x] weekly_digests table created
@@ -68,7 +74,7 @@ RLS Policies
 [x] message_chunk_embeddings RLS added
 [x] highlights RLS added
 [x] highlight_embeddings RLS added
-[x] branch_highlights RLS added (deprecated - no longer used in branchless model)
+[x] branch_highlights RLS added (DEPRECATED - no longer used in branchless model)
 [x] project_conversations RLS added
 [x] decisions RLS added
 [x] weekly_digests RLS added
@@ -263,6 +269,7 @@ A5 — Weekly Digest v2 (Narrative Intelligence)
 [x] Open loops surfaced with priority levels
 [x] Recommended next steps with priorities
 [x] Enhanced digest UI with new sections
+[x] Weekly Digest moved from Tools page to /home screen (Tools page removed from navigation)
 
 ==================================================
 PHASE B — UX MAGIC & VISUALIZATION
@@ -289,15 +296,17 @@ B3 — Theme Map ("The Field" v1)
 B4 — Status Layer Integration
 [x] Priority / Open / Complete / Dormant UI affordances
 [x] "What changed this week" (project-level activity summary)
-[x] Personal project flag + filters (default business)
+[x] Personal project flag + filters - DEPRECATED (removed Personal bucket entirely; users create projects as needed)
 [x] Inactive item flag + filters (default active)
 [x] Reducing valve rules applied to lists and sorting
-[x] Filter pills for projects (Business/All/Personal)
+[x] Filter pills for projects (Business/All/Personal) - DEPRECATED (removed; all projects shown together)
 [x] Filter pills for items (Active/All/Inactive)
 [x] Toggle UI for marking items inactive
-[x] Toggle UI for marking projects as personal (project header)
+[x] Toggle UI for marking projects as personal - DEPRECATED (removed from UI)
 [x] Inactive items visually de-emphasized and sorted to bottom
-[x] Personal badge displayed on project name when enabled
+[x] Personal badge displayed on project name - DEPRECATED (removed from UI)
+[x] Tasks screen: 3 statuses only (Open, Priority, Complete) with horizon-based grouping (This Week, This Month, Later, Complete)
+[x] Tasks horizon field added to database (enum: this_week, this_month, later)
 
 ==================================================
 PHASE C — ROUND-TRIP LOOPS (INTELLIGENT ACTION)
@@ -397,15 +406,20 @@ D) Onboarding (Alpha-Minimal)
 
 E) Analytics Markers
 [x] GA4 dataLayer events added (landing_view, invite_code_used)
-[x] Import events (import_start, import_complete)
-[x] Ask Index events (ask_query)
+[x] Import events (import_start, import_complete, import_failed)
+[x] Ask Index events (ask_index_query, ask_index_answered)
 [x] Start Chat events (start_chat_invoked)
 [x] Meaning object events (highlight_created, task_created, decision_created)
+[x] Limit hit events (limit_hit with limit_type)
+[x] Analytics helper library (lib/analytics.ts) with debug mode
 
 F) UI Polish
 [x] Nav bar background color with opacity (sticky header above content)
 [x] Signed-out nav state (minimal: INDEX logo + Sign in button)
 [x] Signed-in nav state (full navigation with mobile menu)
+[x] Tools page removed from navigation (Weekly Digest moved to /home)
+[x] Personal bucket removed from UI (badges, filter pills, toggle button)
+[x] Projects become the only containers (user-defined, not system-imposed)
 
 ==================================================
 PHASE F — MONETIZATION PREP
@@ -415,6 +429,19 @@ F2 — Subscription tiers
 F3 — Soft paywall (import count)
 F4 — Usage dashboard
 F5 — Upgrade nudges
+
+==================================================
+PHASE G — LEGAL & COMMUNICATION
+==================================================
+G1 — Legal Surface
+[x] Privacy Policy page (/privacy)
+[x] Terms of Use page (/terms)
+[x] Footer component with legal links (appears on signed-in and signed-out pages)
+[x] Cookie notice banner (minimal consent acknowledgment)
+
+G2 — Email Templates
+[x] Supabase magic link email template (matching INDEX aesthetic)
+[x] Supabase password reset email template (matching INDEX aesthetic)
 
 ==================================================
 PHASE 2.5 — ACTION ORGANIZATION & PLANNING LAYER
@@ -453,13 +480,16 @@ Core Principles:
 --------------------------------------------------
 
 Purpose:
-Provide a sense of “when” without schedules, dates, or deadlines.
+Provide a sense of "when" without schedules, dates, or deadlines.
 
-[ ] Add enum-only horizon tags to Tasks:
+[x] Add enum-only horizon tags to Tasks:
     - `this_week`
     - `this_month`
     - `later`
-    - Instrument: `task_horizon_tagged`
+    - Database migration created (add_horizon_to_tasks.sql)
+    - Horizon-based grouping implemented in Tasks UI (This Week, This Month, Later, Complete)
+    - Auto-inference from created_at if horizon not set
+    - Instrument: `task_horizon_tagged` (future)
 
 [ ] Add enum-only horizon tags to Decisions:
     - `this_week`
@@ -496,7 +526,7 @@ Rules:
 
 Rules:
 - Business domain uses **Projects** as containers
-- Personal domain uses **Themes** as containers
+- Personal domain uses **Themes** as containers - DEPRECATED (removed Personal bucket entirely)
 - No crossover of:
     - Tasks
     - Decisions
@@ -504,9 +534,10 @@ Rules:
     - Start Chat context
     - Exports
 
-[ ] Business dashboard shows project-level items only
-[ ] Personal dashboard shows theme-level items only
-    - Instrument: `domain_switched`, `dashboard_viewed`
+[x] Business dashboard shows project-level items only
+[x] Personal dashboard → DEPRECATED (removed Personal bucket; users create projects as needed)
+[x] Personal project flag/filters/badges → DEPRECATED (removed from UI entirely)
+    - Instrument: `domain_switched`, `dashboard_viewed` (future)
 
 --------------------------------------------------
 2.5.5 — Dashboard Planning Views (Orientation Surfaces)
@@ -534,7 +565,7 @@ not productivity metrics.
 
 [ ] Enable checklist.md export from:
     - Project Dashboard
-    - Theme Dashboard
+    - Theme Dashboard - DEPRECATED (use Projects for personal if needed)
     - Task detail view
 
 [ ] Ensure exports respect:
@@ -570,6 +601,16 @@ To Prototype (Evaluate or Discard):
     - Must respect Redactions + Inactive flags
     - Instrument: `start_chat_invoked`
 
+--------------------------------------------------
+2.5.8 — ACTION INGESTION & PLANNING (Post-Alpha)
+--------------------------------------------------
+
+[ ] EXPERIMENT — Email ingestion as project artifact intake
+    - Forward emails to: username-projectname@indexapp.co
+    - INDEX ingests only the email body, distills 3–5 actionable signals
+    - No email replies or threading inside INDEX
+    - Output must be user-editable and non-authoritative
+    - Instrument: `import_email_ingested`
 
 ==================================================
 DEPRECATED / REMOVED (Conceptual Corrections)
@@ -581,5 +622,10 @@ DEPRECATED / REMOVED (Conceptual Corrections)
 [x] Thread Explorer / Mini-Map visualization
 [x] Theme Map visualization
 [x] Micro-chat UI surfaces
+[x] Personal bucket/silo (removed from UI; users create projects as needed)
+[x] Personal project flag, filters, badges, toggle button (removed from UI)
+[x] Tools page navigation (removed; Weekly Digest moved to /home)
+[x] Task status filters (replaced with horizon-based grouping; only 3 statuses: Open, Priority, Complete)
+[x] Theme containers for Personal domain (Phase 2.5 - removed in favor of user-defined Projects)
 
 
