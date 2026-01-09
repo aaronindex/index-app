@@ -7,7 +7,7 @@ import { getCurrentUser } from '@/lib/getUser';
 import { parseTranscript, generateAutoTitle } from '@/lib/parsers/transcript';
 import { chunkText } from '@/lib/chunking';
 import { embedTexts } from '@/lib/ai/embeddings';
-import { generateDedupeHash } from '@/lib/jobs/importProcessor';
+import { generateDedupeHash, processImportJobStep } from '@/lib/jobs/importProcessor';
 import crypto from 'crypto';
 
 const SYNC_THRESHOLD_CHARS = 25000; // Process synchronously if <= 25k chars
@@ -382,6 +382,22 @@ export async function POST(request: NextRequest) {
 
       // Increment limit counter
       await incrementLimit(user.id, 'import');
+
+      // Trigger immediate job processing (fire-and-forget, non-blocking)
+      // This starts processing right away instead of waiting for cron
+      // Process first step only to get it started (cron will continue)
+      // Don't await to avoid blocking the response
+      (async () => {
+        try {
+          // Just process the first step to get it started
+          // Cron will continue with subsequent steps
+          const result = await processImportJobStep(job.id);
+          console.log(`[Quick Import] Processed initial step. Next step: ${result.nextStep || 'complete'}, Error: ${result.error || 'none'}`);
+        } catch (err) {
+          // Silently fail - cron will pick it up if this fails
+          console.log('[Quick Import] Immediate processing failed (cron will handle it):', err instanceof Error ? err.message : 'Unknown error');
+        }
+      })();
 
       return NextResponse.json({
         success: true,
