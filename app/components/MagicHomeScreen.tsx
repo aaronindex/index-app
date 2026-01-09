@@ -77,12 +77,20 @@ export default function MagicHomeScreen() {
       const response = await fetch('/api/home/data');
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Failed to fetch home data');
+        const errorMessage = errorData.error || `Failed to fetch home data (${response.status})`;
+        console.error('[Home] API error:', errorMessage, errorData);
+        throw new Error(errorMessage);
       }
       const result = await response.json();
+      console.log('[Home] Data received:', { 
+        hasPriorityItems: result.priorityItems?.tasks?.length || result.priorityItems?.decisions?.length,
+        hasRevisit: result.thingsToRevisit?.length,
+        hasDigest: !!result.latestDigest
+      });
       setData(result);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load home data';
+      console.error('[Home] Error:', err);
       setError(errorMessage);
       showError(errorMessage);
     } finally {
