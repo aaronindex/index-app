@@ -10,8 +10,8 @@ import { embedTexts } from '@/lib/ai/embeddings';
 import { generateDedupeHash, processImportJobStep } from '@/lib/jobs/importProcessor';
 import crypto from 'crypto';
 
-const SYNC_THRESHOLD_CHARS = 25000; // Process synchronously if <= 25k chars
-const SYNC_THRESHOLD_CHUNKS = 150; // Process synchronously if <= 150 chunks
+const SYNC_THRESHOLD_CHARS = 100000; // Process synchronously if <= 100k chars (increased for better UX)
+const SYNC_THRESHOLD_CHUNKS = 500; // Process synchronously if <= 500 chunks (increased for better UX)
 
 async function processQuickImportSync(
   supabase: any,
@@ -383,21 +383,21 @@ export async function POST(request: NextRequest) {
       // Increment limit counter
       await incrementLimit(user.id, 'import');
 
-      // Trigger immediate job processing (fire-and-forget, non-blocking)
-      // This starts processing right away instead of waiting for cron
-      // Process first step only to get it started (cron will continue)
-      // Don't await to avoid blocking the response
-      (async () => {
-        try {
-          // Just process the first step to get it started
-          // Cron will continue with subsequent steps
-          const result = await processImportJobStep(job.id);
-          console.log(`[Quick Import] Processed initial step. Next step: ${result.nextStep || 'complete'}, Error: ${result.error || 'none'}`);
-        } catch (err) {
-          // Silently fail - cron will pick it up if this fails
-          console.log('[Quick Import] Immediate processing failed (cron will handle it):', err instanceof Error ? err.message : 'Unknown error');
-        }
-      })();
+      // Trigger immediate job processing via API call (fire-and-forget)
+      // This ensures it runs in serverless environment where async IIFE might not complete
+      // Use fetch to trigger processing endpoint
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 
+        (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+      
+      // Fire-and-forget fetch - don't await
+      fetch(`${baseUrl}/api/jobs/process`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jobId: job.id }),
+      }).catch((err) => {
+        // Silently fail - cron will pick it up if this fails
+        console.log('[Quick Import] Immediate processing trigger failed (cron will handle it):', err.message);
+      });
 
       return NextResponse.json({
         success: true,
