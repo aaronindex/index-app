@@ -265,14 +265,22 @@ export async function POST(request: NextRequest) {
         .eq('user_id', user.id)
         .single();
 
-      return NextResponse.json(
-        {
-          error: 'duplicate',
-          existingConversationId: existingConv?.id || null,
-          existingTitle: existingConv?.title || finalTitle,
-        },
-        { status: 409 }
-      );
+      // If import exists but conversation doesn't (failed job), allow re-import
+      // Only block if import is complete and conversation exists
+      if (existingImport.status === 'complete' && existingConv) {
+        return NextResponse.json(
+          {
+            error: 'duplicate',
+            existingConversationId: existingConv.id,
+            existingTitle: existingConv.title || finalTitle,
+          },
+          { status: 409 }
+        );
+      }
+      
+      // If import is pending/processing but no conversation yet, allow re-import
+      // (the old import might be stuck)
+      // Continue with new import
     }
 
     // Determine if we should process synchronously or queue a job
