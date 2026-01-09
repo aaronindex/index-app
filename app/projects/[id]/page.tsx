@@ -172,9 +172,10 @@ export default async function ProjectDetailPage({
 
     if (tab === 'decisions') {
       // Query decisions for this project (by project_id OR by conversation_id)
+      // Order: pinned first, then by created_at (descending)
       let decisionsQuery = supabase
         .from('decisions')
-        .select('id, title, content, conversation_id, created_at, is_inactive')
+        .select('id, title, content, conversation_id, created_at, is_inactive, is_pinned')
         .eq('user_id', user.id);
 
       // Build OR condition: project_id = id OR conversation_id in conversationIds
@@ -185,7 +186,9 @@ export default async function ProjectDetailPage({
         decisionsQuery = decisionsQuery.eq('project_id', id);
       }
 
-      const { data: decisions } = await decisionsQuery.order('created_at', { ascending: false });
+      const { data: decisions } = await decisionsQuery
+        .order('is_pinned', { ascending: false })
+        .order('created_at', { ascending: false });
 
       if (decisions && decisions.length > 0) {
         const convIds = [...new Set(decisions.map((d) => d.conversation_id).filter(Boolean))];
@@ -200,6 +203,7 @@ export default async function ProjectDetailPage({
           id: decision.id,
           title: decision.title,
           content: decision.content,
+          is_pinned: decision.is_pinned || false,
           conversation_title: decision.conversation_id
             ? conversationMap.get(decision.conversation_id) || null
             : null,
@@ -211,11 +215,14 @@ export default async function ProjectDetailPage({
 
     if (tab === 'tasks') {
       // Query tasks for this project (include inactive for filtering)
+      // Order: pinned first, then by sort_order (ascending), then by created_at (descending)
       const { data: tasks } = await supabase
         .from('tasks')
-        .select('id, title, description, status, horizon, conversation_id, created_at, is_inactive')
+        .select('id, title, description, status, horizon, conversation_id, created_at, is_inactive, is_pinned, sort_order')
         .eq('project_id', id)
         .eq('user_id', user.id)
+        .order('is_pinned', { ascending: false })
+        .order('sort_order', { ascending: true, nullsFirst: false })
         .order('created_at', { ascending: false });
 
       if (tasks && tasks.length > 0) {
@@ -233,6 +240,8 @@ export default async function ProjectDetailPage({
           description: task.description,
           status: task.status,
           horizon: task.horizon,
+          is_pinned: task.is_pinned || false,
+          sort_order: task.sort_order,
           conversation_title: task.conversation_id
             ? conversationMap.get(task.conversation_id) || null
             : null,
@@ -302,7 +311,7 @@ export default async function ProjectDetailPage({
               <HighlightsTab highlights={highlightsData} projectName={project.name} />
             )}
             {activeTab === 'decisions' && <DecisionsTab decisions={decisionsData} projectId={id} />}
-            {activeTab === 'tasks' && <TasksTab tasks={tasksData} />}
+            {activeTab === 'tasks' && <TasksTab tasks={tasksData} projectId={id} />}
             {activeTab === 'library' && <LibraryTab assets={assetsData} projectId={id} />}
           </div>
         </div>

@@ -8,6 +8,8 @@ import TaskStatusControl from './TaskStatusControl';
 import DeleteTaskButton from './DeleteTaskButton';
 import ActiveFilterPills from './ActiveFilterPills';
 import ToggleInactiveButton from './ToggleInactiveButton';
+import PinTaskButton from './PinTaskButton';
+import TaskReorderControls from './TaskReorderControls';
 import Card from '@/app/components/ui/Card';
 
 interface Task {
@@ -16,6 +18,8 @@ interface Task {
   description: string | null;
   status: 'open' | 'in_progress' | 'complete' | 'cancelled' | 'dormant' | 'priority';
   horizon: 'this_week' | 'this_month' | 'later' | null;
+  is_pinned?: boolean;
+  sort_order: number | null;
   conversation_title: string | null;
   conversation_id: string | null;
   created_at: string;
@@ -24,6 +28,7 @@ interface Task {
 
 interface TasksTabProps {
   tasks: Task[];
+  projectId: string;
 }
 
 type ActiveFilter = 'active' | 'all' | 'inactive';
@@ -36,7 +41,7 @@ const getDisplayStatus = (status: string): DisplayStatus => {
   return 'open'; // open, in_progress, dormant all map to 'open'
 };
 
-export default function TasksTab({ tasks }: TasksTabProps) {
+export default function TasksTab({ tasks, projectId }: TasksTabProps) {
   const [activeFilter, setActiveFilter] = useState<ActiveFilter>('active');
 
   const { activeTasks, inactiveTasks } = useMemo(() => {
@@ -51,70 +56,39 @@ export default function TasksTab({ tasks }: TasksTabProps) {
     return [...activeTasks, ...inactiveTasks];
   }, [activeFilter, activeTasks, inactiveTasks]);
 
-  // Group tasks by horizon and status
-  const groupedTasks = useMemo(() => {
-    const now = new Date();
-    const weekEnd = new Date(now);
-    weekEnd.setDate(now.getDate() + (7 - now.getDay())); // End of this week (Sunday)
-    const monthEnd = new Date(now);
-    monthEnd.setMonth(now.getMonth() + 1);
-    monthEnd.setDate(0); // Last day of this month
+  // Sort tasks: pinned first, then by sort_order, then by status (priority first), then by created_at
+  // No horizon grouping - tasks are displayed in a single list
+  const sortedTasks = useMemo(() => {
+    return [...filteredByActive].sort((a, b) => {
+      // Pinned tasks first
+      if (a.is_pinned && !b.is_pinned) return -1;
+      if (!a.is_pinned && b.is_pinned) return 1;
 
-    const groups: {
-      thisWeek: Task[];
-      thisMonth: Task[];
-      later: Task[];
-      complete: Task[];
-    } = {
-      thisWeek: [],
-      thisMonth: [],
-      later: [],
-      complete: [],
-    };
-
-    filteredByActive.forEach((task) => {
-      const displayStatus = getDisplayStatus(task.status);
-      
-      if (displayStatus === 'complete') {
-        groups.complete.push(task);
-        return;
+      // If both pinned or both unpinned, sort by sort_order
+      if (a.is_pinned && b.is_pinned) {
+        if (a.sort_order !== null && b.sort_order !== null) {
+          return a.sort_order - b.sort_order;
+        }
+        if (a.sort_order !== null) return -1;
+        if (b.sort_order !== null) return 1;
       }
 
-      // Use horizon if set, otherwise infer from created_at
-      let horizon = task.horizon;
-      if (!horizon) {
-        const taskDate = new Date(task.created_at);
-        if (taskDate <= weekEnd) {
-          horizon = 'this_week';
-        } else if (taskDate <= monthEnd) {
-          horizon = 'this_month';
-        } else {
-          horizon = 'later';
+      // For unpinned tasks, also consider sort_order if set
+      if (!a.is_pinned && !b.is_pinned) {
+        if (a.sort_order !== null && b.sort_order !== null) {
+          return a.sort_order - b.sort_order;
         }
       }
 
-      if (horizon === 'this_week') {
-        groups.thisWeek.push(task);
-      } else if (horizon === 'this_month') {
-        groups.thisMonth.push(task);
-      } else {
-        groups.later.push(task);
-      }
-    });
+      // Then by status: priority first
+      const aStatus = getDisplayStatus(a.status);
+      const bStatus = getDisplayStatus(b.status);
+      if (aStatus === 'priority' && bStatus !== 'priority') return -1;
+      if (aStatus !== 'priority' && bStatus === 'priority') return 1;
 
-    // Sort each group: Priority first, then by created_at
-    const sortTasks = (a: Task, b: Task) => {
-      if (a.status === 'priority' && b.status !== 'priority') return -1;
-      if (a.status !== 'priority' && b.status === 'priority') return 1;
+      // Finally by created_at (newest first)
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-    };
-
-    groups.thisWeek.sort(sortTasks);
-    groups.thisMonth.sort(sortTasks);
-    groups.later.sort(sortTasks);
-    groups.complete.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-
-    return groups;
+    });
   }, [filteredByActive]);
 
   const formatDate = (dateString: string) => {
@@ -142,60 +116,75 @@ export default function TasksTab({ tasks }: TasksTabProps) {
     return getDisplayStatus(status).charAt(0).toUpperCase() + getDisplayStatus(status).slice(1);
   };
 
-  const hasTasks = groupedTasks.thisWeek.length > 0 || 
-                   groupedTasks.thisMonth.length > 0 || 
-                   groupedTasks.later.length > 0 || 
-                   groupedTasks.complete.length > 0;
+  // Extract project ID - all tasks in this tab belong to the same project
+  // projectId is passed as prop from the parent page
 
-  const renderTaskCard = (task: Task) => (
-    <Card
-      key={task.id}
-      className={task.is_inactive ? 'opacity-60' : ''}
-    >
-      <div className="p-4">
-        <div className="flex items-start justify-between mb-2">
-          <div className="flex-1 flex items-center gap-2">
-            <h3 className="font-medium text-[rgb(var(--text))]">{task.title}</h3>
-            {task.is_inactive && (
-              <span className="px-2 py-0.5 text-xs font-medium rounded-md bg-[rgb(var(--surface2))] text-[rgb(var(--muted))]">
-                Inactive
-              </span>
-            )}
+  const renderTaskCard = (task: Task, index: number) => {
+    const canMoveUp = index > 0;
+    const canMoveDown = index < sortedTasks.length - 1;
+
+    return (
+      <Card
+        key={task.id}
+        className={task.is_inactive ? 'opacity-60' : ''}
+      >
+        <div className="p-4">
+          <div className="flex items-start justify-between mb-2">
+            <div className="flex-1 flex items-center gap-2">
+              <PinTaskButton
+                taskId={task.id}
+                isPinned={task.is_pinned || false}
+                projectId={projectId}
+              />
+              <TaskReorderControls
+                taskId={task.id}
+                projectId={projectId}
+                currentOrder={task.sort_order}
+                canMoveUp={canMoveUp}
+                canMoveDown={canMoveDown}
+              />
+              <h3 className="font-medium text-[rgb(var(--text))]">{task.title}</h3>
+              {task.is_inactive && (
+                <span className="px-2 py-0.5 text-xs font-medium rounded-md bg-[rgb(var(--surface2))] text-[rgb(var(--muted))]">
+                  Inactive
+                </span>
+              )}
+            </div>
+            <TaskStatusControl taskId={task.id} currentStatus={task.status} />
           </div>
-          <TaskStatusControl taskId={task.id} currentStatus={task.status} />
+          {task.description && (
+            <p className="text-[rgb(var(--text))] mb-3 text-sm">
+              {task.description}
+            </p>
+          )}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4 text-sm text-[rgb(var(--muted))]">
+              {task.conversation_id && task.conversation_title ? (
+                <Link
+                  href={`/conversations/${task.conversation_id}`}
+                  className="hover:text-[rgb(var(--text))] transition-colors"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  From: {task.conversation_title}
+                </Link>
+              ) : (
+                <span>Created: {formatDate(task.created_at)}</span>
+              )}
+            </div>
+            <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+              <ToggleInactiveButton
+                type="task"
+                id={task.id}
+                isInactive={task.is_inactive || false}
+              />
+              <TaskStartChatButton taskId={task.id} />
+              <DeleteTaskButton taskId={task.id} taskTitle={task.title} />
+            </div>
+          </div>
         </div>
-        {task.description && (
-          <p className="text-[rgb(var(--text))] mb-3 text-sm">
-            {task.description}
-          </p>
-        )}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4 text-sm text-[rgb(var(--muted))]">
-            {task.conversation_id && task.conversation_title ? (
-              <Link
-                href={`/conversations/${task.conversation_id}`}
-                className="hover:text-[rgb(var(--text))] transition-colors"
-                onClick={(e) => e.stopPropagation()}
-              >
-                From: {task.conversation_title}
-              </Link>
-            ) : (
-              <span>Created: {formatDate(task.created_at)}</span>
-            )}
-          </div>
-          <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-            <ToggleInactiveButton
-              type="task"
-              id={task.id}
-              isInactive={task.is_inactive || false}
-            />
-            <TaskStartChatButton taskId={task.id} />
-            <DeleteTaskButton taskId={task.id} taskTitle={task.title} />
-          </div>
-        </div>
-      </div>
-    </Card>
-  );
+      </Card>
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -208,7 +197,7 @@ export default function TasksTab({ tasks }: TasksTabProps) {
         />
       )}
 
-      {!hasTasks ? (
+      {sortedTasks.length === 0 ? (
         <div className="text-center py-12">
           <p className="text-[rgb(var(--muted))]">
             {tasks.length === 0
@@ -217,46 +206,8 @@ export default function TasksTab({ tasks }: TasksTabProps) {
           </p>
         </div>
       ) : (
-        <div className="space-y-8">
-          {/* This Week */}
-          {groupedTasks.thisWeek.length > 0 && (
-            <div>
-              <h3 className="text-sm font-semibold text-[rgb(var(--text))] mb-3">This Week</h3>
-              <div className="space-y-3">
-                {groupedTasks.thisWeek.map(renderTaskCard)}
-              </div>
-            </div>
-          )}
-
-          {/* This Month */}
-          {groupedTasks.thisMonth.length > 0 && (
-            <div>
-              <h3 className="text-sm font-semibold text-[rgb(var(--text))] mb-3">This Month</h3>
-              <div className="space-y-3">
-                {groupedTasks.thisMonth.map(renderTaskCard)}
-              </div>
-            </div>
-          )}
-
-          {/* Later */}
-          {groupedTasks.later.length > 0 && (
-            <div>
-              <h3 className="text-sm font-semibold text-[rgb(var(--text))] mb-3">Later</h3>
-              <div className="space-y-3">
-                {groupedTasks.later.map(renderTaskCard)}
-              </div>
-            </div>
-          )}
-
-          {/* Complete */}
-          {groupedTasks.complete.length > 0 && (
-            <div>
-              <h3 className="text-sm font-semibold text-[rgb(var(--text))] mb-3">Complete</h3>
-              <div className="space-y-3">
-                {groupedTasks.complete.map(renderTaskCard)}
-              </div>
-            </div>
-          )}
+        <div className="space-y-3">
+          {sortedTasks.map((task, index) => renderTaskCard(task, index))}
         </div>
       )}
     </div>

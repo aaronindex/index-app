@@ -145,6 +145,13 @@ export async function GET(request: NextRequest) {
       .select('*', { count: 'exact', head: true })
       .eq('user_id', user.id);
 
+    // Get user's weekly digest email preference
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('weekly_digest_enabled')
+      .eq('id', user.id)
+      .single();
+
     return NextResponse.json({
       success: true,
       hasConversations: (conversationCount || 0) > 0,
@@ -186,6 +193,7 @@ export async function GET(request: NextRequest) {
         top_themes: latestDigest.top_themes,
         open_loops: latestDigest.open_loops,
       } : null,
+      weekly_digest_enabled: profile?.weekly_digest_enabled ?? true,
     });
   } catch (error) {
     console.error('Home data API error:', error);

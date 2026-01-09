@@ -1,7 +1,7 @@
 // app/tools/components/GenerateDigestButton.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 export default function GenerateDigestButton() {
@@ -11,6 +11,27 @@ export default function GenerateDigestButton() {
   const [error, setError] = useState<string | null>(null);
   const [weekStart, setWeekStart] = useState('');
   const [weekEnd, setWeekEnd] = useState('');
+  const [emailOptIn, setEmailOptIn] = useState(false);
+  const [currentEmailPreference, setCurrentEmailPreference] = useState<boolean | null>(null);
+
+  // Fetch current email preference on mount
+  useEffect(() => {
+    const fetchPreference = async () => {
+      try {
+        const response = await fetch('/api/home/data');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.weekly_digest_enabled !== undefined) {
+            setCurrentEmailPreference(data.weekly_digest_enabled);
+            setEmailOptIn(data.weekly_digest_enabled);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch email preference:', err);
+      }
+    };
+    fetchPreference();
+  }, []);
 
   // Set default to last week
   const setDefaultDates = () => {
@@ -40,6 +61,20 @@ export default function GenerateDigestButton() {
     setError(null);
 
     try {
+      // Update email preference if changed
+      if (currentEmailPreference !== null && emailOptIn !== currentEmailPreference) {
+        const prefResponse = await fetch('/api/profile/update-digest-email', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ weekly_digest_enabled: emailOptIn }),
+        });
+
+        if (!prefResponse.ok) {
+          console.error('Failed to update email preference');
+        }
+      }
+
+      // Generate digest
       const response = await fetch('/api/digests/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -105,13 +140,27 @@ export default function GenerateDigestButton() {
           </div>
         )}
 
+        {/* Email opt-in checkbox */}
+        <div className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            id="email-opt-in"
+            checked={emailOptIn}
+            onChange={(e) => setEmailOptIn(e.target.checked)}
+            className="w-4 h-4 rounded border-zinc-300 dark:border-zinc-700 text-foreground focus:ring-2 focus:ring-zinc-500"
+          />
+          <label htmlFor="email-opt-in" className="text-sm text-[rgb(var(--muted))]">
+            Email me weekly digests
+          </label>
+        </div>
+
         <div className="flex gap-3">
           <button
             onClick={handleGenerate}
             disabled={loading || !weekStart || !weekEnd}
             className="px-4 py-2 bg-foreground text-background rounded-lg hover:opacity-90 transition-opacity font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Generating...' : 'Generate Digest'}
+            {loading ? 'Generating...' : 'Generate Weekly Digest'}
           </button>
           <button
             onClick={() => {

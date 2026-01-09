@@ -359,10 +359,10 @@ export default function MagicHomeScreen() {
 
       {/* Weekly Digest Section */}
       <div>
-        <SectionHeader>Weekly Digest</SectionHeader>
+        <SectionHeader>Weekly Digest — Make the week usable</SectionHeader>
         <Card className="p-6 bg-gradient-to-br from-[rgb(var(--surface2))] to-[rgb(var(--surface))]">
-          <p className="text-sm text-[rgb(var(--muted))] mb-4">
-            Collapse your week into what still matters.
+          <p className="text-sm text-[rgb(var(--muted))] mb-4 italic">
+            Collapse the last 7 days into what still matters.
           </p>
           <GenerateDigestButton />
         </Card>

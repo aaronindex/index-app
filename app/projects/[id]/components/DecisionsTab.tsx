@@ -8,6 +8,7 @@ import DeleteDecisionButton from './DeleteDecisionButton';
 import CreateDecisionButton from './CreateDecisionButton';
 import ActiveFilterPills from './ActiveFilterPills';
 import ToggleInactiveButton from './ToggleInactiveButton';
+import PinDecisionButton from './PinDecisionButton';
 import Card from '@/app/components/ui/Card';
 import SectionHeader from '@/app/components/ui/SectionHeader';
 
@@ -19,6 +20,7 @@ interface Decision {
   conversation_id: string | null;
   created_at: string;
   is_inactive?: boolean;
+  is_pinned?: boolean;
 }
 
 interface DecisionsTabProps {
@@ -82,6 +84,11 @@ export default function DecisionsTab({ decisions, projectId }: DecisionsTabProps
             >
               <div className="p-4">
                 <div className="flex items-center gap-2 mb-2">
+                  <PinDecisionButton
+                    decisionId={decision.id}
+                    isPinned={decision.is_pinned || false}
+                    projectId={projectId}
+                  />
                   <h3 className="font-medium text-[rgb(var(--text))]">{decision.title}</h3>
                   {decision.is_inactive && (
                     <span className="px-2 py-0.5 text-xs font-medium rounded-md bg-[rgb(var(--surface2))] text-[rgb(var(--muted))]">
