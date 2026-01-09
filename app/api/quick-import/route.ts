@@ -383,21 +383,16 @@ export async function POST(request: NextRequest) {
       // Increment limit counter
       await incrementLimit(user.id, 'import');
 
-      // Trigger immediate job processing via API call (fire-and-forget)
-      // This ensures it runs in serverless environment where async IIFE might not complete
-      // Use fetch to trigger processing endpoint
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 
-        (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
-      
-      // Fire-and-forget fetch - don't await
-      fetch(`${baseUrl}/api/jobs/process`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jobId: job.id }),
-      }).catch((err) => {
-        // Silently fail - cron will pick it up if this fails
-        console.log('[Quick Import] Immediate processing trigger failed (cron will handle it):', err.message);
-      });
+      // Process first step immediately (don't await to avoid blocking response)
+      // This gets the job started right away
+      processImportJobStep(job.id)
+        .then((result) => {
+          console.log(`[Quick Import] Processed initial step. Next step: ${result.nextStep || 'complete'}, Error: ${result.error || 'none'}`);
+        })
+        .catch((err) => {
+          // Log error but don't fail - cron will pick it up
+          console.error('[Quick Import] Immediate processing error (cron will handle it):', err);
+        });
 
       return NextResponse.json({
         success: true,
