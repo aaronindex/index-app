@@ -68,6 +68,138 @@ export default function MagicHomeScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // All hooks must be called unconditionally at the top level (before any early returns)
+  const formatDate = useCallback((dateString: string | null | undefined) => {
+    if (!dateString) return 'Recently';
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString();
+    } catch {
+      return 'Recently';
+    }
+  }, []);
+
+  // Group priority items and revisit items by project - must be before early returns
+  const groupedByProject = useMemo(() => {
+    if (!data) return {};
+    
+    const groups: Record<string, {
+      project_id: string | null;
+      project_name: string | null;
+      items: Array<{
+        type: 'task' | 'decision' | 'revisit';
+        id: string;
+        title: string;
+        secondary: string;
+        href: string;
+        badgeLabel: string;
+        badgeColor: string;
+      }>;
+    }> = {};
+
+    // Add priority tasks
+    (data.priorityItems?.tasks || []).slice(0, 5).forEach((task) => {
+      const projectKey = task.project_id || 'unassigned';
+      if (!groups[projectKey]) {
+        groups[projectKey] = {
+          project_id: task.project_id,
+          project_name: task.project_name,
+          items: [],
+        };
+      }
+
+      const isCommitment = task.description?.includes('[Commitment]');
+      const isBlocker = task.description?.includes('[Blocker]');
+      const isOpenLoop = task.description?.includes('[Open Loop]');
+      
+      let badgeColor = 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400';
+      let badgeLabel = 'Task';
+      if (isCommitment) {
+        badgeColor = 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400';
+        badgeLabel = 'Commitment';
+      } else if (isBlocker) {
+        badgeColor = 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400';
+        badgeLabel = 'Blocker';
+      } else if (isOpenLoop) {
+        badgeColor = 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-400';
+        badgeLabel = 'Open Loop';
+      }
+
+      groups[projectKey].items.push({
+        type: 'task',
+        id: task.id,
+        title: task.title,
+        secondary: task.project_name || formatDate(task.created_at),
+        href: task.project_id ? `/projects/${task.project_id}?tab=tasks` : '/projects',
+        badgeLabel,
+        badgeColor,
+      });
+    });
+
+    // Add priority decisions
+    (data.priorityItems?.decisions || []).slice(0, 2).forEach((decision) => {
+      const projectKey = decision.project_id || 'unassigned';
+      if (!groups[projectKey]) {
+        groups[projectKey] = {
+          project_id: decision.project_id,
+          project_name: decision.project_name,
+          items: [],
+        };
+      }
+
+      groups[projectKey].items.push({
+        type: 'decision',
+        id: decision.id,
+        title: decision.title,
+        secondary: decision.conversation_title || decision.project_name || formatDate(decision.created_at),
+        href: decision.project_id ? `/projects/${decision.project_id}?tab=decisions` : (decision.conversation_id ? `/conversations/${decision.conversation_id}` : '/projects'),
+        badgeLabel: 'Decision',
+        badgeColor: 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-400',
+      });
+    });
+
+    // Add revisit items
+    (data.thingsToRevisit || []).forEach((revisit) => {
+      const projectKey = revisit.project_id || 'unassigned';
+      if (!groups[projectKey]) {
+        groups[projectKey] = {
+          project_id: revisit.project_id,
+          project_name: revisit.project_name,
+          items: [],
+        };
+      }
+
+      groups[projectKey].items.push({
+        type: 'revisit',
+        id: revisit.id,
+        title: revisit.title || 'Untitled Conversation',
+        secondary: `Last updated: ${formatDate(revisit.updated_at || revisit.created_at)}`,
+        href: `/conversations/${revisit.id}`,
+        badgeLabel: 'Revisit',
+        badgeColor: 'bg-zinc-100 dark:bg-zinc-900/30 text-zinc-800 dark:text-zinc-400',
+      });
+    });
+
+    // Limit items per project: 1-3 priority items + 0-1 revisit
+    Object.keys(groups).forEach((key) => {
+      const group = groups[key];
+      const priorityItems = group.items.filter((i) => i.type !== 'revisit');
+      const revisitItems = group.items.filter((i) => i.type === 'revisit');
+      
+      group.items = [
+        ...priorityItems.slice(0, 3),
+        ...revisitItems.slice(0, 1),
+      ];
+    });
+
+    return groups;
+  }, [data, formatDate]);
+
+  const hasUnifiedItems = Object.keys(groupedByProject).length > 0 && 
+    Object.values(groupedByProject).some((g) => g.items.length > 0);
+
+  const hasInsights = (data?.latestInsights?.length || 0) > 0;
+
   useEffect(() => {
     fetchHomeData();
   }, []);
@@ -98,16 +230,7 @@ export default function MagicHomeScreen() {
     }
   };
 
-  const formatDate = useCallback((dateString: string | null | undefined) => {
-    if (!dateString) return 'Recently';
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString();
-    } catch {
-      return 'Recently';
-    }
-  }, []);
-
+  // Early returns after all hooks
   if (loading) {
     return (
       <div className="space-y-8">
@@ -160,12 +283,7 @@ export default function MagicHomeScreen() {
     );
   }
 
-  if (!data) {
-    return null;
-  }
-
-  const hasInsights = (data.latestInsights?.length || 0) > 0;
-
+  // All hooks must be called unconditionally before any early returns
   // Group priority items and revisit items by project
   const groupedByProject = useMemo(() => {
     if (!data) return {};
@@ -284,6 +402,65 @@ export default function MagicHomeScreen() {
 
   const hasUnifiedItems = Object.keys(groupedByProject).length > 0 && 
     Object.values(groupedByProject).some((g) => g.items.length > 0);
+
+  const hasInsights = (data?.latestInsights?.length || 0) > 0;
+
+  // Early returns after all hooks
+  if (loading) {
+    return (
+      <div className="space-y-8">
+        {/* Quick Commands Skeleton */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {[1, 2].map((i) => (
+            <div
+              key={i}
+              className="p-6 rounded-xl bg-gradient-to-br from-[rgb(var(--surface2))] to-[rgb(var(--surface))] ring-1 ring-[rgb(var(--ring)/0.08)] animate-pulse"
+            >
+              <div className="h-6 bg-[rgb(var(--surface2))] rounded w-1/3 mb-2"></div>
+              <div className="h-4 bg-[rgb(var(--surface2))] rounded w-2/3"></div>
+            </div>
+          ))}
+        </div>
+        {/* Content Skeleton */}
+        <div className="space-y-4">
+          <div className="h-7 bg-[rgb(var(--surface2))] rounded w-1/4 animate-pulse"></div>
+          {[1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="p-4 rounded-xl bg-[rgb(var(--surface))] ring-1 ring-[rgb(var(--ring)/0.08)] animate-pulse"
+            >
+              <div className="h-5 bg-[rgb(var(--surface2))] rounded w-3/4 mb-2"></div>
+              <div className="h-4 bg-[rgb(var(--surface2))] rounded w-full"></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-12">
+        <div className="max-w-md mx-auto p-6 rounded-xl bg-red-50 dark:bg-red-900/20 ring-1 ring-red-200 dark:ring-red-800">
+          <p className="text-red-800 dark:text-red-400 mb-4">{error}</p>
+          <button
+            onClick={() => {
+              setError(null);
+              setLoading(true);
+              fetchHomeData();
+            }}
+            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:opacity-90 transition-opacity font-medium"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!data) {
+    return null;
+  }
 
   return (
     <div className="space-y-8">
