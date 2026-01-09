@@ -1,7 +1,7 @@
 // app/components/MagicHomeScreen.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import OnboardingFlow from './OnboardingFlow';
@@ -31,6 +31,8 @@ interface HomeData {
       content: string | null;
       conversation_id: string | null;
       conversation_title: string | null;
+      project_id: string | null;
+      project_name: string | null;
       created_at: string;
     }>;
   };
@@ -47,6 +49,8 @@ interface HomeData {
     title: string | null;
     created_at: string;
     updated_at: string | null;
+    project_id: string | null;
+    project_name: string | null;
   }>;
   latestDigest: {
     id: string;
@@ -151,113 +155,172 @@ export default function MagicHomeScreen() {
     return null;
   }
 
-  const hasPriorityItems = data.priorityItems.tasks.length > 0 || data.priorityItems.decisions.length > 0;
   const hasInsights = data.latestInsights.length > 0;
-  const hasThingsToRevisit = data.thingsToRevisit.length > 0;
+
+  // Group priority items and revisit items by project
+  const groupedByProject = useMemo(() => {
+    const groups: Record<string, {
+      project_id: string | null;
+      project_name: string | null;
+      items: Array<{
+        type: 'task' | 'decision' | 'revisit';
+        id: string;
+        title: string;
+        secondary: string;
+        href: string;
+        badgeLabel: string;
+        badgeColor: string;
+      }>;
+    }> = {};
+
+    // Add priority tasks
+    data.priorityItems.tasks.slice(0, 5).forEach((task) => {
+      const projectKey = task.project_id || 'unassigned';
+      if (!groups[projectKey]) {
+        groups[projectKey] = {
+          project_id: task.project_id,
+          project_name: task.project_name,
+          items: [],
+        };
+      }
+
+      const isCommitment = task.description?.includes('[Commitment]');
+      const isBlocker = task.description?.includes('[Blocker]');
+      const isOpenLoop = task.description?.includes('[Open Loop]');
+      
+      let badgeColor = 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400';
+      let badgeLabel = 'Task';
+      if (isCommitment) {
+        badgeColor = 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400';
+        badgeLabel = 'Commitment';
+      } else if (isBlocker) {
+        badgeColor = 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400';
+        badgeLabel = 'Blocker';
+      } else if (isOpenLoop) {
+        badgeColor = 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-400';
+        badgeLabel = 'Open Loop';
+      }
+
+      groups[projectKey].items.push({
+        type: 'task',
+        id: task.id,
+        title: task.title,
+        secondary: task.project_name || formatDate(task.created_at),
+        href: task.project_id ? `/projects/${task.project_id}?tab=tasks` : '/projects',
+        badgeLabel,
+        badgeColor,
+      });
+    });
+
+    // Add priority decisions
+    data.priorityItems.decisions.slice(0, 2).forEach((decision) => {
+      const projectKey = decision.project_id || 'unassigned';
+      if (!groups[projectKey]) {
+        groups[projectKey] = {
+          project_id: decision.project_id,
+          project_name: decision.project_name,
+          items: [],
+        };
+      }
+
+      groups[projectKey].items.push({
+        type: 'decision',
+        id: decision.id,
+        title: decision.title,
+        secondary: decision.conversation_title || decision.project_name || formatDate(decision.created_at),
+        href: decision.project_id ? `/projects/${decision.project_id}?tab=decisions` : (decision.conversation_id ? `/conversations/${decision.conversation_id}` : '/projects'),
+        badgeLabel: 'Decision',
+        badgeColor: 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-400',
+      });
+    });
+
+    // Add revisit items
+    data.thingsToRevisit.forEach((revisit) => {
+      const projectKey = revisit.project_id || 'unassigned';
+      if (!groups[projectKey]) {
+        groups[projectKey] = {
+          project_id: revisit.project_id,
+          project_name: revisit.project_name,
+          items: [],
+        };
+      }
+
+      groups[projectKey].items.push({
+        type: 'revisit',
+        id: revisit.id,
+        title: revisit.title || 'Untitled Conversation',
+        secondary: `Last updated: ${formatDate(revisit.updated_at || revisit.created_at)}`,
+        href: `/conversations/${revisit.id}`,
+        badgeLabel: 'Revisit',
+        badgeColor: 'bg-zinc-100 dark:bg-zinc-900/30 text-zinc-800 dark:text-zinc-400',
+      });
+    });
+
+    // Limit items per project: 1-3 priority items + 0-1 revisit
+    Object.keys(groups).forEach((key) => {
+      const group = groups[key];
+      const priorityItems = group.items.filter((i) => i.type !== 'revisit');
+      const revisitItems = group.items.filter((i) => i.type === 'revisit');
+      
+      group.items = [
+        ...priorityItems.slice(0, 3),
+        ...revisitItems.slice(0, 1),
+      ];
+    });
+
+    return groups;
+  }, [data.priorityItems, data.thingsToRevisit]);
+
+  const hasUnifiedItems = Object.keys(groupedByProject).length > 0 && 
+    Object.values(groupedByProject).some((g) => g.items.length > 0);
 
   return (
     <div className="space-y-8">
-      {/* Quick Commands */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card hover className="p-6 bg-gradient-to-br from-[rgb(var(--surface2))] to-[rgb(var(--surface))]">
-          <Link href="/ask" className="block">
-            <div className="flex items-center gap-3 mb-2">
-              <span className="text-2xl">🔍</span>
-              <h3 className="text-lg font-semibold text-[rgb(var(--text))]">Ask Index</h3>
-            </div>
-            <p className="text-sm text-[rgb(var(--muted))]">
-              Get AI-synthesized answers from your conversations
-            </p>
-          </Link>
-        </Card>
-
-      </div>
-
-      {/* Priority Items */}
-      {hasPriorityItems && (
+      {/* Unified Priority List: "What still deserves attention" */}
+      {hasUnifiedItems ? (
         <div>
-          <SectionHeader>Priority Items</SectionHeader>
-          <div className="space-y-3">
-            {data.priorityItems.tasks.slice(0, 5).map((task) => {
-              // Determine badge color based on task type (from description)
-              const isAIExtracted = task.source_query === 'AI Insight Extraction';
-              const isCommitment = task.description?.includes('[Commitment]');
-              const isBlocker = task.description?.includes('[Blocker]');
-              const isOpenLoop = task.description?.includes('[Open Loop]');
-              
-              let badgeColor = 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400';
-              let badgeLabel = 'Task';
-              if (isCommitment) {
-                badgeColor = 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400';
-                badgeLabel = 'Commitment';
-              } else if (isBlocker) {
-                badgeColor = 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400';
-                badgeLabel = 'Blocker';
-              } else if (isOpenLoop) {
-                badgeColor = 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-400';
-                badgeLabel = 'Open Loop';
-              }
-
-              return (
-                <Card key={task.id} hover>
-                  <Link
-                    href={task.project_id ? `/projects/${task.project_id}?tab=tasks` : '/projects'}
-                    className="block p-4"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className={`text-xs font-medium px-2 py-0.5 rounded ${badgeColor}`}>
-                            {badgeLabel}
-                          </span>
-                          {isAIExtracted && (
-                            <span className="text-xs px-2 py-0.5 rounded bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-400">
-                              AI
+          <SectionHeader>What still deserves attention</SectionHeader>
+          <div className="space-y-6">
+            {Object.entries(groupedByProject)
+              .filter(([_, group]) => group.items.length > 0)
+              .map(([key, group]) => (
+                <div key={key}>
+                  {group.project_name && (
+                    <h3 className="text-sm font-semibold text-[rgb(var(--text))] mb-3">
+                      {group.project_name}
+                    </h3>
+                  )}
+                  <div className="space-y-2">
+                    {group.items.map((item) => (
+                      <Card key={item.id} hover>
+                        <Link href={item.href} className="block p-4">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className={`text-xs font-medium px-2 py-0.5 rounded ${item.badgeColor}`}>
+                              {item.badgeLabel}
                             </span>
-                          )}
-                          {task.project_name && (
-                            <span className="text-xs text-[rgb(var(--muted))]">
-                              {task.project_name}
-                            </span>
-                          )}
-                        </div>
-                        <h3 className="font-medium text-[rgb(var(--text))]">{task.title}</h3>
-                        {task.description && (
-                          <p className="text-sm text-[rgb(var(--muted))] mt-1 line-clamp-2">
-                            {task.description.replace(/^\[(Commitment|Blocker|Open Loop)\]\s*/, '')}
+                          </div>
+                          <h3 className="font-medium text-[rgb(var(--text))] mb-1">
+                            {item.title}
+                          </h3>
+                          <p className="text-xs text-[rgb(var(--muted))]">
+                            {item.secondary}
                           </p>
-                        )}
-                      </div>
-                    </div>
-                  </Link>
-                </Card>
-              );
-            })}
-            {data.priorityItems.decisions.slice(0, 2).map((decision) => (
-              <Card key={decision.id} hover>
-                <Link
-                  href={decision.conversation_id ? `/conversations/${decision.conversation_id}` : '/projects'}
-                  className="block p-4"
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs font-medium px-2 py-0.5 rounded bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-400">
-                          Decision
-                        </span>
-                        {decision.conversation_title && (
-                          <span className="text-xs text-[rgb(var(--muted))]">
-                            {decision.conversation_title}
-                          </span>
-                        )}
-                      </div>
-                      <h3 className="font-medium text-[rgb(var(--text))]">{decision.title}</h3>
-                    </div>
+                        </Link>
+                      </Card>
+                    ))}
                   </div>
-                </Link>
-              </Card>
-            ))}
+                </div>
+              ))}
           </div>
+        </div>
+      ) : (
+        <div>
+          <SectionHeader>What still deserves attention</SectionHeader>
+          <Card className="p-8 text-center">
+            <p className="text-[rgb(var(--muted))]">
+              No priority items yet. Import a conversation, create a highlight, or ask INDEX a question.
+            </p>
+          </Card>
         </div>
       )}
 
@@ -300,71 +363,35 @@ export default function MagicHomeScreen() {
       )}
 
 
-      {/* 3 Things to Revisit */}
-      {hasThingsToRevisit && (
-        <div>
-          <SectionHeader>3 Things INDEX Thinks You Should Revisit</SectionHeader>
-          <div className="space-y-3">
-            {data.thingsToRevisit.map((item) => (
-              <Card key={item.id} hover>
-                <Link
-                  href={`/conversations/${item.id}`}
-                  className="block p-4"
-                >
-                  <h3 className="font-medium text-[rgb(var(--text))] mb-1">
-                    {item.title || 'Untitled Conversation'}
-                  </h3>
-                  <p className="text-xs text-[rgb(var(--muted))]">
-                    Last updated: {formatDate(item.updated_at || item.created_at)}
-                  </p>
-                </Link>
-              </Card>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Mind Map Preview - Hidden (themes/tags are internal signal layer only) */}
-
-      {/* Digest Preview */}
-      {data.latestDigest && (
-        <div>
-          <SectionHeader 
-            description="Your weekly intelligence briefing: what changed, open loops, and next steps"
-            action={
-              <Link
-                href={`/digests/${data.latestDigest.id}`}
-                className="text-sm text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] transition-colors"
-              >
-                View full →
-              </Link>
-            }
-          >
-            Latest Weekly Digest
-          </SectionHeader>
-          <Card hover className="p-6 bg-gradient-to-br from-[rgb(var(--surface2))] to-[rgb(var(--surface))]">
-            <Link href={`/digests/${data.latestDigest.id}`} className="block">
-              <div className="flex items-center gap-2 mb-3">
-                <span className="text-sm font-medium text-[rgb(var(--muted))]">
-                  {formatDate(data.latestDigest.week_start)} - {formatDate(data.latestDigest.week_end)}
-                </span>
-              </div>
-              <p className="text-[rgb(var(--text))] line-clamp-3">
-                {data.latestDigest.summary}
-              </p>
-            </Link>
-          </Card>
-        </div>
-      )}
-
-      {/* Weekly Digest Section */}
+      {/* Consolidated Weekly Digest Section */}
       <div>
-        <SectionHeader>Weekly Digest — Make the week usable</SectionHeader>
+        <SectionHeader>Weekly Digest</SectionHeader>
         <Card className="p-6 bg-gradient-to-br from-[rgb(var(--surface2))] to-[rgb(var(--surface))]">
           <p className="text-sm text-[rgb(var(--muted))] mb-4 italic">
-            Collapse the last 7 days into what still matters.
+            Collapse your week into what still matters.
           </p>
-          <GenerateDigestButton />
+          {data.latestDigest ? (
+            <>
+              <div className="mb-4 pb-4 border-b border-[rgb(var(--ring)/0.08)]">
+                <Link href={`/digests/${data.latestDigest.id}`} className="block">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-[rgb(var(--muted))]">
+                      {formatDate(data.latestDigest.week_start)} - {formatDate(data.latestDigest.week_end)}
+                    </span>
+                    <span className="text-sm text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] transition-colors">
+                      View full →
+                    </span>
+                  </div>
+                  <p className="text-[rgb(var(--text))] line-clamp-2 text-sm">
+                    {data.latestDigest.summary}
+                  </p>
+                </Link>
+              </div>
+              <GenerateDigestButton />
+            </>
+          ) : (
+            <GenerateDigestButton />
+          )}
         </Card>
       </div>
 
@@ -376,7 +403,7 @@ export default function MagicHomeScreen() {
       )}
 
       {/* Partial Empty State - Has conversations but no content yet */}
-      {data.hasConversations && !hasPriorityItems && !hasInsights && !hasThingsToRevisit && !data.latestDigest && (
+      {data.hasConversations && !hasUnifiedItems && !hasInsights && !data.latestDigest && (
         <div className="max-w-2xl mx-auto text-center py-12">
           <Card className="p-8 bg-gradient-to-br from-[rgb(var(--surface2))] to-[rgb(var(--surface))]">
             <h3 className="font-serif text-xl font-semibold text-[rgb(var(--text))] mb-3">

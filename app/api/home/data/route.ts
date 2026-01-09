@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
     // Stance: prioritize decisions that might need follow-up
     const { data: recentDecisions } = await supabase
       .from('decisions')
-      .select('id, title, content, conversation_id, created_at, conversations(title)')
+      .select('id, title, content, conversation_id, project_id, created_at, conversations(title), projects(name)')
       .eq('user_id', user.id)
       .eq('is_inactive', false)
       .order('created_at', { ascending: false })
@@ -111,7 +111,7 @@ export async function GET(request: NextRequest) {
     const now = new Date();
     const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
     
-    const thingsToRevisit = allConversations
+    const conversationsToRevisit = allConversations
       ?.filter((conv) => {
         const convHighlights = allHighlights?.filter((h) => h.conversation_id === conv.id) || [];
         const convTasks = allTasksForConvs?.filter((t) => t.conversation_id === conv.id) || [];
@@ -125,13 +125,36 @@ export async function GET(request: NextRequest) {
         
         return hasThoughtObjects && isOld;
       })
-      .slice(0, 3)
-      .map((conv) => ({
+      .slice(0, 3) || [];
+
+    // Get project info for conversations to revisit
+    const revisitConvIds = conversationsToRevisit.map((c) => c.id);
+    const { data: projectConversations } = await supabase
+      .from('project_conversations')
+      .select('conversation_id, project_id, projects(name)')
+      .in('conversation_id', revisitConvIds);
+
+    const projectMap = new Map<string, { project_id: string; project_name: string }>();
+    projectConversations?.forEach((pc: any) => {
+      if (pc.project_id && pc.projects) {
+        projectMap.set(pc.conversation_id, {
+          project_id: pc.project_id,
+          project_name: pc.projects.name,
+        });
+      }
+    });
+
+    const thingsToRevisit = conversationsToRevisit.map((conv) => {
+      const projectInfo = projectMap.get(conv.id);
+      return {
         id: conv.id,
         title: conv.title,
         created_at: conv.created_at,
         updated_at: conv.ended_at || conv.created_at,
-      })) || [];
+        project_id: projectInfo?.project_id || null,
+        project_name: projectInfo?.project_name || null,
+      };
+    });
 
     // Check if user has any conversations or projects (for empty state)
     // For empty state check, include all (active and inactive, business and personal)
@@ -173,6 +196,8 @@ export async function GET(request: NextRequest) {
           content: d.content,
           conversation_id: d.conversation_id,
           conversation_title: (d.conversations as any)?.title || null,
+          project_id: d.project_id || null,
+          project_name: (d.projects as any)?.name || null,
           created_at: d.created_at,
         })) || [],
       },
