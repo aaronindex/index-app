@@ -1,9 +1,15 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/getUser";
 import LandingPage from "@/app/components/LandingPage";
+import type { Metadata } from "next";
 
 // Force dynamic rendering since we use cookies() for auth
 export const dynamic = 'force-dynamic';
+
+export const metadata: Metadata = {
+  title: "INDEX — Personal Business Intelligence for your AI life",
+  description: "Import, organize, and search your AI conversations. The memory your AI doesn't have.",
+};
 
 export default async function Home() {
   // Try to get user, but if it fails, just show landing page

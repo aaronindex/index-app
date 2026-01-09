@@ -1,7 +1,13 @@
 // app/unassigned/page.tsx
 import { getSupabaseServerClient } from '@/lib/supabaseServer';
 import { getCurrentUser } from '@/lib/getUser';
+import type { Metadata } from 'next';
 import UnassignedConversationsClient from './components/UnassignedConversationsClient';
+
+export const metadata: Metadata = {
+  title: "Unassigned | INDEX",
+  description: "Conversations not yet assigned to a project",
+};
 
 export default async function UnassignedPage() {
   const user = await getCurrentUser();

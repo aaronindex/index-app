@@ -1,7 +1,7 @@
 // app/ask/page.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import FollowUpQuestion from '@/app/ask/components/FollowUpQuestion';
@@ -37,6 +37,11 @@ export default function AskPage() {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [answer, setAnswer] = useState<SynthesizedAnswer | null>(null);
+
+  // Update page title
+  useEffect(() => {
+    document.title = 'Ask Index | INDEX';
+  }, []);
   const [relatedContent, setRelatedContent] = useState<{
     highlights: Array<{
       id: string;

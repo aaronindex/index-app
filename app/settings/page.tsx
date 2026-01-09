@@ -1,11 +1,15 @@
 // app/settings/page.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 export default function SettingsPage() {
+  // Update page title
+  useEffect(() => {
+    document.title = 'Settings | INDEX';
+  }, []);
   const router = useRouter();
   const [exporting, setExporting] = useState(false);
   const [deleting, setDeleting] = useState(false);

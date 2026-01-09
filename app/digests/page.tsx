@@ -2,7 +2,13 @@
 import { getSupabaseServerClient } from '@/lib/supabaseServer';
 import { getCurrentUser } from '@/lib/getUser';
 import Link from 'next/link';
+import type { Metadata } from 'next';
 import DigestList from './components/DigestList';
+
+export const metadata: Metadata = {
+  title: "Weekly Digests | INDEX",
+  description: "AI-generated summaries of your weekly conversations and insights",
+};
 
 export default async function DigestsPage() {
   const user = await getCurrentUser();
@@ -24,10 +30,10 @@ export default async function DigestsPage() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="mb-8">
           <Link
-            href="/tools"
+            href="/home"
             className="text-sm text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] transition-colors mb-4 inline-block"
           >
-            ← Back to Tools
+            ← Back to Home
           </Link>
           <h1 className="font-serif text-3xl font-semibold text-[rgb(var(--text))] mb-2">Weekly Digests</h1>
           <p className="text-[rgb(var(--muted))]">

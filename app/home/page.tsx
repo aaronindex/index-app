@@ -1,6 +1,12 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/getUser";
 import MagicHomeScreen from "@/app/components/MagicHomeScreen";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Home | INDEX",
+  description: "Your personal business intelligence dashboard",
+};
 
 export default async function HomePage() {
   const user = await getCurrentUser();

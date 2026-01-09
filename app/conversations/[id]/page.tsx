@@ -2,6 +2,7 @@
 import { getSupabaseServerClient } from '@/lib/supabaseServer';
 import { getCurrentUser } from '@/lib/getUser';
 import { notFound } from 'next/navigation';
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import ConversationViewClient from './components/ConversationViewClient';
 import DeleteConversationButton from './components/DeleteConversationButton';

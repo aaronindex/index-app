@@ -1,11 +1,15 @@
 // app/auth/forgot-password/page.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { getSupabaseBrowserClient } from '@/lib/supabaseClient';
 import Link from 'next/link';
 
 export default function ForgotPasswordPage() {
+  // Update page title
+  useEffect(() => {
+    document.title = 'Forgot Password | INDEX';
+  }, []);
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

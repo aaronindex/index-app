@@ -1,10 +1,14 @@
 // app/feedback/page.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
 export default function FeedbackPage() {
+  // Update page title
+  useEffect(() => {
+    document.title = 'Feedback | INDEX';
+  }, []);
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);

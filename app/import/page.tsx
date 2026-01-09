@@ -18,6 +18,11 @@ interface DetectedConversation {
 export default function ImportPage() {
   const router = useRouter();
   const [step, setStep] = useState<'upload' | 'preview' | 'assign'>('upload');
+
+  // Update page title
+  useEffect(() => {
+    document.title = 'Import | INDEX';
+  }, []);
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

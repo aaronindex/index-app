@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useTheme } from 'next-themes';
 import { trackEvent } from '@/lib/analytics';
+import { captureUTMParams, getUTMParamsForAnalytics } from '@/lib/utm';
 import MonitorScreenshotPanel from './landing/MonitorScreenshotPanel';
 import ValueCard from './landing/ValueCard';
 import InviteCodeInput from './landing/InviteCodeInput';
@@ -27,18 +28,20 @@ export default function LandingPage() {
   }, [mounted, resolvedTheme, setTheme]);
 
   useEffect(() => {
+    // Capture UTM params from URL and store for attribution
+    captureUTMParams();
+
     // Fire landing_page_view analytics event with page context
     if (typeof window !== 'undefined') {
       const url = new URL(window.location.href);
       const referrer = document.referrer ? new URL(document.referrer) : null;
+      const utmParams = getUTMParamsForAnalytics();
       
       trackEvent('landing_page_view', {
         page_type: 'landing',
         path: window.location.pathname,
         referrer_host: referrer?.host || undefined,
-        utm_source: url.searchParams.get('utm_source') || undefined,
-        utm_medium: url.searchParams.get('utm_medium') || undefined,
-        utm_campaign: url.searchParams.get('utm_campaign') || undefined,
+        ...utmParams,
       });
     }
   }, []);

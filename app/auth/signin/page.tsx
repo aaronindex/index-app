@@ -1,7 +1,7 @@
 // app/auth/signin/page.tsx
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState, Suspense, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getSupabaseBrowserClient } from '@/lib/supabaseClient';
 import Link from 'next/link';
@@ -13,6 +13,11 @@ function SignInForm() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Update page title
+  useEffect(() => {
+    document.title = 'Sign In | INDEX';
+  }, []);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();

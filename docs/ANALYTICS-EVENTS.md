@@ -14,10 +14,10 @@ All events use the `trackEvent()` helper from `lib/analytics.ts`, which:
 
 | Event Name | Location | Function/Component | Parameters |
 |------------|----------|-------------------|------------|
-| `landing_page_view` | `app/components/LandingPage.tsx` | `useEffect` on mount | `page_type: 'landing'`, `path: string`, `referrer_host?: string`, `utm_source?: string`, `utm_medium?: string`, `utm_campaign?: string` |
+| `landing_page_view` | `app/components/LandingPage.tsx` | `useEffect` on mount | `page_type: 'landing'`, `path: string`, `referrer_host?: string`, `utm_source?: string`, `utm_medium?: string`, `utm_campaign?: string`, `utm_term?: string`, `utm_content?: string` |
 | `invite_code_submitted` | `app/components/landing/InviteCodeInput.tsx` | `handleSubmit` | `code_length: number` |
 | `invite_code_accepted` | `app/components/landing/InviteCodeInput.tsx` | `handleSubmit` (after verification) | None |
-| `sign_up_completed` | `app/auth/signup/page.tsx` | `handleSignUp` (after signup) | `invite_present: boolean`, `invite_length?: number`, `invite_source?: 'url' \| 'form'` |
+| `sign_up_completed` | `app/auth/signup/page.tsx` | `handleSignUp` (after signup) | `invite_present: boolean`, `invite_length?: number`, `invite_source?: 'url' \| 'form'`, `utm_source?: string`, `utm_medium?: string`, `utm_campaign?: string`, `utm_term?: string`, `utm_content?: string` |
 | `invite_code_rejected` | `app/components/landing/InviteCodeInput.tsx` | `handleSubmit` (on error) | `error: string` |
 | `import_started` | `app/import/page.tsx` | `handleImport` (on submit) | `import_type: 'file_upload'`, `conversation_count: number`, `has_project: boolean`, `size_bytes: number`, `file_type: 'zip' \| 'json' \| 'unknown'` |
 | `import_started` | `app/import/components/QuickImportModal.tsx` | `handleImport` (on submit) | `import_type: 'quick_paste'`, `chars: number`, `has_project: boolean` |

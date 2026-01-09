@@ -6,6 +6,12 @@ import Link from 'next/link';
 import CreateProjectButton from './components/CreateProjectButton';
 import ProjectFilterPills from './components/ProjectFilterPills';
 import Card from '../components/ui/Card';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: "Projects | INDEX",
+  description: "Organize your conversations and thinking into projects",
+};
 
 type Status = 'priority' | 'open' | 'complete' | 'dormant';
 

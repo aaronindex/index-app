@@ -3,6 +3,7 @@ import { getSupabaseServerClient } from '@/lib/supabaseServer';
 import { getCurrentUser } from '@/lib/getUser';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import type { Metadata } from 'next';
 import ProjectTabs from './components/ProjectTabs';
 import OverviewTab from './components/OverviewTab';
 import ChatsTab from './components/ChatsTab';
@@ -14,6 +15,33 @@ import DeleteProjectButton from './components/DeleteProjectButton';
 import ProjectStartChatButton from './components/ProjectStartChatButton';
 
 type Status = 'priority' | 'open' | 'complete' | 'dormant';
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const user = await getCurrentUser();
+  if (!user) {
+    return {
+      title: 'Project | INDEX',
+    };
+  }
+
+  const supabase = await getSupabaseServerClient();
+  const { data: project } = await supabase
+    .from('projects')
+    .select('name')
+    .eq('id', id)
+    .eq('user_id', user.id)
+    .single();
+
+  return {
+    title: project ? `${project.name} | INDEX` : 'Project | INDEX',
+    description: project ? `View project: ${project.name}` : 'Project details',
+  };
+}
 
 function StatusPill({ status }: { status: string | null }) {
   if (!status) return null;

@@ -7,6 +7,7 @@ import { getSupabaseBrowserClient } from '@/lib/supabaseClient';
 import Link from 'next/link';
 import { showError } from '@/lib/error-handling';
 import { trackEvent } from '@/lib/analytics';
+import { getStoredUTMParams, clearUTMParams } from '@/lib/utm';
 
 function SignUpForm() {
   const router = useRouter();
@@ -17,6 +18,11 @@ function SignUpForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [emailSent, setEmailSent] = useState(false);
+
+  // Update page title
+  useEffect(() => {
+    document.title = 'Sign Up | INDEX';
+  }, []);
 
   // Pre-fill invite code from URL if provided
   useEffect(() => {
@@ -117,11 +123,22 @@ function SignUpForm() {
 
       // Track successful signup (privacy-safe: no code string)
       const inviteCodeFromUrl = searchParams.get('code');
+      const utmParams = getStoredUTMParams();
+      
       trackEvent('sign_up_completed', {
         invite_present: true,
         invite_length: inviteCode.trim().length,
         invite_source: inviteCodeFromUrl ? 'url' : 'form',
+        // Include UTM params for attribution
+        utm_source: utmParams?.utm_source,
+        utm_medium: utmParams?.utm_medium,
+        utm_campaign: utmParams?.utm_campaign,
+        utm_term: utmParams?.utm_term,
+        utm_content: utmParams?.utm_content,
       });
+
+      // Clear UTM params after signup (attribution complete)
+      clearUTMParams();
 
       // Profile will be auto-created via database trigger
       // Redirect to home

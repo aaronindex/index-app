@@ -15,6 +15,11 @@ function ResetPasswordForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Update page title
+  useEffect(() => {
+    document.title = 'Reset Password | INDEX';
+  }, []);
+
   useEffect(() => {
     // Check if we have a valid session (user clicked the reset link)
     const checkSession = async () => {

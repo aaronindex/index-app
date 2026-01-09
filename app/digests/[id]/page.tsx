@@ -2,8 +2,45 @@
 import { getSupabaseServerClient } from '@/lib/supabaseServer';
 import { getCurrentUser } from '@/lib/getUser';
 import { notFound } from 'next/navigation';
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import DigestDetailClient from './components/DigestDetailClient';
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const user = await getCurrentUser();
+  if (!user) {
+    return {
+      title: 'Weekly Digest | INDEX',
+    };
+  }
+
+  const supabase = await getSupabaseServerClient();
+  const { data: digest } = await supabase
+    .from('weekly_digests')
+    .select('week_start, week_end')
+    .eq('id', id)
+    .eq('user_id', user.id)
+    .single();
+
+  if (!digest) {
+    return {
+      title: 'Weekly Digest | INDEX',
+    };
+  }
+
+  const startDate = new Date(digest.week_start).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const endDate = new Date(digest.week_end).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+  return {
+    title: `Weekly Digest (${startDate} - ${endDate}) | INDEX`,
+    description: `Weekly intelligence summary for ${startDate} - ${endDate}`,
+  };
+}
 
 export default async function DigestDetailPage({
   params,
