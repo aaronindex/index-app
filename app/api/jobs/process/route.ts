@@ -106,7 +106,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ message: 'No jobs to process' }, { status: 200 });
     }
 
-    if (job.type !== 'import_processing') {
+    if (job.type !== 'import_processing' && job.type !== 'quick_import') {
       return NextResponse.json({ error: 'Unsupported job type' }, { status: 400 });
     }
 
