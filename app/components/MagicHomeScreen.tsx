@@ -79,91 +79,7 @@ export default function MagicHomeScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    fetchHomeData();
-  }, []);
-
-  const fetchHomeData = async () => {
-    try {
-      const response = await fetch('/api/home/data');
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        const errorMessage = errorData.error || `Failed to fetch home data (${response.status})`;
-        console.error('[Home] API error:', errorMessage, errorData);
-        throw new Error(errorMessage);
-      }
-      const result = await response.json();
-      console.log('[Home] Data received:', { 
-        hasPriorityItems: result.priorityItems?.tasks?.length || result.priorityItems?.decisions?.length,
-        hasRevisit: result.thingsToRevisit?.length,
-        hasDigest: !!result.latestDigest
-      });
-      setData(result);
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load home data';
-      console.error('[Home] Error:', err);
-      setError(errorMessage);
-      showError(errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Early returns after all hooks
-  if (loading) {
-    return (
-      <div className="space-y-8">
-        {/* Quick Commands Skeleton */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {[1, 2].map((i) => (
-            <div
-              key={i}
-              className="p-6 rounded-xl bg-gradient-to-br from-[rgb(var(--surface2))] to-[rgb(var(--surface))] ring-1 ring-[rgb(var(--ring)/0.08)] animate-pulse"
-            >
-              <div className="h-6 bg-[rgb(var(--surface2))] rounded w-1/3 mb-2"></div>
-              <div className="h-4 bg-[rgb(var(--surface2))] rounded w-2/3"></div>
-            </div>
-          ))}
-        </div>
-        {/* Content Skeleton */}
-        <div className="space-y-4">
-          <div className="h-7 bg-[rgb(var(--surface2))] rounded w-1/4 animate-pulse"></div>
-          {[1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className="p-4 rounded-xl bg-[rgb(var(--surface))] ring-1 ring-[rgb(var(--ring)/0.08)] animate-pulse"
-            >
-              <div className="h-5 bg-[rgb(var(--surface2))] rounded w-3/4 mb-2"></div>
-              <div className="h-4 bg-[rgb(var(--surface2))] rounded w-full"></div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="text-center py-12">
-        <div className="max-w-md mx-auto p-6 rounded-xl bg-red-50 dark:bg-red-900/20 ring-1 ring-red-200 dark:ring-red-800">
-          <p className="text-red-800 dark:text-red-400 mb-4">{error}</p>
-          <button
-            onClick={() => {
-              setError(null);
-              setLoading(true);
-              fetchHomeData();
-            }}
-            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:opacity-90 transition-opacity font-medium"
-          >
-            Try Again
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // All hooks must be called unconditionally before any early returns
-  // Group priority items and revisit items by project
+  // Group priority items and revisit items by project - MUST be before early returns
   const groupedByProject = useMemo(() => {
     if (!data) return {};
     
@@ -284,8 +200,88 @@ export default function MagicHomeScreen() {
 
   const hasInsights = (data?.latestInsights?.length || 0) > 0;
 
+  useEffect(() => {
+    fetchHomeData();
+  }, []);
+
+  const fetchHomeData = async () => {
+    try {
+      const response = await fetch('/api/home/data');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.error || `Failed to fetch home data (${response.status})`;
+        console.error('[Home] API error:', errorMessage, errorData);
+        throw new Error(errorMessage);
+      }
+      const result = await response.json();
+      console.log('[Home] Data received:', { 
+        hasPriorityItems: result.priorityItems?.tasks?.length || result.priorityItems?.decisions?.length,
+        hasRevisit: result.thingsToRevisit?.length,
+        hasDigest: !!result.latestDigest
+      });
+      setData(result);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load home data';
+      console.error('[Home] Error:', err);
+      setError(errorMessage);
+      showError(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Early returns after all hooks
   if (loading) {
+    return (
+      <div className="space-y-8">
+        {/* Quick Commands Skeleton */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {[1, 2].map((i) => (
+            <div
+              key={i}
+              className="p-6 rounded-xl bg-gradient-to-br from-[rgb(var(--surface2))] to-[rgb(var(--surface))] ring-1 ring-[rgb(var(--ring)/0.08)] animate-pulse"
+            >
+              <div className="h-6 bg-[rgb(var(--surface2))] rounded w-1/3 mb-2"></div>
+              <div className="h-4 bg-[rgb(var(--surface2))] rounded w-2/3"></div>
+            </div>
+          ))}
+        </div>
+        {/* Content Skeleton */}
+        <div className="space-y-4">
+          <div className="h-7 bg-[rgb(var(--surface2))] rounded w-1/4 animate-pulse"></div>
+          {[1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="p-4 rounded-xl bg-[rgb(var(--surface))] ring-1 ring-[rgb(var(--ring)/0.08)] animate-pulse"
+            >
+              <div className="h-5 bg-[rgb(var(--surface2))] rounded w-3/4 mb-2"></div>
+              <div className="h-4 bg-[rgb(var(--surface2))] rounded w-full"></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-12">
+        <div className="max-w-md mx-auto p-6 rounded-xl bg-red-50 dark:bg-red-900/20 ring-1 ring-red-200 dark:ring-red-800">
+          <p className="text-red-800 dark:text-red-400 mb-4">{error}</p>
+          <button
+            onClick={() => {
+              setError(null);
+              setLoading(true);
+              fetchHomeData();
+            }}
+            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:opacity-90 transition-opacity font-medium"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
     return (
       <div className="space-y-8">
         {/* Quick Commands Skeleton */}
