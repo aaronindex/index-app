@@ -164,7 +164,7 @@ export default function MagicHomeScreen() {
     return null;
   }
 
-  const hasInsights = data.latestInsights.length > 0;
+  const hasInsights = (data.latestInsights?.length || 0) > 0;
 
   // Group priority items and revisit items by project
   const groupedByProject = useMemo(() => {
