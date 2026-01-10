@@ -726,7 +726,7 @@ export default function ImportPage() {
                         disabled={quickLoading || !quickTranscript.trim()}
                         className="px-6 py-3 bg-[rgb(var(--text))] text-[rgb(var(--bg))] rounded-lg hover:opacity-90 transition-opacity font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {quickLoading ? 'Importing...' : 'Paste a conversation'}
+                        {quickLoading ? 'Importing...' : 'Import'}
                       </button>
                     </div>
                   </div>
