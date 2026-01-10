@@ -52,9 +52,6 @@ export default function ImportPage() {
   const [quickLoading, setQuickLoading] = useState(false);
   const [quickError, setQuickError] = useState<string | null>(null);
   const [quickSuccess, setQuickSuccess] = useState<{ conversationId: string; title: string; messageCount: number } | null>(null);
-  const [quickJobId, setQuickJobId] = useState<string | null>(null);
-  const [quickJobStatus, setQuickJobStatus] = useState<any>(null);
-  const [quickImportStartTime, setQuickImportStartTime] = useState<number | null>(null);
 
   // Fetch projects on mount
   useEffect(() => {
@@ -104,76 +101,7 @@ export default function ImportPage() {
     }
   }, [quickTranscript, quickSwapRoles, quickTreatAsSingleBlock]);
 
-  // Poll quick import job status
-  useEffect(() => {
-    if (!quickJobId || !quickImportStartTime) return;
-
-    const pollInterval = setInterval(async () => {
-      try {
-        const response = await fetch(`/api/imports/jobs`);
-        if (response.ok) {
-          const data = await response.json();
-          const jobs = Array.isArray(data.jobs) ? data.jobs : [];
-          const currentJob = jobs.find((j: any) => j.id === quickJobId);
-          if (currentJob) {
-            setQuickJobStatus(currentJob);
-            if (currentJob.status === 'complete') {
-              clearInterval(pollInterval);
-              const latencyMs = quickImportStartTime ? Date.now() - quickImportStartTime : 0;
-              trackEvent('import_completed', {
-                import_type: 'quick_paste',
-                import_id: currentJob.import_id || undefined,
-                job_id: quickJobId,
-                latency_ms: latencyMs,
-                conversation_count: 1,
-                message_count: currentJob.counts?.messages || 0,
-              });
-              
-              const supabase = getSupabaseBrowserClient();
-              const { data: importData } = await supabase
-                .from('imports')
-                .select('id')
-                .eq('id', currentJob.import_id || '')
-                .single();
-
-              if (importData) {
-                const { data: convData } = await supabase
-                  .from('conversations')
-                  .select('id, title')
-                  .eq('import_id', importData.id)
-                  .single();
-
-                if (convData) {
-                  setQuickSuccess({
-                    conversationId: convData.id,
-                    title: convData.title || 'Untitled',
-                    messageCount: currentJob.counts?.messages || 0,
-                  });
-                  setQuickLoading(false);
-                }
-              }
-            } else if (currentJob.status === 'error') {
-              clearInterval(pollInterval);
-              const latencyMs = quickImportStartTime ? Date.now() - quickImportStartTime : 0;
-              trackEvent('import_failed', {
-                import_type: 'quick_paste',
-                import_id: currentJob.import_id || undefined,
-                job_id: quickJobId,
-                latency_ms: latencyMs,
-                error: currentJob.error || 'Import failed',
-              });
-              setQuickError(currentJob.error || 'Import failed');
-              setQuickLoading(false);
-            }
-          }
-        }
-      } catch (err) {
-        console.error('Error polling job status:', err);
-      }
-    }, 3000);
-
-    return () => clearInterval(pollInterval);
-  }, [quickJobId, quickImportStartTime]);
+  // Quick imports are now always processed synchronously (no polling needed)
 
   const handleQuickImport = async () => {
     if (!quickTranscript.trim()) {
@@ -183,9 +111,7 @@ export default function ImportPage() {
 
     setQuickLoading(true);
     setQuickError(null);
-
     const startTime = Date.now();
-    setQuickImportStartTime(startTime);
 
     trackEvent('import_started', {
       import_type: 'quick_paste',
@@ -259,9 +185,6 @@ export default function ImportPage() {
           messageCount: data.messageCount,
         });
         setQuickLoading(false);
-      } else {
-        setQuickJobId(data.jobId);
-        setQuickJobStatus({ status: 'queued', step: 'queued' });
       }
     } catch (err) {
       const latencyMs = startTime ? Date.now() - startTime : 0;
@@ -663,18 +586,6 @@ export default function ImportPage() {
               ) : (
                 <Card className="p-6">
                   <div className="space-y-6">
-                    {quickJobStatus && quickJobStatus.status !== 'complete' && (
-                      <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                        <p className="text-blue-800 dark:text-blue-400 text-sm font-medium">
-                          Import queued — processing in background
-                        </p>
-                        {quickJobStatus.step && (
-                          <p className="text-xs text-blue-700 dark:text-blue-500 mt-1">
-                            Step: {quickJobStatus.step} ({quickJobStatus.percent || 0}%)
-                          </p>
-                        )}
-                      </div>
-                    )}
 
                     <div>
                       <label className="block text-sm font-medium text-[rgb(var(--text))] mb-2">

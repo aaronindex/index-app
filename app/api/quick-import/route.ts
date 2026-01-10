@@ -7,11 +7,8 @@ import { getCurrentUser } from '@/lib/getUser';
 import { parseTranscript, generateAutoTitle } from '@/lib/parsers/transcript';
 import { chunkText } from '@/lib/chunking';
 import { embedTexts } from '@/lib/ai/embeddings';
-import { generateDedupeHash, processImportJobStep } from '@/lib/jobs/importProcessor';
+import { generateDedupeHash } from '@/lib/jobs/importProcessor';
 import crypto from 'crypto';
-
-const SYNC_THRESHOLD_CHARS = 100000; // Process synchronously if <= 100k chars (increased for better UX)
-const SYNC_THRESHOLD_CHUNKS = 500; // Process synchronously if <= 500 chunks (increased for better UX)
 
 async function processQuickImportSync(
   supabase: any,
@@ -292,127 +289,35 @@ export async function POST(request: NextRequest) {
       // Continue with new import
     }
 
-    // Determine if we should process synchronously or queue a job
-    const transcriptLength = transcript.length;
-    const estimatedChunks = Math.ceil(transcriptLength / 3000); // Rough estimate
+    // Always process quick imports synchronously (no queuing)
+    // Quick imports are meant to be fast, single conversations
+    const result = await processQuickImportSync(
+      supabase,
+      user.id,
+      transcript,
+      finalTitle,
+      parsed,
+      projectId || null,
+      newProject || null
+    );
 
-    const shouldProcessSync = transcriptLength <= SYNC_THRESHOLD_CHARS && estimatedChunks <= SYNC_THRESHOLD_CHUNKS;
-
-    if (shouldProcessSync) {
-      // Process synchronously
-      const result = await processQuickImportSync(
-        supabase,
-        user.id,
-        transcript,
-        finalTitle,
-        parsed,
-        projectId || null,
-        newProject || null
-      );
-
-      if (result.error) {
-        return NextResponse.json({ error: result.error }, { status: 500 });
-      }
-
-      // Increment limit counter
-      await incrementLimit(user.id, 'import');
-
-      // Note: Analytics events are fired client-side to capture latency
-      // and handle failures properly
-
-      return NextResponse.json({
-        success: true,
-        conversationId: result.conversationId,
-        title: finalTitle,
-        messageCount: parsed.messages.length,
-        processed: true,
-      });
-    } else {
-      // Queue background job
-      // Create import record
-      const { data: importRecord, error: importError } = await supabase
-        .from('imports')
-        .insert({
-          user_id: user.id,
-          source: 'quick_import',
-          status: 'pending',
-          raw_file_path: null,
-          dedupe_hash: dedupeHash,
-          progress_json: {
-            percent: 0,
-            counts: { conversations: 0, messages: 0, chunks: 0, embedded: 0 },
-          },
-        })
-        .select()
-        .single();
-
-      if (importError || !importRecord) {
-        return NextResponse.json({ error: `Failed to create import record: ${importError?.message || 'Unknown error'}` }, { status: 500 });
-      }
-
-      // Create job payload (adapt to match importProcessor format)
-      const jobPayload = {
-        import_id: importRecord.id,
-        user_id: user.id,
-        transcript,
-        title: finalTitle,
-        parsed_messages: parsed.messages,
-        project_id: projectId || null,
-        new_project: newProject || null,
-      };
-
-      const { data: job, error: jobError } = await supabase
-        .from('jobs')
-        .insert({
-          user_id: user.id,
-          type: 'quick_import',
-          payload: jobPayload,
-          status: 'pending',
-          step: 'queued',
-          progress_json: {
-            percent: 0,
-            counts: { conversations: 0, messages: 0, chunks: 0, embedded: 0 },
-          },
-          run_at: new Date().toISOString(),
-        })
-        .select()
-        .single();
-
-      if (jobError || !job) {
-        await supabase
-          .from('imports')
-          .update({
-            status: 'error',
-            error_message: jobError?.message || 'Failed to create job',
-          })
-          .eq('id', importRecord.id);
-        return NextResponse.json({ error: 'Failed to queue import job' }, { status: 500 });
-      }
-
-      // Increment limit counter
-      await incrementLimit(user.id, 'import');
-
-      // Process first step immediately (don't await to avoid blocking response)
-      // This gets the job started right away
-      processImportJobStep(job.id)
-        .then((result) => {
-          console.log(`[Quick Import] Processed initial step. Next step: ${result.nextStep || 'complete'}, Error: ${result.error || 'none'}`);
-        })
-        .catch((err) => {
-          // Log error but don't fail - cron will pick it up
-          console.error('[Quick Import] Immediate processing error (cron will handle it):', err);
-        });
-
-      return NextResponse.json({
-        success: true,
-        jobId: job.id,
-        importId: importRecord.id,
-        title: finalTitle,
-        messageCount: parsed.messages.length,
-        processed: false,
-        status: 'queued',
-      });
+    if (result.error) {
+      return NextResponse.json({ error: result.error }, { status: 500 });
     }
+
+    // Increment limit counter
+    await incrementLimit(user.id, 'import');
+
+    // Note: Analytics events are fired client-side to capture latency
+    // and handle failures properly
+
+    return NextResponse.json({
+      success: true,
+      conversationId: result.conversationId,
+      title: finalTitle,
+      messageCount: parsed.messages.length,
+      processed: true,
+    });
   } catch (error) {
     console.error('Quick import error:', error);
     return NextResponse.json(
