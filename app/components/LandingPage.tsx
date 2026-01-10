@@ -8,7 +8,7 @@ import { captureUTMParams, getUTMParamsForAnalytics } from '@/lib/utm';
 import MonitorScreenshotPanel from './landing/MonitorScreenshotPanel';
 import ValueCard from './landing/ValueCard';
 import InviteCodeInput from './landing/InviteCodeInput';
-import Footer from './Footer';
+import WaitlistSignup from './landing/WaitlistSignup';
 import CookieNotice from './CookieNotice';
 
 export default function LandingPage() {
@@ -241,8 +241,14 @@ export default function LandingPage() {
           </p>
         </div>
       </section>
+
+      {/* 6) WAITLIST SECTION */}
+      <section className="w-full py-16 sm:py-20 bg-white">
+        <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
+          <WaitlistSignup source="lp_below_cta" />
+        </div>
+      </section>
       </main>
-      <Footer />
       <CookieNotice />
     </>
   );
