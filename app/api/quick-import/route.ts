@@ -59,7 +59,7 @@ async function processQuickImportSync(
       return { conversationId: '', error: `Failed to create import record: ${importError?.message || 'Unknown error'}` };
     }
 
-    // Create conversation
+    // Create conversation (mark as inactive until import completes)
     const now = new Date();
     const { data: conversation, error: convError } = await supabase
       .from('conversations')
@@ -70,6 +70,7 @@ async function processQuickImportSync(
         source: 'quick_import',
         started_at: now.toISOString(),
         ended_at: now.toISOString(),
+        is_inactive: true, // Hide until import completes
       })
       .select()
       .single();
@@ -200,6 +201,14 @@ async function processQuickImportSync(
         processed_at: new Date().toISOString(),
       })
       .eq('id', importRecord.id);
+
+    // Activate conversation (make it visible)
+    await supabase
+      .from('conversations')
+      .update({
+        is_inactive: false,
+      })
+      .eq('id', conversation.id);
 
     return { conversationId: conversation.id, error: null };
   } catch (error) {

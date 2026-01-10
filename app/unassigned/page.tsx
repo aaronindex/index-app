@@ -17,11 +17,13 @@ export default async function UnassignedPage() {
 
   const supabase = await getSupabaseServerClient();
 
-  // Get all conversations for this user
+  // Get all active conversations for this user
+  // Conversations are marked inactive during import and activated when complete
   const { data: allConversations } = await supabase
     .from('conversations')
     .select('id')
     .eq('user_id', user.id)
+    .eq('is_inactive', false) // Only show active (completed) conversations
     .is('parent_conversation_id', null); // Only top-level conversations, not branches
 
   const allConversationIds = allConversations?.map((c) => c.id) || [];

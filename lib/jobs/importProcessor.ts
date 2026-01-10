@@ -762,7 +762,7 @@ async function processQuickImportJobStep(
           payload.project_id = finalProjectId;
         }
 
-        // Create conversation
+        // Create conversation (mark as inactive until import completes)
         const now = new Date();
         const { data: conversation, error: convError } = await supabase
           .from('conversations')
@@ -773,6 +773,7 @@ async function processQuickImportJobStep(
             source: 'quick_import',
             started_at: now.toISOString(),
             ended_at: now.toISOString(),
+            is_inactive: true, // Hide until import completes
           })
           .select()
           .single();
@@ -965,6 +966,16 @@ async function processQuickImportJobStep(
             progress_json: progress,
           })
           .eq('id', import_id);
+
+        // Activate conversation (make it visible)
+        if (payload.conversation_id) {
+          await supabase
+            .from('conversations')
+            .update({
+              is_inactive: false,
+            })
+            .eq('id', payload.conversation_id);
+        }
 
         progress.percent = 100;
         return { nextStep: null, error: null };
