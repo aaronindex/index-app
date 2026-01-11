@@ -3,6 +3,10 @@
     {
       "path": "/api/jobs/process",
       "schedule": "*/1 * * * *"
+    },
+    {
+      "path": "/api/cron/no-import-nudge",
+      "schedule": "0 10 * * *"
     }
   ]
 }

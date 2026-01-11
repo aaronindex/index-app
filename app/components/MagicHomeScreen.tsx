@@ -79,6 +79,18 @@ export default function MagicHomeScreen() {
     }
   }, []);
 
+  // Trigger welcome email on first signed-in experience (idempotent, quiet)
+  useEffect(() => {
+    // Fire-and-forget: call welcome email endpoint once
+    // Safe to call multiple times (idempotent)
+    fetch('/api/lifecycle/welcome', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    }).catch(() => {
+      // Silently fail - don't spam logs or show errors to user
+    });
+  }, []);
+
   // Group priority items and revisit items by project - MUST be before early returns
   const groupedByProject = useMemo(() => {
     if (!data) return {};
