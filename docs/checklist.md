@@ -334,6 +334,7 @@ D1 — Frictionless First Run
 [x] Enhanced partial empty state with next steps guidance
 [x] Digest preview/explanation for new users (when no digest exists)
 [x] Clear call-to-action to generate first digest
+[x] Welcome email sent automatically on first signed-in experience
 [ ] Auto-trigger insights extraction after first import (optional enhancement)
 
 D2 — Guided Tour
@@ -354,6 +355,8 @@ E1 — Move imports to durable background jobs
 [x] Cron authentication (x-vercel-cron header + optional token)
 [x] Quick import jobs supported (sync for small, async for large)
 [x] Deduplication hash for preventing duplicate imports
+[x] Lifecycle email cron job (no-import nudge, runs daily)
+[x] Welcome email trigger (idempotent, fires on first /home visit)
 
 E2 — Adaptive chunking strategy
 E3 — Error notifications + logging
@@ -397,6 +400,8 @@ C) Landing Page
 [x] MonitorScreenshotPanel component for screenshot display
 [x] ValueCard component for reusable marketing cards
 [x] Full-width sections with proper spacing and hierarchy
+[x] Waitlist signup (inline expandable in hero, early access updates)
+[x] Waitlist table created (lp_waitlist) with RLS policies
 
 D) Onboarding (Alpha-Minimal)
 [x] OnboardingSteps.tsx component created
@@ -442,6 +447,9 @@ G1 — Legal Surface
 G2 — Email Templates
 [x] Supabase magic link email template (matching INDEX aesthetic)
 [x] Supabase password reset email template (matching INDEX aesthetic)
+[x] Welcome email template (sent on first /home visit)
+[x] No-import nudge email template (sent after X days if no imports)
+[x] Waitlist confirmation email template (for early access signups)
 
 ==================================================
 PHASE 2.5 — ACTION ORGANIZATION & PLANNING LAYER
