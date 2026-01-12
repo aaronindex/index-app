@@ -26,9 +26,9 @@ export default function ValueCard({
           {body}
         </p>
       </div>
-      <div className="mt-auto h-40 w-full bg-white/50 rounded-xl flex items-center justify-center overflow-hidden">
+      <div className="mt-auto h-40 w-full flex items-center justify-center">
         {imageSrc ? (
-          <img src={imageSrc} alt={title} className="max-h-full max-w-full rounded-lg object-contain" />
+          <img src={imageSrc} alt={title} className="max-h-full max-w-full object-contain" />
         ) : pdfUrl ? (
           <a
             href={pdfUrl}

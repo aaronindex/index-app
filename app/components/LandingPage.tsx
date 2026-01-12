@@ -136,7 +136,7 @@ export default function LandingPage() {
             />
             <ValueCard
               title="Move"
-              body="Reduce everything to what remains — and carry it forward."
+              body="Reduce everything — carry it forward."
               imageSrc="/move-icon-cubes.png"
             />
           </div>
@@ -179,7 +179,7 @@ export default function LandingPage() {
                   <div className="inline-block text-xs font-semibold tracking-wider uppercase opacity-60 mb-2 text-[#121211] dark:text-[#FAF8F6]">
                     Move
                   </div>
-                  <p className="text-base opacity-75 text-[#121211] dark:text-[#FAF8F6]">See what matters next — and change position</p>
+                  <p className="text-base opacity-75 text-[#121211] dark:text-[#FAF8F6]">Carry what remains</p>
                 </div>
               </div>
             </div>
