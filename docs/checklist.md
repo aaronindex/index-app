@@ -562,6 +562,7 @@ not productivity metrics.
     - Instrument: `dashboard_project_progressed`, `next_action_viewed`
 
 [ ] Personal Dashboard
+    - DEPRECATED in favor of projects as the universal container 
     - Tasks grouped by horizon (Week / Month / Later)
     - Qualitative progress per Theme
     - Single “Minimum Next Action” headline

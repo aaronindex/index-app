@@ -65,18 +65,13 @@ export default function LandingPage() {
               {/* Bulletless list */}
               <div className="space-y-2.5 text-base sm:text-lg opacity-75 mb-10 text-white max-w-xl mx-auto lg:mx-0">
                 <p>Import conversations from ChatGPT, Claude, Cursor</p>
-                <p>Organize into projects, highlights, decisions</p>
-                <p>Ask across your archive — with citations</p>
+                <p>Organize into projects, highlights, tasks, decisions</p>
+                <p>Move with what matters next — without continuing the loop</p>
               </div>
 
               {/* Invite code input */}
               <div className="mb-6">
                 <InviteCodeInput variant="hero" />
-              </div>
-
-              {/* Expandable waitlist */}
-              <div className="mb-4">
-                <ExpandableWaitlist source="lp_hero_inline" />
               </div>
 
               {/* Secondary link */}
@@ -90,9 +85,14 @@ export default function LandingPage() {
               </div>
 
               {/* Trust microcopy */}
-              <p className="text-sm opacity-60 text-white">
+              <p className="text-sm opacity-60 text-white mb-4">
                 Invite-only alpha. No training on your data. Export anytime.
               </p>
+
+              {/* Expandable waitlist */}
+              <div>
+                <ExpandableWaitlist source="lp_hero_inline" />
+              </div>
             </div>
 
             {/* Right column: Macbook mock - no frame, enlarged (55%) */}
@@ -127,14 +127,17 @@ export default function LandingPage() {
             <ValueCard
               title="Import"
               body="Paste or upload conversations from GPT, Claude, Cursor."
+              imageSrc="/import-icon-cubes.png"
             />
             <ValueCard
               title="Organize"
-              body="Assign to projects. Save highlights, tasks, decisions."
+              body="Assign to projects. Distill highlights, tasks, decisions."
+              imageSrc="/organize-icon-cubes.png"
             />
             <ValueCard
-              title="Ask"
-              body="Ask Index across everything you've said — with sources."
+              title="Move"
+              body="Reduce everything to what remains — and carry it forward."
+              imageSrc="/move-icon-cubes.png"
             />
           </div>
         </div>
@@ -170,19 +173,13 @@ export default function LandingPage() {
                   <div className="inline-block text-xs font-semibold tracking-wider uppercase opacity-60 mb-2 text-[#121211] dark:text-[#FAF8F6]">
                     Organize
                   </div>
-                  <p className="text-base opacity-75 text-[#121211] dark:text-[#FAF8F6]">Into projects, highlights, decisions</p>
+                  <p className="text-base opacity-75 text-[#121211] dark:text-[#FAF8F6]">Distill into highlights, tasks, decisions</p>
                 </div>
                 <div>
                   <div className="inline-block text-xs font-semibold tracking-wider uppercase opacity-60 mb-2 text-[#121211] dark:text-[#FAF8F6]">
-                    Ask
+                    Move
                   </div>
-                  <p className="text-base opacity-75 text-[#121211] dark:text-[#FAF8F6]">Questions across your archive</p>
-                </div>
-                <div>
-                  <div className="inline-block text-xs font-semibold tracking-wider uppercase opacity-60 mb-2 text-[#121211] dark:text-[#FAF8F6]">
-                    Act
-                  </div>
-                  <p className="text-base opacity-75 text-[#121211] dark:text-[#FAF8F6]">Get answers with sources</p>
+                  <p className="text-base opacity-75 text-[#121211] dark:text-[#FAF8F6]">See what matters next — and change position</p>
                 </div>
               </div>
             </div>

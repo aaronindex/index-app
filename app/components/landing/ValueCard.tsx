@@ -17,16 +17,18 @@ export default function ValueCard({
   className = '',
 }: ValueCardProps) {
   return (
-    <div className={`rounded-2xl p-10 sm:p-12 text-center bg-[#f4f2f0] ${className}`}>
-      <h3 className="text-2xl sm:text-3xl font-semibold tracking-tight mb-4 text-[#0b0a08]">
-        {title}
-      </h3>
-      <p className="text-base sm:text-lg max-w-sm mx-auto text-[#686765] mb-6">
-        {body}
-      </p>
-      <div className="mt-6 h-40 w-full bg-white/50 rounded-xl flex items-center justify-center overflow-hidden">
+    <div className={`rounded-2xl p-10 sm:p-12 text-center bg-[#f4f2f0] flex flex-col justify-between ${className}`}>
+      <div>
+        <h3 className="text-2xl sm:text-3xl font-semibold tracking-tight mb-4 text-[#0b0a08]">
+          {title}
+        </h3>
+        <p className="text-base sm:text-lg max-w-sm mx-auto text-[#686765] mb-6">
+          {body}
+        </p>
+      </div>
+      <div className="mt-auto h-40 w-full bg-white/50 rounded-xl flex items-center justify-center overflow-hidden">
         {imageSrc ? (
-          <img src={imageSrc} alt={title} className="max-h-full max-w-full rounded-lg object-cover" />
+          <img src={imageSrc} alt={title} className="max-h-full max-w-full rounded-lg object-contain" />
         ) : pdfUrl ? (
           <a
             href={pdfUrl}
