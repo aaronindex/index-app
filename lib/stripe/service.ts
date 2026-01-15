@@ -13,7 +13,7 @@ export function getStripeClient(): Stripe {
 
   const config = requireStripeEnabled();
   stripeInstance = new Stripe(config.stripeSecretKey!, {
-    apiVersion: '2024-12-18.acacia',
+    apiVersion: '2025-12-15.clover',
   });
 
   return stripeInstance;
