@@ -1,12 +1,12 @@
 // app/billing/success/page.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getSupabaseBrowserClient } from '@/lib/supabaseClient';
 import { track } from '@/lib/analytics/track';
 
-export default function BillingSuccessPage() {
+function BillingSuccessContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const sessionId = searchParams.get('session_id');
@@ -105,6 +105,21 @@ export default function BillingSuccessPage() {
         )}
       </div>
     </main>
+  );
+}
+
+export default function BillingSuccessPage() {
+  return (
+    <Suspense fallback={
+      <main className="min-h-screen bg-[rgb(var(--bg))] flex items-center justify-center px-4">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-foreground mx-auto"></div>
+          <p className="mt-4 text-[rgb(var(--muted))]">Loading...</p>
+        </div>
+      </main>
+    }>
+      <BillingSuccessContent />
+    </Suspense>
   );
 }
 
