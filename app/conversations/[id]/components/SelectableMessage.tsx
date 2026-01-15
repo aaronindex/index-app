@@ -309,7 +309,7 @@ export default function SelectableMessage({
       hidePill();
     };
 
-    const handlePointerDown = (e: PointerEvent | TouchEvent) => {
+    const handlePointerDown = (e: PointerEvent | TouchEvent | MouseEvent) => {
       const target = e.target as HTMLElement;
       // Don't hide if clicking the button container or any button inside it
       const highlightButtonContainer = target.closest('[data-highlight-button]');
