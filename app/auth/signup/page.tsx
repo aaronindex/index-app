@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { showError } from '@/lib/error-handling';
 import { trackEvent } from '@/lib/analytics';
 import { getStoredUTMParams, clearUTMParams } from '@/lib/utm';
+import { ALPHA_MODE } from '@/lib/config/flags';
 
 function SignUpForm() {
   const router = useRouter();
@@ -38,28 +39,37 @@ function SignUpForm() {
     setError(null);
     setEmailSent(false);
 
-    // Verify invite code first
-    if (!inviteCode.trim()) {
-      setError('Invite code is required');
-      setLoading(false);
-      return;
-    }
-
-    try {
-      // Verify invite code
-      const verifyResponse = await fetch('/api/invite-codes/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: inviteCode }),
-      });
-
-      const verifyData = await verifyResponse.json();
-
-      if (!verifyData.valid) {
-        setError(verifyData.error || 'Invalid invite code');
+    // Verify invite code first (only if ALPHA_MODE is enabled)
+    if (ALPHA_MODE) {
+      if (!inviteCode.trim()) {
+        setError('Invite code is required');
         setLoading(false);
         return;
       }
+
+      try {
+        // Verify invite code
+        const verifyResponse = await fetch('/api/invite-codes/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code: inviteCode }),
+        });
+
+        const verifyData = await verifyResponse.json();
+
+        if (!verifyData.valid) {
+          setError(verifyData.error || 'Invalid invite code');
+          setLoading(false);
+          return;
+        }
+      } catch (err) {
+        setError('Failed to verify invite code. Please try again.');
+        setLoading(false);
+        return;
+      }
+    }
+
+    try {
 
       // Create account
       const supabase = getSupabaseBrowserClient();
@@ -114,12 +124,14 @@ function SignUpForm() {
         return;
       }
 
-      // Use invite code (increment uses)
-      await fetch('/api/invite-codes/use', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: inviteCode }),
-      });
+      // Use invite code (increment uses) - only if ALPHA_MODE is enabled
+      if (ALPHA_MODE && inviteCode.trim()) {
+        await fetch('/api/invite-codes/use', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code: inviteCode }),
+        });
+      }
 
       // Track successful signup (privacy-safe: no code string)
       const inviteCodeFromUrl = searchParams.get('code');
@@ -136,6 +148,29 @@ function SignUpForm() {
         utm_term: utmParams?.utm_term,
         utm_content: utmParams?.utm_content,
       });
+
+      // Attach attribution to profile (first-touch only)
+      const { getStoredAttribution } = await import('@/lib/analytics/attribution');
+      const attribution = getStoredAttribution();
+      if (attribution) {
+        try {
+          await fetch('/api/attribution/attach', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              utm_source: attribution.utm_source,
+              utm_medium: attribution.utm_medium,
+              utm_campaign: attribution.utm_campaign,
+              utm_content: attribution.utm_content,
+              utm_term: attribution.utm_term,
+              initial_referrer: attribution.initial_referrer,
+              initial_landing_path: attribution.initial_landing_path,
+            }),
+          });
+        } catch (error) {
+          console.error('Failed to attach attribution:', error);
+        }
+      }
 
       // Clear UTM params after signup (attribution complete)
       clearUTMParams();

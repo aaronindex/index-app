@@ -197,6 +197,7 @@ export async function GET(request: NextRequest) {
             project_name: (t.projects as any)?.name || null,
             conversation_id: t.conversation_id || null,
             created_at: t.created_at,
+            source_query: t.source_query || null,
           })),
           decisions: (recentDecisions || []).map((d: any) => ({
             id: d.id,

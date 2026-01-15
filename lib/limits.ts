@@ -2,15 +2,28 @@
 /**
  * Free-user limits enforcement
  * Limits are tracked per 24-hour period
+ * Pro users bypass all limits
  */
 
 import { getSupabaseServerClient } from './supabaseServer';
+import { isProUser } from './billing/plan';
+
+// Environment-driven limits (with defaults)
+const FREE_MAX_ACTIVE_PROJECTS = parseInt(process.env.FREE_MAX_ACTIVE_PROJECTS || '1', 10);
+const FREE_MAX_ASK_PER_24H = parseInt(process.env.FREE_MAX_ASK_PER_24H || '15', 10);
+const FREE_MAX_DIGEST_PER_30D = parseInt(process.env.FREE_MAX_DIGEST_PER_30D || '4', 10);
+const FREE_ASSET_UPLOADS_ENABLED = process.env.FREE_ASSET_UPLOADS_ENABLED === 'true';
+const FREE_IMPORT_MODE = process.env.FREE_IMPORT_MODE || 'quick_only'; // 'quick_only' | 'full'
 
 export const FREE_USER_LIMITS = {
+  maxActiveProjects: FREE_MAX_ACTIVE_PROJECTS,
   importsPer24h: 3,
-  askQueriesPer24h: 15,
+  askQueriesPer24h: FREE_MAX_ASK_PER_24H,
   meaningObjectsPer24h: 20, // highlights + tasks + decisions
   assetsPerProject: 50,
+  digestPer30d: FREE_MAX_DIGEST_PER_30D,
+  assetUploadsEnabled: FREE_ASSET_UPLOADS_ENABLED,
+  importMode: FREE_IMPORT_MODE,
 } as const;
 
 export interface LimitCheckResult {
@@ -77,6 +90,15 @@ export async function checkImportLimit(userId: string): Promise<LimitCheckResult
  * Check if user can perform an Ask Index query
  */
 export async function checkAskLimit(userId: string): Promise<LimitCheckResult> {
+  // Pro users bypass limits
+  if (await isProUser(userId)) {
+    return {
+      allowed: true,
+      remaining: 999,
+      limit: 999,
+    };
+  }
+
   const supabase = await getSupabaseServerClient();
 
   const { data: profile, error } = await supabase
@@ -115,6 +137,15 @@ export async function checkAskLimit(userId: string): Promise<LimitCheckResult> {
  * Check if user can create a meaning object (highlight/task/decision)
  */
 export async function checkMeaningObjectLimit(userId: string): Promise<LimitCheckResult> {
+  // Pro users bypass limits
+  if (await isProUser(userId)) {
+    return {
+      allowed: true,
+      remaining: 999,
+      limit: 999,
+    };
+  }
+
   const supabase = await getSupabaseServerClient();
 
   const { data: profile, error } = await supabase
@@ -150,9 +181,67 @@ export async function checkMeaningObjectLimit(userId: string): Promise<LimitChec
 }
 
 /**
+ * Check if user can create a new project (free tier limit)
+ */
+export async function checkProjectLimit(userId: string): Promise<LimitCheckResult> {
+  // Pro users bypass limits
+  if (await isProUser(userId)) {
+    return {
+      allowed: true,
+      remaining: 999,
+      limit: 999,
+    };
+  }
+
+  const supabase = await getSupabaseServerClient();
+
+  const { count, error } = await supabase
+    .from('projects')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .eq('is_inactive', false);
+
+  if (error) {
+    return { allowed: false, message: 'Unable to check limits' };
+  }
+
+  const currentCount = count || 0;
+  const remaining = FREE_USER_LIMITS.maxActiveProjects - currentCount;
+  const allowed = remaining > 0;
+
+  return {
+    allowed,
+    remaining: Math.max(0, remaining),
+    limit: FREE_USER_LIMITS.maxActiveProjects,
+    message: allowed
+      ? undefined
+      : `Project limit reached. Free users can have ${FREE_USER_LIMITS.maxActiveProjects} active project. Upgrade to Pro for unlimited projects.`,
+  };
+}
+
+/**
  * Check if project has reached asset limit
  */
-export async function checkAssetLimit(projectId: string): Promise<LimitCheckResult> {
+export async function checkAssetLimit(projectId: string, userId?: string): Promise<LimitCheckResult> {
+  // Pro users bypass limits
+  if (userId && (await isProUser(userId))) {
+    return {
+      allowed: true,
+      remaining: 999,
+      limit: 999,
+    };
+  }
+
+  // Free users: check if asset uploads are enabled
+  if (!FREE_USER_LIMITS.assetUploadsEnabled) {
+    return {
+      allowed: false,
+      remaining: 0,
+      limit: 0,
+      message: 'Asset uploads are not available on the free plan. Upgrade to Pro to upload files.',
+    };
+  }
+
   const supabase = await getSupabaseServerClient();
 
   const { count, error } = await supabase

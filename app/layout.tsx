@@ -9,6 +9,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import FeedbackModal from "./components/FeedbackModal";
 import Footer from "./components/Footer";
 import CookieNotice from "./components/CookieNotice";
+import AttributionCapture from "./components/AttributionCapture";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -109,6 +110,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
             <ErrorNotificationContainer />
             <FeedbackModal />
             <CookieNotice />
+            <AttributionCapture />
           </ErrorBoundary>
         </ThemeProvider>
       </body>

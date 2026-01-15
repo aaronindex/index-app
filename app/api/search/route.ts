@@ -24,7 +24,11 @@ export async function POST(request: NextRequest) {
     const limitCheck = await checkAskLimit(user.id);
     if (!limitCheck.allowed) {
       return NextResponse.json(
-        { error: limitCheck.message || 'Ask Index limit reached' },
+        { 
+          error: limitCheck.message || 'Ask Index limit reached',
+          limitReached: true,
+          source: 'paywall_ask_limit',
+        },
         { status: 429 }
       );
     }

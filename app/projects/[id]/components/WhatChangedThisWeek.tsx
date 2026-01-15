@@ -4,6 +4,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { formatDistanceToNow, parseISO } from 'date-fns';
+import CreateTaskButton from './CreateTaskButton';
 
 interface WhatChangedThisWeekProps {
   projectId: string;
@@ -106,110 +107,109 @@ export default function WhatChangedThisWeek({ projectId }: WhatChangedThisWeekPr
 
   const hasChanges =
     data.tasks.totalChanged > 0 ||
-    data.decisions.created > 0 ||
-    data.highlights.created > 0 ||
-    data.conversations.added > 0;
+    data.decisions.created > 0;
+
+  // Check if there are open/unresolved items (tasks with open/priority status, or any decisions)
+  const hasOpenItems = 
+    (data.tasks.items.some((t) => t.status === 'open' || t.status === 'priority' || t.status === 'in_progress')) ||
+    data.decisions.items.length > 0;
 
   if (!hasChanges) {
     return (
       <div>
-        <h3 className="font-medium text-foreground mb-2">What Changed This Week</h3>
+        <h3 className="font-medium text-foreground mb-2">Still Open</h3>
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          No changes in the last 7 days.
+          No open items in the last 7 days.
         </p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8">
-      <h3 className="font-serif text-xl font-semibold text-[rgb(var(--text))]">What Changed This Week</h3>
+      <div className="space-y-8">
+      <h3 className="font-serif text-xl font-semibold text-[rgb(var(--text))]">Still Open</h3>
       <div className="space-y-6">
-        {/* Tasks Cards */}
-        {data.tasks.items.length > 0 && (
-          <div>
-            <h4 className="text-sm font-medium text-[rgb(var(--text))] mb-3">Tasks</h4>
-            <div className="space-y-3">
-              {data.tasks.items.map((task) => (
-                <Link
-                  key={task.id}
-                  href={`/projects/${projectId}?tab=tasks`}
-                  className="block p-4 rounded-xl bg-gradient-to-br from-[rgb(var(--surface2))] to-[rgb(var(--surface))] shadow-sm ring-1 ring-[rgb(var(--ring)/0.08)] hover:shadow-md hover:ring-[rgb(var(--ring)/0.12)] transition-all"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-[rgb(var(--text))]">{task.title}</p>
-                      <p className="text-xs text-[rgb(var(--muted))] mt-1">
-                        Status: {task.status}
-                      </p>
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Decisions Cards */}
+        {/* Decisions Cards - Primary (increased visual weight) */}
         {data.decisions.items.length > 0 && (
           <div>
-            <h4 className="text-sm font-medium text-[rgb(var(--text))] mb-3">Decisions</h4>
+            <h4 className="text-base font-semibold text-[rgb(var(--text))] mb-4">Decisions</h4>
             <div className="space-y-3">
               {data.decisions.items.map((decision) => (
                 <Link
                   key={decision.id}
                   href={`/projects/${projectId}?tab=decisions`}
-                  className="block p-4 rounded-xl bg-gradient-to-br from-[rgb(var(--surface2))] to-[rgb(var(--surface))] shadow-sm ring-1 ring-[rgb(var(--ring)/0.08)] hover:shadow-md hover:ring-[rgb(var(--ring)/0.12)] transition-all"
+                  className="block p-5 rounded-xl bg-gradient-to-br from-[rgb(var(--surface2))] to-[rgb(var(--surface))] shadow-md ring-2 ring-[rgb(var(--ring)/0.12)] hover:shadow-lg hover:ring-[rgb(var(--ring)/0.2)] transition-all"
                 >
-                  <p className="text-sm font-medium text-[rgb(var(--text))]">{decision.title}</p>
+                  <p className="text-base font-semibold text-[rgb(var(--text))]">{decision.title}</p>
                 </Link>
               ))}
             </div>
           </div>
         )}
 
-        {/* Highlights Cards */}
-        {data.highlights.items.length > 0 && (
-          <div>
-            <h4 className="text-sm font-medium text-[rgb(var(--text))] mb-3">Highlights</h4>
-            <div className="space-y-3">
-              {data.highlights.items.map((highlight) => (
-                <Link
-                  key={highlight.id}
-                  href={`/projects/${projectId}?tab=highlights`}
-                  className="block p-4 rounded-xl bg-gradient-to-br from-[rgb(var(--surface2))] to-[rgb(var(--surface))] shadow-sm ring-1 ring-[rgb(var(--ring)/0.08)] hover:shadow-md hover:ring-[rgb(var(--ring)/0.12)] transition-all"
-                >
-                  <p className="text-sm font-medium text-[rgb(var(--text))] mb-1">
-                    {highlight.label || 'Highlight'}
-                  </p>
-                  <p className="text-xs text-[rgb(var(--muted))] line-clamp-2">
-                    {highlight.content}
-                  </p>
-                </Link>
-              ))}
-            </div>
+        {/* Tasks Cards - Primary (separated by priority/relevance) */}
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-sm font-semibold text-[rgb(var(--text))]">Tasks</h4>
+            <CreateTaskButton projectId={projectId} />
           </div>
-        )}
+          {data.tasks.items.length > 0 && (
+            <>
+              {/* Primary/Most Relevant Tasks (priority, in_progress) */}
+            {data.tasks.items.filter((t) => t.status === 'priority' || t.status === 'in_progress').length > 0 && (
+              <div className="mb-4">
+                <div className="space-y-3">
+                  {data.tasks.items
+                    .filter((t) => t.status === 'priority' || t.status === 'in_progress')
+                    .map((task) => (
+                      <Link
+                        key={task.id}
+                        href={`/projects/${projectId}?tab=tasks`}
+                        className="block p-4 rounded-xl bg-gradient-to-br from-[rgb(var(--surface2))] to-[rgb(var(--surface))] shadow-sm ring-1 ring-[rgb(var(--ring)/0.08)] hover:shadow-md hover:ring-[rgb(var(--ring)/0.12)] transition-all"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-[rgb(var(--text))]">{task.title}</p>
+                            <p className="text-xs text-[rgb(var(--muted))] mt-1">
+                              Status: {task.status}
+                            </p>
+                          </div>
+                        </div>
+                      </Link>
+                    ))}
+                </div>
+              </div>
+            )}
+            
+            {/* Other Open Tasks */}
+            {data.tasks.items.filter((t) => t.status === 'open').length > 0 && (
+              <div className={data.tasks.items.filter((t) => t.status === 'priority' || t.status === 'in_progress').length > 0 ? 'pt-4 border-t border-[rgb(var(--ring)/0.08)]' : ''}>
+                <div className="space-y-2">
+                  {data.tasks.items
+                    .filter((t) => t.status === 'open')
+                    .map((task) => (
+                      <Link
+                        key={task.id}
+                        href={`/projects/${projectId}?tab=tasks`}
+                        className="block p-3 rounded-lg bg-[rgb(var(--surface))] ring-1 ring-[rgb(var(--ring)/0.05)] hover:ring-[rgb(var(--ring)/0.08)] transition-all"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-[rgb(var(--text))]">{task.title}</p>
+                            <p className="text-xs text-[rgb(var(--muted))] mt-1">
+                              Status: {task.status}
+                            </p>
+                          </div>
+                        </div>
+                      </Link>
+                    ))}
+                </div>
+              </div>
+            )}
+            </>
+          )}
+        </div>
 
-        {/* Conversations Cards */}
-        {data.conversations.items.length > 0 && (
-          <div>
-            <h4 className="text-sm font-medium text-[rgb(var(--text))] mb-3">Conversations</h4>
-            <div className="space-y-3">
-              {data.conversations.items.map((conversation) => (
-                <Link
-                  key={conversation.id}
-                  href={`/conversations/${conversation.id}`}
-                  className="block p-4 rounded-xl bg-gradient-to-br from-[rgb(var(--surface2))] to-[rgb(var(--surface))] shadow-sm ring-1 ring-[rgb(var(--ring)/0.08)] hover:shadow-md hover:ring-[rgb(var(--ring)/0.12)] transition-all"
-                >
-                  <p className="text-sm font-medium text-[rgb(var(--text))]">
-                    {conversation.title || 'Untitled Conversation'}
-                  </p>
-                </Link>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

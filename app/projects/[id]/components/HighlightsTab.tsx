@@ -5,6 +5,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import DeleteHighlightButton from './DeleteHighlightButton';
 import Card from '@/app/components/ui/Card';
+import SectionHeader from '@/app/components/ui/SectionHeader';
 
 type Status = 'priority' | 'open' | 'complete' | 'dormant';
 
@@ -56,6 +57,8 @@ export default function HighlightsTab({ highlights, projectName }: HighlightsTab
 
   return (
     <div className="space-y-6">
+      <SectionHeader>Highlights</SectionHeader>
+
       {highlights.length === 0 ? (
         <div className="text-center py-12">
           <p className="text-[rgb(var(--muted))]">
@@ -85,6 +88,8 @@ export default function HighlightsTab({ highlights, projectName }: HighlightsTab
                       <div className="flex items-center gap-4 text-sm text-[rgb(var(--muted))]">
                         <span>From: {highlight.conversation_title || 'Untitled Chat'}</span>
                         <span>Created: {formatDate(highlight.created_at)}</span>
+                        {/* TODO: Add AI provenance label for highlights created via Extract Insights
+                            Requires schema change to track source (e.g., add source_query or extract_run_id to highlights table) */}
                       </div>
                       <div onClick={(e) => e.preventDefault()}>
                         <DeleteHighlightButton highlightId={highlight.id} highlightLabel={highlight.label} />

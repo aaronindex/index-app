@@ -14,6 +14,13 @@ export default function Footer() {
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-[rgb(var(--muted))]">
           <div className="flex items-center gap-4">
             <Link
+              href="/pricing"
+              className="hover:text-[rgb(var(--text))] transition-colors focus:outline-none focus:ring-2 focus:ring-[rgb(var(--ring)/0.2)] rounded"
+            >
+              Pricing
+            </Link>
+            <span className="text-[rgb(var(--ring)/0.3)]">·</span>
+            <Link
               href="/privacy"
               className="hover:text-[rgb(var(--text))] transition-colors focus:outline-none focus:ring-2 focus:ring-[rgb(var(--ring)/0.2)] rounded"
             >

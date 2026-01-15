@@ -9,6 +9,7 @@ import DeleteConversationButton from './components/DeleteConversationButton';
 import ExtractInsightsButton from './components/ExtractInsightsButton';
 import CreateTaskFromHighlightButton from './components/CreateTaskFromHighlightButton';
 import DeleteHighlightButton from '@/app/projects/[id]/components/DeleteHighlightButton';
+import MobileHighlightsPanel from './components/MobileHighlightsPanel';
 
 type Status = 'priority' | 'open' | 'complete' | 'dormant';
 
@@ -125,17 +126,9 @@ export default async function ConversationPage({
           {/* Main Content Column */}
           <div className="lg:col-span-3 space-y-6">
             {/* Header */}
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
-                    <h1 className="text-2xl font-semibold text-foreground mb-2">
-                      {conversation.title || 'Untitled Conversation'}
-                    </h1>
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 flex-shrink-0">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+              {/* Buttons row - full width on mobile */}
+              <div className="flex items-center gap-3 w-full sm:w-auto sm:order-2">
                 <StatusPill status={null} />
                 <ExtractInsightsButton conversationId={id} projectId={project?.id || null} />
                 <DeleteConversationButton
@@ -144,7 +137,20 @@ export default async function ConversationPage({
                   projectId={project?.id || null}
                 />
               </div>
+              {/* Title row - full width on mobile */}
+              <div className="flex-1 min-w-0 w-full sm:order-1">
+                <h1 className="text-2xl font-semibold text-foreground mb-2">
+                  {conversation.title || 'Untitled Conversation'}
+                </h1>
+              </div>
             </div>
+
+            {/* Mobile Highlights Panel - full width, below title */}
+            <MobileHighlightsPanel
+              highlights={highlights || []}
+              conversationId={id}
+              projectId={project?.id || null}
+            />
 
             {/* Messages */}
             <ConversationViewClient
@@ -154,8 +160,8 @@ export default async function ConversationPage({
             />
           </div>
 
-          {/* Sidebar */}
-          <div className="lg:col-span-1 space-y-4">
+          {/* Sidebar - Desktop only */}
+          <div className="hidden lg:block lg:col-span-1 space-y-4">
             {/* Highlights Section */}
             <div className="border border-zinc-200 dark:border-zinc-800 rounded-lg p-4 bg-white dark:bg-zinc-950">
               <h2 className="font-medium text-foreground mb-4">Highlights</h2>

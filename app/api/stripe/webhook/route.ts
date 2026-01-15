@@ -1,0 +1,253 @@
+// app/api/stripe/webhook/route.ts
+// Stripe webhook handler for subscription events
+// MUST use Node runtime for raw body access
+
+import { NextRequest, NextResponse } from 'next/server';
+import { stripeConfig, requireStripeEnabled } from '@/lib/stripe/config';
+import { getStripeClient } from '@/lib/stripe/service';
+import Stripe from 'stripe';
+
+// Force Node.js runtime for raw body access
+export const runtime = 'nodejs';
+
+// Disable body parsing to get raw body for webhook signature verification
+export const dynamic = 'force-dynamic';
+
+// Get Supabase service role client
+function getSupabaseServiceClient() {
+  const { createClient } = require('@supabase/supabase-js');
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  
+  if (!url || !serviceRoleKey) {
+    throw new Error('Supabase service role credentials not configured');
+  }
+  
+  return createClient(url, serviceRoleKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  });
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const config = requireStripeEnabled();
+    const stripe = getStripeClient();
+
+    // Read raw body
+    const body = await request.text();
+    const signature = request.headers.get('stripe-signature');
+
+    if (!signature) {
+      return NextResponse.json({ error: 'Missing signature' }, { status: 400 });
+    }
+
+    // Verify webhook signature
+    let event: Stripe.Event;
+    try {
+      event = stripe.webhooks.constructEvent(
+        body,
+        signature,
+        config.stripeWebhookSecret!
+      );
+    } catch (err) {
+      console.error('Webhook signature verification failed:', err);
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
+    }
+
+    const supabase = getSupabaseServiceClient();
+
+    // Handle event types
+    if (event.type === 'checkout.session.completed') {
+      const session = event.data.object as Stripe.Checkout.Session;
+
+      const userId = session.metadata?.user_id || session.client_reference_id;
+      if (!userId) {
+        console.error('No user_id in checkout session');
+        return NextResponse.json({ error: 'Missing user_id' }, { status: 400 });
+      }
+
+      const subscriptionId = session.subscription as string;
+      if (!subscriptionId) {
+        console.error('No subscription in checkout session');
+        return NextResponse.json({ error: 'Missing subscription' }, { status: 400 });
+      }
+
+      // Fetch subscription details
+      const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+
+      // Check if billing event already exists (idempotency)
+      const { data: existingEvent } = await supabase
+        .from('billing_events')
+        .select('id')
+        .eq('stripe_event_id', event.id)
+        .single();
+
+      if (existingEvent) {
+        // Already processed
+        return NextResponse.json({ received: true, skipped: true });
+      }
+
+      // Get user profile for UTM attribution
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('utm_source, utm_medium, utm_campaign, utm_content, utm_term')
+        .eq('id', userId)
+        .single();
+
+      // Update profile
+      const plan = subscription.status === 'active' || subscription.status === 'trialing' ? 'pro' : 'free';
+
+      await supabase
+        .from('profiles')
+        .update({
+          plan,
+          plan_status: subscription.status,
+          stripe_subscription_id: subscriptionId,
+          stripe_customer_id: subscription.customer as string,
+          plan_updated_at: new Date().toISOString(),
+        })
+        .eq('id', userId);
+
+      // Insert billing event
+      await supabase.from('billing_events').insert({
+        user_id: userId,
+        event_type: 'subscription_activated',
+        plan,
+        price_id: subscription.items.data[0]?.price.id || null,
+        stripe_event_id: event.id,
+        utm_source: profile?.utm_source || null,
+        utm_medium: profile?.utm_medium || null,
+        utm_campaign: profile?.utm_campaign || null,
+      });
+
+      return NextResponse.json({ received: true });
+    }
+
+    if (event.type === 'customer.subscription.updated') {
+      const subscription = event.data.object as Stripe.Subscription;
+
+      // Get customer metadata to find user_id
+      const customer = await stripe.customers.retrieve(subscription.customer as string);
+      const userId = (customer as Stripe.Customer).metadata?.user_id;
+
+      if (!userId) {
+        console.error('No user_id in customer metadata');
+        return NextResponse.json({ error: 'Missing user_id' }, { status: 400 });
+      }
+
+      // Check idempotency
+      const { data: existingEvent } = await supabase
+        .from('billing_events')
+        .select('id')
+        .eq('stripe_event_id', event.id)
+        .single();
+
+      if (existingEvent) {
+        return NextResponse.json({ received: true, skipped: true });
+      }
+
+      // Get profile for UTM
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('utm_source, utm_medium, utm_campaign, utm_content, utm_term')
+        .eq('id', userId)
+        .single();
+
+      // Determine plan based on status
+      const plan =
+        subscription.status === 'active' || subscription.status === 'trialing' ? 'pro' : 'free';
+
+      // Update profile
+      await supabase
+        .from('profiles')
+        .update({
+          plan,
+          plan_status: subscription.status,
+          plan_updated_at: new Date().toISOString(),
+        })
+        .eq('id', userId);
+
+      // Insert billing event
+      await supabase.from('billing_events').insert({
+        user_id: userId,
+        event_type: 'subscription_updated',
+        plan,
+        price_id: subscription.items.data[0]?.price.id || null,
+        stripe_event_id: event.id,
+        utm_source: profile?.utm_source || null,
+        utm_medium: profile?.utm_medium || null,
+        utm_campaign: profile?.utm_campaign || null,
+      });
+
+      return NextResponse.json({ received: true });
+    }
+
+    if (event.type === 'customer.subscription.deleted') {
+      const subscription = event.data.object as Stripe.Subscription;
+
+      // Get customer metadata
+      const customer = await stripe.customers.retrieve(subscription.customer as string);
+      const userId = (customer as Stripe.Customer).metadata?.user_id;
+
+      if (!userId) {
+        console.error('No user_id in customer metadata');
+        return NextResponse.json({ error: 'Missing user_id' }, { status: 400 });
+      }
+
+      // Check idempotency
+      const { data: existingEvent } = await supabase
+        .from('billing_events')
+        .select('id')
+        .eq('stripe_event_id', event.id)
+        .single();
+
+      if (existingEvent) {
+        return NextResponse.json({ received: true, skipped: true });
+      }
+
+      // Get profile for UTM
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('utm_source, utm_medium, utm_campaign, utm_content, utm_term')
+        .eq('id', userId)
+        .single();
+
+      // Update profile to free
+      await supabase
+        .from('profiles')
+        .update({
+          plan: 'free',
+          plan_status: 'canceled',
+          plan_updated_at: new Date().toISOString(),
+        })
+        .eq('id', userId);
+
+      // Insert billing event
+      await supabase.from('billing_events').insert({
+        user_id: userId,
+        event_type: 'subscription_canceled',
+        plan: 'free',
+        price_id: subscription.items.data[0]?.price.id || null,
+        stripe_event_id: event.id,
+        utm_source: profile?.utm_source || null,
+        utm_medium: profile?.utm_medium || null,
+        utm_campaign: profile?.utm_campaign || null,
+      });
+
+      return NextResponse.json({ received: true });
+    }
+
+    // Unhandled event type
+    return NextResponse.json({ received: true, unhandled: event.type });
+  } catch (error) {
+    console.error('Webhook error:', error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+

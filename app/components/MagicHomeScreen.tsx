@@ -67,6 +67,7 @@ export default function MagicHomeScreen() {
   const [data, setData] = useState<HomeData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
 
   // All hooks must be called unconditionally at the top level (before any early returns)
   const formatDate = useCallback((dateString: string | null | undefined) => {
@@ -106,6 +107,7 @@ export default function MagicHomeScreen() {
         href: string;
         badgeLabel: string;
         badgeColor: string;
+        isAIGenerated?: boolean;
       }>;
     }> = {};
 
@@ -123,6 +125,7 @@ export default function MagicHomeScreen() {
       const isCommitment = task.description?.includes('[Commitment]');
       const isBlocker = task.description?.includes('[Blocker]');
       const isOpenLoop = task.description?.includes('[Open Loop]');
+      const isAIGenerated = task.source_query === 'AI Insight Extraction';
       
       let badgeColor = 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400';
       let badgeLabel = 'Task';
@@ -145,6 +148,7 @@ export default function MagicHomeScreen() {
         href: task.project_id ? `/projects/${task.project_id}?tab=tasks` : '/projects',
         badgeLabel,
         badgeColor,
+        isAIGenerated,
       });
     });
 
@@ -192,14 +196,17 @@ export default function MagicHomeScreen() {
       });
     });
 
-    // Limit items per project: 1-3 priority items + 0-1 revisit
+    // Limit items per project: prioritize tasks/decisions, then revisit
     Object.keys(groups).forEach((key) => {
       const group = groups[key];
-      const priorityItems = group.items.filter((i) => i.type !== 'revisit');
+      const tasks = group.items.filter((i) => i.type === 'task');
+      const decisions = group.items.filter((i) => i.type === 'decision');
       const revisitItems = group.items.filter((i) => i.type === 'revisit');
       
+      // Order: tasks first, then decisions, then revisit
       group.items = [
-        ...priorityItems.slice(0, 3),
+        ...tasks.slice(0, 3),
+        ...decisions.slice(0, 2),
         ...revisitItems.slice(0, 1),
       ];
     });
@@ -209,6 +216,52 @@ export default function MagicHomeScreen() {
 
   const hasUnifiedItems = Object.keys(groupedByProject).length > 0 && 
     Object.values(groupedByProject).some((g) => g.items.length > 0);
+
+  // Initialize expanded projects: if > 2 projects, expand first 2; otherwise expand all
+  useEffect(() => {
+    const projectEntries = Object.entries(groupedByProject).filter(([_, group]) => group.items.length > 0);
+    const projectCount = projectEntries.length;
+    
+    if (projectCount > 2) {
+      // Expand first 2 projects
+      const firstTwo = projectEntries.slice(0, 2).map(([key]) => key);
+      setExpandedProjects(new Set(firstTwo));
+    } else {
+      // Expand all projects
+      const allKeys = projectEntries.map(([key]) => key);
+      setExpandedProjects(new Set(allKeys));
+    }
+  }, [groupedByProject]);
+
+  const toggleProject = useCallback((projectKey: string) => {
+    setExpandedProjects((prev) => {
+      const next = new Set(prev);
+      if (next.has(projectKey)) {
+        next.delete(projectKey);
+      } else {
+        next.add(projectKey);
+      }
+      return next;
+    });
+  }, []);
+
+  // Helper to get summary counts for a project
+  const getProjectSummary = useCallback((items: Array<{ type: 'task' | 'decision' | 'revisit'; badgeLabel?: string }>) => {
+    // Count tasks, commitments, and blockers from task items
+    const taskItems = items.filter((i) => i.type === 'task');
+    const regularTasks = taskItems.filter((i) => 
+      i.badgeLabel !== 'Commitment' && i.badgeLabel !== 'Blocker'
+    ).length;
+    const commitments = taskItems.filter((i) => i.badgeLabel === 'Commitment').length;
+    const blockers = taskItems.filter((i) => i.badgeLabel === 'Blocker').length;
+    
+    const parts: string[] = [];
+    if (regularTasks > 0) parts.push(`Tasks: ${regularTasks}`);
+    if (commitments > 0) parts.push(`Commitments: ${commitments}`);
+    if (blockers > 0) parts.push(`Blockers: ${blockers}`);
+    
+    return parts.join(' · ') || 'No items';
+  }, []);
 
   const fetchHomeData = useCallback(async () => {
     try {
@@ -294,34 +347,111 @@ export default function MagicHomeScreen() {
           <div className="space-y-6">
             {Object.entries(groupedByProject)
               .filter(([_, group]) => group.items.length > 0)
-              .map(([key, group]) => (
-                <div key={key}>
-                  {group.project_name && (
-                    <h3 className="text-sm font-semibold text-[rgb(var(--text))] mb-3">
-                      {group.project_name}
-                    </h3>
-                  )}
-                  <div className="space-y-2">
-                    {group.items.map((item) => (
-                      <Card key={item.id} hover>
-                        <Link href={item.href} className="block p-4">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className={`text-xs font-medium px-2 py-0.5 rounded ${item.badgeColor}`}>
-                              {item.badgeLabel}
-                            </span>
+              .map(([key, group]) => {
+                const isExpanded = expandedProjects.has(key);
+                const projectEntries = Object.entries(groupedByProject).filter(([_, g]) => g.items.length > 0);
+                const projectCount = projectEntries.length;
+                const shouldUseAccordion = projectCount > 2;
+                const projectIndex = projectEntries.findIndex(([k]) => k === key);
+                const shouldBeExpandedByDefault = projectIndex < 2;
+                
+                // If accordion mode and not expanded, show collapsed row
+                if (shouldUseAccordion && !isExpanded) {
+                  return (
+                    <Card key={key} hover>
+                      <button
+                        onClick={() => toggleProject(key)}
+                        className="w-full text-left p-4"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <h3 className="text-sm font-medium text-[rgb(var(--text))] mb-1">
+                              {group.project_name || 'Unassigned'}
+                            </h3>
+                            <p className="text-xs text-[rgb(var(--muted))]">
+                              {getProjectSummary(group.items)}
+                            </p>
                           </div>
-                          <h3 className="font-medium text-[rgb(var(--text))] mb-1">
-                            {item.title}
-                          </h3>
-                          <p className="text-xs text-[rgb(var(--muted))]">
-                            {item.secondary}
-                          </p>
-                        </Link>
-                      </Card>
-                    ))}
+                          <svg
+                            className="w-5 h-5 text-[rgb(var(--muted))] flex-shrink-0 ml-4"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M19 9l-7 7-7-7"
+                            />
+                          </svg>
+                        </div>
+                      </button>
+                    </Card>
+                  );
+                }
+                
+                // Expanded view
+                return (
+                  <div key={key}>
+                    <div className="flex items-center justify-between mb-2">
+                      {group.project_name && (
+                        <h3 className="text-xs font-medium text-[rgb(var(--muted))]">
+                          {group.project_name}
+                        </h3>
+                      )}
+                      {shouldUseAccordion && (
+                        <button
+                          onClick={() => toggleProject(key)}
+                          className="text-xs text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] transition-colors flex items-center gap-1"
+                        >
+                          <span>Collapse</span>
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M5 15l7-7 7 7"
+                            />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      {group.items.map((item) => {
+                        const isPrimary = item.type === 'task' || item.type === 'decision';
+                        return (
+                          <Card key={item.id} hover>
+                            <Link href={item.href} className="block p-4">
+                              <div className="flex items-center gap-2 mb-2">
+                                <span className={`text-xs font-medium px-2 py-0.5 rounded ${item.badgeColor}`}>
+                                  {item.badgeLabel}
+                                </span>
+                              </div>
+                              <h3 className={`${isPrimary ? 'font-semibold' : 'font-medium'} text-[rgb(var(--text))] mb-1 ${isPrimary ? 'text-base' : 'text-sm'}`}>
+                                {item.title}
+                              </h3>
+                              <div className="flex items-center gap-2">
+                                <p className="text-xs text-[rgb(var(--muted))]">
+                                  {item.secondary}
+                                </p>
+                                {item.isAIGenerated && (
+                                  <span className="text-xs text-[rgb(var(--muted))]">• Generated by INDEX</span>
+                                )}
+                              </div>
+                            </Link>
+                          </Card>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
           </div>
         </div>
       ) : (

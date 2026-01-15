@@ -114,6 +114,8 @@ export default function DecisionsTab({ decisions, projectId }: DecisionsTabProps
                     ) : (
                       <span>Decided: {formatDate(decision.created_at)}</span>
                     )}
+                    {/* TODO: Add AI provenance label for decisions created via Extract Insights
+                        Requires schema change to track source (e.g., add source_query or extract_run_id to decisions table) */}
                   </div>
                   <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                     <ToggleInactiveButton

@@ -1,9 +1,15 @@
 // app/api/invite-codes/use/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabaseServer';
+import { ALPHA_MODE } from '@/lib/config/flags';
 
 export async function POST(request: NextRequest) {
   try {
+    // If ALPHA_MODE is false, bypass invite code usage
+    if (!ALPHA_MODE) {
+      return NextResponse.json({ success: true, uses: 0 });
+    }
+
     const body = await request.json();
     const { code } = body;
 

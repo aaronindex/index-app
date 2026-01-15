@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import ActiveFilterPills from './ActiveFilterPills';
 import ToggleInactiveButton from './ToggleInactiveButton';
+import SectionHeader from '@/app/components/ui/SectionHeader';
 
 type Status = 'priority' | 'open' | 'complete' | 'dormant';
 
@@ -84,6 +85,8 @@ export default function ChatsTab({ conversations, projectId }: ChatsTabProps) {
 
   return (
     <div className="space-y-6">
+      <SectionHeader>Chats</SectionHeader>
+
       {conversations.length > 0 && (
         <ActiveFilterPills
           activeCount={activeItems.length}

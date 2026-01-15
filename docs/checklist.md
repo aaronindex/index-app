@@ -2,6 +2,8 @@
 <!-- REVIEW NOTE -->
 <!-- All items under PHASE 0–8 and PHASE A1/A2/A3/A5 confirmed completed or correctly scoped. -->
 <!-- PHASE 2.5 is explicitly post-alpha prototyping, evaluated only after 3–5 users generate real import signals. -->
+<!-- PHASE F (Monetization) completed: Stripe billing, pricing page, upgrade surfaces, usage gating, analytics tracking. -->
+<!-- Recent additions: Manual task creation, export checklist, mobile UI improvements, ALPHA_MODE feature flag. -->
 
 
 --------------------------------------------------
@@ -385,10 +387,12 @@ A) Routing & Access Control
 [x] Invite code verification and usage tracking
 
 B) Free-User Limits (Reducing Valve)
-[x] Free-user limits enforced server-side (imports, ask, meaning objects, assets)
+[x] Free-user limits enforced server-side (imports, ask, meaning objects, assets, projects)
 [x] Limit tracking fields added to profiles
 [x] Limit hit toast messages in UI
 [x] Limits reset after 24 hours
+[x] Plan-based limit enforcement (Pro users bypass all limits)
+[x] Environment-driven limit configuration (env vars for easy adjustment)
 
 C) Landing Page
 [x] LandingPage.tsx component created
@@ -402,6 +406,9 @@ C) Landing Page
 [x] Full-width sections with proper spacing and hierarchy
 [x] Waitlist signup (inline expandable in hero, early access updates)
 [x] Waitlist table created (lp_waitlist) with RLS policies
+[x] ALPHA_MODE feature flag (ALPHA_MODE env var controls invite-code gating globally)
+[x] Conditional landing page CTAs based on ALPHA_MODE (invite code input vs "Get started" button)
+[x] Conditional signup flow based on ALPHA_MODE (invite code required vs open signup)
 
 D) Onboarding (Alpha-Minimal)
 [x] OnboardingSteps.tsx component created
@@ -417,6 +424,10 @@ E) Analytics Markers
 [x] Meaning object events (highlight_created, task_created, decision_created)
 [x] Limit hit events (limit_hit with limit_type)
 [x] Analytics helper library (lib/analytics.ts) with debug mode
+[x] Enhanced analytics tracking (lib/analytics/track.ts) with event_id and UTM attribution
+[x] Attribution persistence (lib/analytics/attribution.ts) for first-touch tracking
+[x] Billing conversion events (billing_upgrade_clicked, billing_checkout_session_created, billing_pro_activated, etc.)
+[x] Pricing page tracking (pricing_viewed event)
 
 F) UI Polish
 [x] Nav bar background color with opacity (sticky header above content)
@@ -425,15 +436,81 @@ F) UI Polish
 [x] Tools page removed from navigation (Weekly Digest moved to /home)
 [x] Personal bucket removed from UI (badges, filter pills, toggle button)
 [x] Projects become the only containers (user-defined, not system-imposed)
+[x] Homepage multi-project accordion (first 2 expanded, rest collapsed with summary counts)
+[x] Project Overview simplified (Highlights and Conversations sections removed from display)
+[x] Project Overview hierarchy strengthened (Decisions increased visual weight, Tasks separated into Primary/Other)
+[x] Project navigation tabs reordered (Overview, Decisions, Tasks, Chats, Highlights, Library)
+[x] Manual task creation ("New Task" button in Overview and Tasks tab)
+[x] Export checklist feature (Export checklist.md button in project header)
+[x] Mobile UI/UX improvements:
+    - Project page: buttons, name, description stack vertically on mobile
+    - Chat page: action buttons and title stack vertically on mobile
+    - Mobile highlights panel: collapsed toggle above transcript (mobile only)
+    - Tab navigation: horizontal scroll with edge fade gradients (mobile only)
+    - iOS selection overlap fix: fixed bottom action bar instead of floating pill
+[x] Tab headers cleanup (Tasks, Chats, Highlights tabs have consistent SectionHeader)
 
 ==================================================
 PHASE F — MONETIZATION PREP
 ==================================================
-F1 — Billing page
-F2 — Subscription tiers
-F3 — Soft paywall (import count)
-F4 — Usage dashboard
-F5 — Upgrade nudges
+F1 — Billing Infrastructure
+[x] Stripe Checkout integration (subscription mode)
+[x] Stripe webhook handler for subscription events (checkout.session.completed, customer.subscription.updated, customer.subscription.deleted)
+[x] Plan status tracking (profiles.plan, profiles.plan_status, profiles.stripe_customer_id, profiles.stripe_subscription_id)
+[x] Billing events table (billing_events) for server-side truth tracking
+[x] Environment-aware Stripe config (test vs production keys)
+[x] Idempotent webhook processing (stripe_event_id deduplication)
+
+F2 — Subscription Tiers
+[x] Free tier limits (configurable via env vars):
+    - FREE_MAX_ACTIVE_PROJECTS (default: 1)
+    - FREE_MAX_ASK_PER_24H (default: 15)
+    - FREE_MAX_DIGEST_PER_30D (default: 4)
+    - FREE_ASSET_UPLOADS_ENABLED (default: false)
+    - FREE_IMPORT_MODE (default: 'quick_only')
+[x] Pro tier (unlimited projects, full JSON import, uploads enabled, removed caps)
+[x] Plan checking utilities (lib/billing/plan.ts)
+[x] Pro users bypass all limits automatically
+
+F3 — Upgrade Surfaces & Paywalls
+[x] Upgrade modal component (UpgradeModal.tsx)
+[x] Paywall triggers:
+    - Project creation limit (FREE_MAX_ACTIVE_PROJECTS)
+    - Ask Index limit (FREE_MAX_ASK_PER_24H)
+    - Asset upload limit (FREE_ASSET_UPLOADS_ENABLED)
+[x] Upgrade CTAs in paywall modals
+[x] Billing success page (/billing/success) with plan activation polling
+[x] Billing cancel page (/billing/cancel)
+[x] Create checkout session API route (/api/billing/create-checkout-session)
+
+F4 — Usage Gating
+[x] Project limit enforcement (checkProjectLimit)
+[x] Ask Index limit enforcement (checkAskLimit with plan check)
+[x] Asset upload limit enforcement (checkAssetLimit with plan check)
+[x] Meaning object limit enforcement (checkMeaningObjectLimit with plan check)
+[x] Plan-based limit bypass for Pro users
+
+F5 — Pricing Page
+[x] Public /pricing page (accessible to signed-out and signed-in users)
+[x] Free vs Pro comparison table
+[x] Current free tier limits displayed
+[x] CTAs: "Get started (free)" and "Upgrade to Pro"
+[x] Conditional routing (sign-in redirect for signed-out users, upgrade modal for signed-in)
+[x] Pricing link added to footer
+[x] Analytics tracking (pricing_viewed event with UTM attribution)
+
+F6 — Analytics & Attribution
+[x] Billing conversion tracking (dataLayer events):
+    - billing_upgrade_clicked
+    - billing_checkout_session_created
+    - billing_checkout_success_viewed
+    - billing_pro_activated
+    - billing_checkout_canceled_viewed
+[x] Event ID (UUID) for deduplication on conversion events
+[x] UTM attribution persistence (first-touch capture in localStorage)
+[x] Attribution attachment to profiles on signup/login
+[x] UTM params included in billing events (copied from profile at time of event)
+[x] Privacy-safe analytics (no PII in dataLayer params)
 
 ==================================================
 PHASE G — LEGAL & COMMUNICATION
@@ -572,19 +649,17 @@ not productivity metrics.
 2.5.6 — Exports & Continuity
 --------------------------------------------------
 
-[ ] Enable checklist.md export from:
-    - Project Dashboard
-    - Theme Dashboard - DEPRECATED (use Projects for personal if needed)
-    - Task detail view
-
-[ ] Ensure exports respect:
-    - Redactions
-    - Inactive / Dormant flags
-    - Domain silo (Business or Personal only)
-
-[ ] Export filename format:
-    - `checklist-<timestamp>.md`
-    - Instrument: `checklist_exported`
+[x] Enable checklist.md export from:
+    - Project Dashboard (Export checklist.md button in project header)
+    - Export includes: project name, description, decisions (as checkboxes), tasks (as checkboxes), blockers section
+    - Export filename: `checklist.md` (browser download)
+[x] Ensure exports respect:
+    - Redactions (not included in export)
+    - Inactive / Dormant flags (only active items exported)
+    - Project scope (only items from the specific project)
+[x] Export filename format:
+    - `checklist.md` (browser download)
+    - Instrument: `checklist_exported` (future)
 
 --------------------------------------------------
 2.5.7 — Tools (System-Level Verbs Only)
@@ -620,6 +695,26 @@ To Prototype (Evaluate or Discard):
     - No email replies or threading inside INDEX
     - Output must be user-editable and non-authoritative
     - Instrument: `import_email_ingested`
+
+==================================================
+PRODUCT DECISIONS
+==================================================
+
+[x] Allow users to create Tasks manually (not only from highlights or AI extraction)
+[x] Keep Tasks minimal: no expand/collapse, no headers, no subtask hierarchy
+[x] Avoid drag-and-drop task reordering until real user pain is observed
+[x] On mobile, surface Highlights as a collapsed, toggleable section above the chat transcript
+[x] Use horizontal scroll for mobile tab navigation; avoid dropdown replacement
+[x] Manual task creation implemented:
+    - "New Task" button in Project Overview (Tasks section header)
+    - "New Task" button in Project Tasks tab
+    - Inline input field (Enter to submit, Escape to cancel)
+    - Defaults: status='open', horizon='this_week', project_id=current project
+    - Analytics: task_created event with source='manual'
+[x] Export checklist feature implemented:
+    - Export button in project header
+    - Generates markdown file with decisions, tasks, and blockers
+    - Server-side generation via API route (/api/projects/[id]/export-checklist)
 
 ==================================================
 DEPRECATED / REMOVED (Conceptual Corrections)

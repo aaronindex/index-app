@@ -13,6 +13,7 @@ import TasksTab from './components/TasksTab';
 import LibraryTab from './components/LibraryTab';
 import DeleteProjectButton from './components/DeleteProjectButton';
 import ProjectStartChatButton from './components/ProjectStartChatButton';
+import ExportChecklistButton from './components/ExportChecklistButton';
 
 type Status = 'priority' | 'open' | 'complete' | 'dormant';
 
@@ -218,7 +219,7 @@ export default async function ProjectDetailPage({
       // Order: pinned first, then by sort_order (ascending), then by created_at (descending)
       const { data: tasks } = await supabase
         .from('tasks')
-        .select('id, title, description, status, horizon, conversation_id, created_at, is_inactive, is_pinned, sort_order')
+        .select('id, title, description, status, horizon, conversation_id, created_at, is_inactive, is_pinned, sort_order, source_query')
         .eq('project_id', id)
         .eq('user_id', user.id)
         .order('is_pinned', { ascending: false })
@@ -247,6 +248,7 @@ export default async function ProjectDetailPage({
             : null,
           conversation_id: task.conversation_id,
           created_at: task.created_at,
+          source_query: task.source_query || null,
         }));
       }
     }
@@ -264,9 +266,9 @@ export default async function ProjectDetailPage({
     }
   }
 
-  const activeTab = (['overview', 'chats', 'highlights', 'decisions', 'tasks', 'library'].includes(tab)
+  const activeTab = (['overview', 'decisions', 'tasks', 'chats', 'highlights', 'library'].includes(tab)
     ? tab
-    : 'overview') as 'overview' | 'chats' | 'highlights' | 'decisions' | 'tasks' | 'library';
+    : 'overview') as 'overview' | 'decisions' | 'tasks' | 'chats' | 'highlights' | 'library';
 
   return (
     <main className="min-h-screen bg-[rgb(var(--bg))]">
@@ -278,23 +280,34 @@ export default async function ProjectDetailPage({
           >
             ← Back to Projects
           </Link>
-          <div className="flex items-center justify-between mt-4">
-            <div className="flex items-center gap-3">
-              <h1 className="font-serif text-3xl font-semibold text-[rgb(var(--text))]">
-                {project.name}
-              </h1>
+          {/* Mobile: Stack buttons, name, description on separate rows */}
+          {/* Desktop: Keep horizontal layout */}
+          <div className="mt-4">
+            {/* Mobile: Stack layout */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              {/* Buttons row - full width on mobile, right side on desktop */}
+              <div className="flex items-center gap-3 w-full sm:w-auto sm:order-2">
+                <StatusPill status={project.status} />
+                <ExportChecklistButton projectId={id} />
+                <ProjectStartChatButton projectId={id} projectName={project.name} />
+                <DeleteProjectButton projectId={id} projectName={project.name} />
+              </div>
+              
+              {/* Project name row - full width on mobile, left side on desktop */}
+              <div className="w-full sm:w-auto sm:order-1">
+                <h1 className="font-serif text-3xl font-semibold text-[rgb(var(--text))]">
+                  {project.name}
+                </h1>
+              </div>
             </div>
-            <div className="flex items-center gap-3">
-              <StatusPill status={project.status} />
-              <ProjectStartChatButton projectId={id} projectName={project.name} />
-              <DeleteProjectButton projectId={id} projectName={project.name} />
-            </div>
+            
+            {/* Description row - full width on mobile, below on desktop */}
+            {project.description && (
+              <p className="mt-4 text-[rgb(var(--muted))]">
+                {project.description}
+              </p>
+            )}
           </div>
-          {project.description && (
-            <p className="mt-4 text-[rgb(var(--muted))]">
-              {project.description}
-            </p>
-          )}
         </div>
 
         <div className="mt-8">

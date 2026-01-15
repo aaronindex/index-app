@@ -164,10 +164,14 @@ export async function POST(request: NextRequest) {
 
     // Check asset limit for project
     const { checkAssetLimit } = await import('@/lib/limits');
-    const limitCheck = await checkAssetLimit(projectId);
+    const limitCheck = await checkAssetLimit(projectId, user.id);
     if (!limitCheck.allowed) {
       return NextResponse.json(
-        { error: limitCheck.message || 'Asset limit reached for this project' },
+        { 
+          error: limitCheck.message || 'Asset limit reached for this project',
+          limitReached: true,
+          source: 'paywall_asset_upload',
+        },
         { status: 429 }
       );
     }

@@ -50,6 +50,16 @@ body {
   font-family: var(--font-geist-sans), system-ui, sans-serif;
 }
 
+/* Hide scrollbar utility for tab navigation */
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 /* Hide Next.js dev indicator */
 #__next-build-watcher,
 [data-nextjs-toast],

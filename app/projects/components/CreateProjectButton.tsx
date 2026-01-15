@@ -5,10 +5,12 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSupabaseBrowserClient } from '@/lib/supabaseClient';
 import { showError, showSuccess } from '@/app/components/ErrorNotification';
+import UpgradeModal from '@/app/components/billing/UpgradeModal';
 
 export default function CreateProjectButton() {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
+  const [showUpgrade, setShowUpgrade] = useState(false);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
@@ -29,6 +31,17 @@ export default function CreateProjectButton() {
     if (!user) {
       setError('You must be signed in to create a project.');
       setLoading(false);
+      return;
+    }
+
+    // Check project limit
+    const limitResponse = await fetch('/api/billing/check-project-limit');
+    const limitData = await limitResponse.json();
+
+    if (!limitData.allowed) {
+      setLoading(false);
+      setIsOpen(false);
+      setShowUpgrade(true);
       return;
     }
 
@@ -147,6 +160,12 @@ export default function CreateProjectButton() {
           </div>
         </div>
       )}
+
+      <UpgradeModal
+        isOpen={showUpgrade}
+        onClose={() => setShowUpgrade(false)}
+        source="paywall_project_limit"
+      />
     </>
   );
 }

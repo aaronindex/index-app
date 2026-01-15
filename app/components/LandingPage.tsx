@@ -5,6 +5,8 @@ import { useEffect, useState } from 'react';
 import { useTheme } from 'next-themes';
 import { trackEvent } from '@/lib/analytics';
 import { captureUTMParams, getUTMParamsForAnalytics } from '@/lib/utm';
+import { captureAttribution } from '@/lib/analytics/attribution';
+import { ALPHA_MODE } from '@/lib/config/flags';
 import MonitorScreenshotPanel from './landing/MonitorScreenshotPanel';
 import ValueCard from './landing/ValueCard';
 import InviteCodeInput from './landing/InviteCodeInput';
@@ -30,6 +32,9 @@ export default function LandingPage() {
   useEffect(() => {
     // Capture UTM params from URL and store for attribution
     captureUTMParams();
+    
+    // Capture attribution (first-touch only)
+    captureAttribution();
 
     // Fire landing_page_view analytics event with page context
     if (typeof window !== 'undefined') {
@@ -69,25 +74,45 @@ export default function LandingPage() {
                 <p>Move with what matters next — without continuing the loop</p>
               </div>
 
-              {/* Invite code input */}
-              <div className="mb-6">
-                <InviteCodeInput variant="hero" />
-              </div>
+              {/* Invite code input or direct CTA */}
+              {ALPHA_MODE ? (
+                <>
+                  <div className="mb-6">
+                    <InviteCodeInput variant="hero" />
+                  </div>
 
-              {/* Secondary link */}
-              <div className="mb-4">
-                <Link
-                  href="mailto:hello@indexapp.co?subject=INDEX Invite Request"
-                  className="text-sm text-white opacity-70 hover:opacity-100 transition-opacity underline"
-                >
-                  Request an invite
-                </Link>
-              </div>
+                  {/* Secondary link */}
+                  <div className="mb-4">
+                    <Link
+                      href="mailto:hello@indexapp.co?subject=INDEX Invite Request"
+                      className="text-sm text-white opacity-70 hover:opacity-100 transition-opacity underline"
+                    >
+                      Request an invite
+                    </Link>
+                  </div>
 
-              {/* Trust microcopy */}
-              <p className="text-sm opacity-60 text-white mb-4">
-                Invite-only alpha. No training on your data. Export anytime.
-              </p>
+                  {/* Trust microcopy */}
+                  <p className="text-sm opacity-60 text-white mb-4">
+                    Invite-only alpha. No training on your data. Export anytime.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <div className="mb-6">
+                    <Link
+                      href="/auth/signup"
+                      className="inline-block px-6 py-3 bg-white text-[#121211] rounded-lg hover:opacity-90 transition-opacity font-medium"
+                    >
+                      Get started
+                    </Link>
+                  </div>
+
+                  {/* Trust microcopy */}
+                  <p className="text-sm opacity-60 text-white mb-4">
+                    No training on your data. Export anytime.
+                  </p>
+                </>
+              )}
 
               {/* Expandable waitlist */}
               <div>
@@ -136,7 +161,7 @@ export default function LandingPage() {
             />
             <ValueCard
               title="Move"
-              body="Reduce everything — carry it forward."
+              body="Carry what remains."
               imageSrc="/move-icon-cubes.png"
             />
           </div>
@@ -230,17 +255,32 @@ export default function LandingPage() {
           <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight mb-8 text-white">
             Start with one conversation. INDEX remembers the rest.
           </h2>
-          <div className="mb-6">
-            <InviteCodeInput variant="compact" darkBg={true} />
-          </div>
-          <p className="text-sm opacity-60 text-white">
-            <Link
-              href="mailto:hello@indexapp.co?subject=INDEX Invite Request"
-              className="underline hover:opacity-80 transition-opacity"
-            >
-              Request an invite
-            </Link>
-          </p>
+          {ALPHA_MODE ? (
+            <>
+              <div className="mb-6">
+                <InviteCodeInput variant="compact" darkBg={true} />
+              </div>
+              <p className="text-sm opacity-60 text-white">
+                <Link
+                  href="mailto:hello@indexapp.co?subject=INDEX Invite Request"
+                  className="underline hover:opacity-80 transition-opacity"
+                >
+                  Request an invite
+                </Link>
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="mb-6">
+                <Link
+                  href="/auth/signup"
+                  className="inline-block px-6 py-3 bg-white text-[#121211] rounded-lg hover:opacity-90 transition-opacity font-medium"
+                >
+                  Create account
+                </Link>
+              </div>
+            </>
+          )}
         </div>
       </section>
 
