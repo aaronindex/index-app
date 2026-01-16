@@ -192,6 +192,7 @@ export async function POST(request: NextRequest) {
           const result = await resend.emails.send({
             from: fromEmail,
             to: customerEmail,
+            replyTo: process.env.RESEND_REPLY_TO || 'support@indexapp.co',
             subject: 'Welcome to INDEX Pro',
             html: renderSubscriptionConfirmationEmail(),
           });
