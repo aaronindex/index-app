@@ -276,7 +276,7 @@ export default function LandingPage() {
                   href="/auth/signup"
                   className="inline-block px-6 py-3 bg-white text-[#121211] rounded-lg hover:opacity-90 transition-opacity font-medium"
                 >
-                  Create account
+                  Try it Free
                 </Link>
               </div>
             </>
