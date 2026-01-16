@@ -75,20 +75,9 @@ export async function POST(request: NextRequest) {
       utm_campaign: profileForEvent?.utm_campaign || null,
     });
 
-    // Access properties safely with type assertion
-    const sub = subscription as any as Stripe.Subscription;
-    const currentPeriodEnd = sub.current_period_end 
-      ? new Date(sub.current_period_end * 1000).toISOString() 
-      : null;
-    const cancelAt = sub.cancel_at 
-      ? new Date(sub.cancel_at * 1000).toISOString() 
-      : null;
-
     return NextResponse.json({
       success: true,
       message: 'Subscription canceled. You will retain access until the end of your billing period.',
-      cancel_at: cancelAt,
-      current_period_end: currentPeriodEnd,
     });
   } catch (error) {
     console.error('Cancel subscription error:', error);
