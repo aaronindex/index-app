@@ -67,20 +67,29 @@ export async function POST(request: NextRequest) {
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object as Stripe.Checkout.Session;
 
+      console.log(`[Webhook] checkout.session.completed - Session ID: ${session.id}`);
+      console.log(`[Webhook] Session metadata:`, JSON.stringify(session.metadata));
+      console.log(`[Webhook] Session client_reference_id:`, session.client_reference_id);
+
       const userId = session.metadata?.user_id || session.client_reference_id;
       if (!userId) {
-        console.error('No user_id in checkout session');
+        console.error('[Webhook] No user_id in checkout session - metadata:', session.metadata, 'client_reference_id:', session.client_reference_id);
         return NextResponse.json({ error: 'Missing user_id' }, { status: 400 });
       }
 
+      console.log(`[Webhook] Processing checkout for user_id: ${userId}`);
+
       const subscriptionId = session.subscription as string;
       if (!subscriptionId) {
-        console.error('No subscription in checkout session');
+        console.error('[Webhook] No subscription in checkout session');
         return NextResponse.json({ error: 'Missing subscription' }, { status: 400 });
       }
 
+      console.log(`[Webhook] Subscription ID: ${subscriptionId}`);
+
       // Fetch subscription details
       const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+      console.log(`[Webhook] Subscription status: ${subscription.status}`);
 
       // Check if billing event already exists (idempotency)
       const { data: existingEvent } = await supabase
@@ -108,8 +117,9 @@ export async function POST(request: NextRequest) {
 
       // Update profile
       const plan = subscription.status === 'active' || subscription.status === 'trialing' ? 'pro' : 'free';
+      console.log(`[Webhook] Updating profile to plan: ${plan}, status: ${subscription.status}`);
 
-      const { error: updateError } = await supabase
+      const { data: updatedProfile, error: updateError } = await supabase
         .from('profiles')
         .update({
           plan,
@@ -118,15 +128,21 @@ export async function POST(request: NextRequest) {
           stripe_customer_id: subscription.customer as string,
           plan_updated_at: new Date().toISOString(),
         })
-        .eq('id', userId);
+        .eq('id', userId)
+        .select()
+        .single();
 
       if (updateError) {
-        console.error('Error updating profile:', updateError);
+        console.error('[Webhook] Error updating profile:', updateError);
+        console.error('[Webhook] Update error details:', JSON.stringify(updateError));
         return NextResponse.json({ error: 'Failed to update profile' }, { status: 500 });
       }
 
+      console.log(`[Webhook] Profile updated successfully:`, updatedProfile?.plan, updatedProfile?.plan_status);
+
       // Insert billing event
-      const { error: insertError } = await supabase.from('billing_events').insert({
+      console.log(`[Webhook] Inserting billing event for user ${userId}`);
+      const { data: insertedEvent, error: insertError } = await supabase.from('billing_events').insert({
         user_id: userId,
         event_type: 'subscription_activated',
         plan,
@@ -135,11 +151,14 @@ export async function POST(request: NextRequest) {
         utm_source: profile?.utm_source || null,
         utm_medium: profile?.utm_medium || null,
         utm_campaign: profile?.utm_campaign || null,
-      });
+      }).select().single();
 
       if (insertError) {
-        console.error('Error inserting billing event:', insertError);
+        console.error('[Webhook] Error inserting billing event:', insertError);
+        console.error('[Webhook] Insert error details:', JSON.stringify(insertError));
         // Don't fail the webhook if billing event insert fails, but log it
+      } else {
+        console.log(`[Webhook] Billing event inserted successfully:`, insertedEvent?.id);
       }
 
       // Send subscription confirmation email
