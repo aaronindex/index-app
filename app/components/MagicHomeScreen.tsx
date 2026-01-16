@@ -68,6 +68,7 @@ export default function MagicHomeScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
+  const [onboardingCompleted, setOnboardingCompleted] = useState<boolean | null>(null);
 
   // All hooks must be called unconditionally at the top level (before any early returns)
   const formatDate = useCallback((dateString: string | null | undefined) => {
