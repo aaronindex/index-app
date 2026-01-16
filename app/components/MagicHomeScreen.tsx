@@ -352,18 +352,16 @@ export default function MagicHomeScreen() {
     <div className="space-y-8">
       {/* Onboarding Flow - Show at top on first login */}
       {showOnboarding && (
-        <div>
-          <OnboardingFlow
-            onComplete={() => {
-              setOnboardingCompleted(true);
-            }}
-          />
-        </div>
+        <OnboardingFlow
+          onComplete={() => {
+            setOnboardingCompleted(true);
+          }}
+        />
       )}
 
-      {/* Primary: Unified Priority List - Hide/de-emphasize when onboarding active */}
-      {hasUnifiedItems && (
-        <div className={showOnboarding ? 'opacity-30 pointer-events-none' : ''}>
+      {/* Primary: Unified Priority List - Completely hide when onboarding active */}
+      {hasUnifiedItems && !showOnboarding && (
+        <div>
           <SectionHeader>What still deserves attention</SectionHeader>
           <div className="space-y-6">
             {Object.entries(groupedByProject)

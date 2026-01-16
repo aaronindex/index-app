@@ -101,77 +101,113 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     markCompleted();
   };
 
+  const handleNext = () => {
+    if (currentStep < steps.length - 1) {
+      setCurrentStep(currentStep + 1);
+    }
+  };
+
+  const handlePrevious = () => {
+    if (currentStep > 0) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+
   // Don't render if not visible
   if (!isVisible) {
     return null;
   }
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <Card className="p-8 bg-gradient-to-br from-[rgb(var(--surface2))] to-[rgb(var(--surface))]">
-        {/* Progress Indicator */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-2">
-            {steps.map((_, index) => (
-              <div
-                key={index}
-                className={`h-2 w-2 rounded-full transition-colors ${
-                  index <= currentStep
-                    ? 'bg-[rgb(var(--text))]'
-                    : 'bg-[rgb(var(--surface2))]'
-                }`}
-              />
-            ))}
-          </div>
-          <button
-            onClick={handleSkip}
-            className="text-xs text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] transition-colors opacity-70"
-          >
-            Skip
-          </button>
-        </div>
-
-        {/* Step Content */}
-        <div className="text-center mb-8">
-          <h2 className="font-serif text-2xl font-semibold text-[rgb(var(--text))] mb-3">
-            {currentStepData.title}
-          </h2>
-          <p className="text-[rgb(var(--text))] text-lg leading-relaxed">
-            {currentStepData.description}
-          </p>
-        </div>
-
-        {/* Actions */}
-        <div className="flex items-center justify-center gap-4">
-          {currentStep > 0 && (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Background overlay with dimming */}
+      <div className="absolute inset-0 bg-[rgb(var(--bg))] opacity-95 backdrop-blur-sm" />
+      
+      {/* Onboarding content */}
+      <div className="relative w-full max-w-3xl mx-auto">
+        <Card className="py-16 px-12 bg-gradient-to-br from-[rgb(var(--surface2))] to-[rgb(var(--surface))]">
+          {/* Progress Indicator */}
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-2">
+              {steps.map((_, index) => (
+                <div
+                  key={index}
+                  className={`h-2.5 w-2.5 rounded-full transition-all duration-300 ${
+                    index === currentStep
+                      ? 'bg-[rgb(var(--text))] w-8'
+                      : index < currentStep
+                      ? 'bg-[rgb(var(--text))] opacity-60'
+                      : 'bg-[rgb(var(--surface2))]'
+                  }`}
+                />
+              ))}
+            </div>
             <button
-              onClick={() => setCurrentStep(currentStep - 1)}
-              className="px-4 py-2 text-sm font-medium text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] transition-colors"
+              onClick={handleSkip}
+              className="text-sm text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] transition-colors"
             >
-              ← Previous
+              Skip
             </button>
-          )}
-          {currentStepData.action.href === '#' ? (
-            <Button
-              variant={currentStepData.action.primary ? 'primary' : 'secondary'}
-              onClick={handleAction}
-            >
-              {currentStepData.action.label}
-            </Button>
-          ) : (
-            <Link href={currentStepData.action.href} onClick={handleAction}>
-              <Button variant={currentStepData.action.primary ? 'primary' : 'secondary'}>
+          </div>
+
+          {/* Step Counter */}
+          <div className="mb-6 text-center text-sm font-medium text-[rgb(var(--muted))]">
+            Step {currentStep + 1} of {steps.length}
+          </div>
+
+          {/* Step Content with transition */}
+          <div 
+            key={currentStep}
+            className="text-center mb-10 onboarding-step-fade-in"
+          >
+            <h2 className="font-serif text-3xl font-semibold text-[rgb(var(--text))] mb-4 max-w-2xl mx-auto">
+              {currentStepData.title}
+            </h2>
+            <p className="text-[rgb(var(--text))] text-lg leading-relaxed max-w-xl mx-auto">
+              {currentStepData.description}
+            </p>
+          </div>
+
+          {/* Actions */}
+          <div className="flex items-center justify-center gap-4 mb-6">
+            {/* Previous Button */}
+            {currentStep > 0 && (
+              <button
+                onClick={handlePrevious}
+                className="px-5 py-2.5 text-sm font-medium text-[rgb(var(--text))] hover:bg-[rgb(var(--surface2))] rounded-lg transition-colors border border-[rgb(var(--ring)/0.12)]"
+              >
+                ← Previous
+              </button>
+            )}
+            
+            {/* Primary Action Button */}
+            {currentStepData.action.href === '#' ? (
+              <Button
+                variant={currentStepData.action.primary ? 'primary' : 'secondary'}
+                onClick={handleAction}
+              >
                 {currentStepData.action.label}
               </Button>
-            </Link>
-          )}
-        </div>
-
-        {/* Step Counter */}
-        <div className="mt-6 text-center text-sm text-[rgb(var(--muted))]">
-          Step {currentStep + 1} of {steps.length}
-        </div>
-      </Card>
+            ) : (
+              <Link href={currentStepData.action.href} onClick={handleAction}>
+                <Button variant={currentStepData.action.primary ? 'primary' : 'secondary'}>
+                  {currentStepData.action.label}
+                </Button>
+              </Link>
+            )}
+            
+            {/* Next Button */}
+            {currentStep < steps.length - 1 && (
+              <button
+                onClick={handleNext}
+                className="px-5 py-2.5 text-sm font-medium text-[rgb(var(--text))] hover:bg-[rgb(var(--surface2))] rounded-lg transition-colors border border-[rgb(var(--ring)/0.12)]"
+              >
+                Next →
+              </button>
+            )}
+          </div>
+        </Card>
+      </div>
     </div>
   );
 }
