@@ -63,6 +63,10 @@ export async function GET(request: NextRequest) {
       error = err;
     }
 
+    // Check if they might be using anon key instead
+    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    const mightBeAnonKey = anonKey && serviceRoleKey === anonKey;
+
     return NextResponse.json({
       checks,
       clientTest,
@@ -72,10 +76,18 @@ export async function GET(request: NextRequest) {
         code: error.code,
         status: error.status,
       } : null,
+      warning: mightBeAnonKey ? '⚠️ WARNING: Your SUPABASE_SERVICE_ROLE_KEY appears to be the same as NEXT_PUBLIC_SUPABASE_ANON_KEY. You need the service_role key, not the anon key!' : null,
       instructions: {
-        whereToFind: 'Supabase Dashboard → Settings → API → service_role key',
-        note: 'This is different from the anon/public key. It bypasses RLS and should be kept secret.',
+        whereToFind: 'Supabase Dashboard → Settings → API → service_role key (NOT anon key)',
+        note: 'The service_role key is different from the anon/public key. It bypasses RLS and should be kept secret.',
         envVarName: 'SUPABASE_SERVICE_ROLE_KEY',
+        steps: [
+          '1. Go to Supabase Dashboard → Your Project → Settings → API',
+          '2. Find the "service_role" key (labeled as "secret")',
+          '3. Copy the ENTIRE key (starts with eyJ, ~130-150 chars)',
+          '4. Update SUPABASE_SERVICE_ROLE_KEY in Vercel environment variables',
+          '5. Redeploy or wait for next deployment',
+        ],
       },
     });
   } catch (error) {
