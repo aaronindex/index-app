@@ -68,7 +68,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     },
     {
       title: 'Carry forward what matters',
-      description: 'INDEX surfaces what still deserves attention so you don\'t have to remember everything yourself.',
+      description: "INDEX surfaces what still deserves attention so you don't have to remember everything yourself.",
       action: {
         label: 'Continue',
         href: '#',
