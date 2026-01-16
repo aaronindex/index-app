@@ -195,11 +195,11 @@ export async function checkProjectLimit(userId: string): Promise<LimitCheckResul
 
   const supabase = await getSupabaseServerClient();
 
+  // Projects don't have an is_inactive field - count all projects for the user
   const { count, error } = await supabase
     .from('projects')
     .select('*', { count: 'exact', head: true })
-    .eq('user_id', userId)
-    .eq('is_inactive', false);
+    .eq('user_id', userId);
 
   if (error) {
     return { allowed: false, message: 'Unable to check limits' };
