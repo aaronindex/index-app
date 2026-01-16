@@ -293,6 +293,12 @@ export default function MagicHomeScreen() {
     fetchHomeData();
   }, [fetchHomeData]);
 
+  // Check onboarding completion status
+  useEffect(() => {
+    const completed = localStorage.getItem('index_onboarding_completed');
+    setOnboardingCompleted(completed === 'true');
+  }, []);
+
   // Early returns after all hooks
   if (loading) {
     return (
@@ -338,11 +344,25 @@ export default function MagicHomeScreen() {
     return null;
   }
 
+  // Show onboarding if not completed (null means still checking, so don't show yet)
+  const showOnboarding = onboardingCompleted === false;
+
   return (
     <div className="space-y-8">
-      {/* Primary: Unified Priority List */}
-      {hasUnifiedItems ? (
+      {/* Onboarding Flow - Show at top on first login */}
+      {showOnboarding && (
         <div>
+          <OnboardingFlow
+            onComplete={() => {
+              setOnboardingCompleted(true);
+            }}
+          />
+        </div>
+      )}
+
+      {/* Primary: Unified Priority List - Hide/de-emphasize when onboarding active */}
+      {hasUnifiedItems && (
+        <div className={showOnboarding ? 'opacity-30 pointer-events-none' : ''}>
           <SectionHeader>What still deserves attention</SectionHeader>
           <div className="space-y-6">
             {Object.entries(groupedByProject)
@@ -455,7 +475,21 @@ export default function MagicHomeScreen() {
           </div>
         </div>
       ) : (
-        <div>
+        !showOnboarding && (
+          <div>
+            <SectionHeader>What still deserves attention</SectionHeader>
+            <Card className="p-8 text-center">
+              <p className="text-[rgb(var(--muted))]">
+                No priority items yet. Import a conversation, create a highlight, or ask INDEX a question.
+              </p>
+            </Card>
+          </div>
+        )
+      )}
+
+      {/* Empty state message when onboarding is active */}
+      {showOnboarding && !hasUnifiedItems && (
+        <div className="opacity-30 pointer-events-none">
           <SectionHeader>What still deserves attention</SectionHeader>
           <Card className="p-8 text-center">
             <p className="text-[rgb(var(--muted))]">
@@ -465,10 +499,11 @@ export default function MagicHomeScreen() {
         </div>
       )}
 
-      {/* Secondary: Weekly Digest */}
-      <div>
-        <SectionHeader>Weekly Digest</SectionHeader>
-        <Card className="p-6 bg-gradient-to-br from-[rgb(var(--surface2))] to-[rgb(var(--surface))]">
+      {/* Secondary: Weekly Digest - Hide when onboarding active */}
+      {!showOnboarding && (
+        <div>
+          <SectionHeader>Weekly Digest</SectionHeader>
+          <Card className="p-6 bg-gradient-to-br from-[rgb(var(--surface2))] to-[rgb(var(--surface))]">
           <p className="text-sm text-[rgb(var(--muted))] mb-4">
             Collapse your week into what still matters.
           </p>
@@ -495,12 +530,6 @@ export default function MagicHomeScreen() {
             <GenerateDigestButton />
           )}
         </Card>
-      </div>
-
-      {/* Empty State - Onboarding Flow */}
-      {!data.hasConversations && !data.hasProjects && (
-        <div className="py-12">
-          <OnboardingFlow />
         </div>
       )}
 

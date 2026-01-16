@@ -1,10 +1,12 @@
 // app/components/OnboardingFlow.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Card from './ui/Card';
 import Button from './ui/Button';
+
+const ONBOARDING_COMPLETED_KEY = 'index_onboarding_completed';
 
 interface OnboardingFlowProps {
   onComplete?: () => void;
@@ -12,50 +14,64 @@ interface OnboardingFlowProps {
 
 export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   const [currentStep, setCurrentStep] = useState(0);
+  const [isVisible, setIsVisible] = useState(false);
+
+  // Check if onboarding was already completed
+  useEffect(() => {
+    const completed = localStorage.getItem(ONBOARDING_COMPLETED_KEY);
+    if (completed === 'true') {
+      setIsVisible(false);
+      if (onComplete) {
+        onComplete();
+      }
+    } else {
+      setIsVisible(true);
+    }
+  }, [onComplete]);
 
   const steps = [
     {
       title: 'Welcome to INDEX',
-      description: 'Your personal business intelligence for your AI life. INDEX helps you capture, organize, and make sense of your AI conversations.',
+      description: 'INDEX helps you reduce your AI conversations into what actually matters — decisions, tasks, and direction you can carry forward.',
       action: {
-        label: 'Get Started',
+        label: 'Start with a real conversation',
         href: '/import',
         primary: true,
       },
     },
     {
-      title: 'Import Your Conversations',
-      description: 'Start by importing your ChatGPT export. INDEX will automatically extract insights, create highlights, and help you organize everything into projects.',
+      title: 'Start with what you already thought through',
+      description: 'Import an AI conversation. INDEX extracts what matters, surfaces decisions, and reduces the rest.',
       action: {
-        label: 'Import Conversations',
+        label: 'Import Conversation',
         href: '/import',
         primary: true,
       },
     },
     {
-      title: 'Organize with Projects',
-      description: 'Create projects to group related conversations. Projects help you focus on specific work areas and keep your INDEX organized.',
+      title: 'Focus your thinking',
+      description: 'Projects group related conversations so INDEX can surface what still deserves attention — without clutter.',
       action: {
         label: 'Create Project',
         href: '/projects',
-        primary: false,
+        primary: true,
       },
     },
     {
-      title: 'Ask Your INDEX',
-      description: 'Use Ask Index to search across all your conversations. Get AI-powered answers with citations and follow-up questions.',
+      title: 'Ask when you need clarity',
+      description: 'Ask INDEX questions across your past conversations to recall decisions, context, and unresolved threads — with citations.',
       action: {
-        label: 'Try Ask Index',
+        label: 'Try Ask INDEX',
         href: '/ask',
-        primary: false,
+        primary: true,
       },
     },
     {
-      title: 'Weekly Digests',
-      description: 'Get a weekly summary of what changed, open loops, and recommended next steps. Your personal intelligence briefing.',
+      title: 'Carry forward what matters',
+      description: 'INDEX surfaces what still deserves attention so you don't have to remember everything yourself.',
       action: {
-        label: 'View Tools',
-        href: '/tools',
+        label: 'Continue',
+        href: '#',
         primary: false,
       },
     },
@@ -63,19 +79,32 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
 
   const currentStepData = steps[currentStep];
 
-  const handleNext = () => {
-    if (currentStep < steps.length - 1) {
-      setCurrentStep(currentStep + 1);
-    } else if (onComplete) {
-      onComplete();
-    }
-  };
-
-  const handleSkip = () => {
+  const markCompleted = () => {
+    localStorage.setItem(ONBOARDING_COMPLETED_KEY, 'true');
+    setIsVisible(false);
     if (onComplete) {
       onComplete();
     }
   };
+
+  const handleAction = () => {
+    // If it's the last step, mark as completed
+    if (currentStep === steps.length - 1) {
+      markCompleted();
+    } else {
+      // For other steps, navigate to the action and advance
+      setCurrentStep(currentStep + 1);
+    }
+  };
+
+  const handleSkip = () => {
+    markCompleted();
+  };
+
+  // Don't render if not visible
+  if (!isVisible) {
+    return null;
+  }
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -96,7 +125,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
           </div>
           <button
             onClick={handleSkip}
-            className="text-sm text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] transition-colors"
+            className="text-xs text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] transition-colors opacity-70"
           >
             Skip
           </button>
@@ -122,18 +151,19 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
               ← Previous
             </button>
           )}
-          <Link href={currentStepData.action.href}>
-            <Button variant={currentStepData.action.primary ? 'primary' : 'secondary'}>
+          {currentStepData.action.href === '#' ? (
+            <Button
+              variant={currentStepData.action.primary ? 'primary' : 'secondary'}
+              onClick={handleAction}
+            >
               {currentStepData.action.label}
             </Button>
-          </Link>
-          {currentStep < steps.length - 1 && (
-            <button
-              onClick={handleNext}
-              className="px-4 py-2 text-sm font-medium text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] transition-colors"
-            >
-              Next →
-            </button>
+          ) : (
+            <Link href={currentStepData.action.href} onClick={handleAction}>
+              <Button variant={currentStepData.action.primary ? 'primary' : 'secondary'}>
+                {currentStepData.action.label}
+              </Button>
+            </Link>
           )}
         </div>
 
@@ -145,4 +175,3 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     </div>
   );
 }
-
