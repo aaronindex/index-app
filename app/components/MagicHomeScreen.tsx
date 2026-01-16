@@ -5,6 +5,7 @@ import { useEffect, useState, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import OnboardingFlow from './OnboardingFlow';
+import PostImportModal from './PostImportModal';
 import Card from './ui/Card';
 import SectionHeader from './ui/SectionHeader';
 import { showError } from './ErrorNotification';
@@ -69,6 +70,7 @@ export default function MagicHomeScreen() {
   const [error, setError] = useState<string | null>(null);
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
   const [onboardingCompleted, setOnboardingCompleted] = useState<boolean | null>(null);
+  const [postImportModalDismissed, setPostImportModalDismissed] = useState(false);
 
   // All hooks must be called unconditionally at the top level (before any early returns)
   const formatDate = useCallback((dateString: string | null | undefined) => {
@@ -533,68 +535,13 @@ export default function MagicHomeScreen() {
         </div>
       )}
 
-      {/* Partial Empty State - Has conversations but no content yet */}
-      {data.hasConversations && !hasUnifiedItems && !data.latestDigest && (
-        <div className="max-w-2xl mx-auto text-center py-12">
-          <Card className="p-8 bg-gradient-to-br from-[rgb(var(--surface2))] to-[rgb(var(--surface))]">
-            <h3 className="font-serif text-xl font-semibold text-[rgb(var(--text))] mb-3">
-              Your INDEX is ready!
-            </h3>
-            <p className="text-[rgb(var(--text))] mb-6">
-              You have conversations imported. Here's how to get the most out of INDEX:
-            </p>
-            <div className="space-y-4 text-left max-w-md mx-auto">
-              <div className="flex items-start gap-3">
-                <div className="flex-shrink-0 w-6 h-6 rounded-full bg-[rgb(var(--text))] text-[rgb(var(--bg))] flex items-center justify-center text-xs font-medium">
-                  1
-                </div>
-                <div>
-                  <p className="font-medium text-[rgb(var(--text))] mb-1">Organize with Projects</p>
-                  <p className="text-sm text-[rgb(var(--muted))]">
-                    Group related conversations into projects to keep your INDEX organized.
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="flex-shrink-0 w-6 h-6 rounded-full bg-[rgb(var(--text))] text-[rgb(var(--bg))] flex items-center justify-center text-xs font-medium">
-                  2
-                </div>
-                <div>
-                  <p className="font-medium text-[rgb(var(--text))] mb-1">Extract Insights</p>
-                  <p className="text-sm text-[rgb(var(--muted))]">
-                    Visit a conversation and click "Extract Insights" to automatically find decisions, tasks, and highlights.
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="flex-shrink-0 w-6 h-6 rounded-full bg-[rgb(var(--text))] text-[rgb(var(--bg))] flex items-center justify-center text-xs font-medium">
-                  3
-                </div>
-                <div>
-                  <p className="font-medium text-[rgb(var(--text))] mb-1">Ask Your INDEX</p>
-                  <p className="text-sm text-[rgb(var(--muted))]">
-                    Use Ask Index to search across all your conversations and get AI-powered answers.
-                  </p>
-                </div>
-              </div>
-            </div>
-            <div className="flex gap-3 justify-center mt-8">
-              <Link
-                href="/ask"
-                className="px-4 py-2 border border-[rgb(var(--ring)/0.12)] rounded-lg hover:bg-[rgb(var(--surface2))] transition-colors font-medium text-[rgb(var(--text))]"
-              >
-                Ask Index
-              </Link>
-              <Link
-                href="/projects"
-                className="px-4 py-2 bg-[rgb(var(--text))] text-[rgb(var(--bg))] rounded-lg hover:opacity-90 transition-opacity font-medium"
-              >
-                View Projects
-              </Link>
-            </div>
-          </Card>
-        </div>
-      )}
+      {/* Post-Import Modal - Has conversations but no content yet */}
+      <PostImportModal
+        isOpen={data.hasConversations && !hasUnifiedItems && !data.latestDigest && !postImportModalDismissed}
+        onClose={() => {
+          setPostImportModalDismissed(true);
+        }}
+      />
     </div>
   );
 }

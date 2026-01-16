@@ -93,7 +93,10 @@ function BillingSuccessContent() {
           <>
             <h1 className="text-2xl font-semibold text-foreground">Subscription processing</h1>
             <p className="text-[rgb(var(--muted))] mb-4">
-              Your payment was successful, but activation is taking longer than expected. You'll receive an email confirmation shortly.
+              Your payment was successful, but activation is taking longer than expected. Your subscription will be activated shortly, and you'll receive a confirmation email from Stripe.
+            </p>
+            <p className="text-sm text-[rgb(var(--muted))] mb-4">
+              You can continue using INDEX. If your subscription doesn't activate within a few minutes, please contact support.
             </p>
             <button
               onClick={() => router.push('/home')}

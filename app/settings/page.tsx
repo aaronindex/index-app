@@ -4,6 +4,12 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { getSupabaseBrowserClient } from '@/lib/supabaseClient';
+
+interface Profile {
+  plan: string;
+  plan_status: string | null;
+}
 
 export default function SettingsPage() {
   // Update page title
@@ -15,6 +21,11 @@ export default function SettingsPage() {
   const [deleting, setDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [loadingProfile, setLoadingProfile] = useState(true);
+  const [canceling, setCanceling] = useState(false);
+  const [cancelSuccess, setCancelSuccess] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
 
   const handleExport = async () => {
     setExporting(true);
@@ -38,6 +49,76 @@ export default function SettingsPage() {
       alert('Failed to export data. Please try again.');
     } finally {
       setExporting(false);
+    }
+  };
+
+  // Fetch user profile to check plan status
+  useEffect(() => {
+    async function fetchProfile() {
+      const supabase = getSupabaseBrowserClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        setLoadingProfile(false);
+        return;
+      }
+
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('plan, plan_status')
+        .eq('id', user.id)
+        .single();
+
+      if (profileData) {
+        setProfile(profileData);
+      }
+      setLoadingProfile(false);
+    }
+    fetchProfile();
+  }, []);
+
+  const handleCancelSubscription = async () => {
+    if (!confirm('Are you sure you want to cancel your subscription? You will retain access until the end of your billing period.')) {
+      return;
+    }
+
+    setCanceling(true);
+    setCancelError(null);
+    try {
+      const response = await fetch('/api/billing/cancel-subscription', {
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to cancel subscription');
+      }
+
+      const data = await response.json();
+      setCancelSuccess(true);
+      
+      // Refresh profile to show updated status
+      const supabase = getSupabaseBrowserClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('plan, plan_status')
+          .eq('id', user.id)
+          .single();
+        if (profileData) {
+          setProfile(profileData);
+        }
+      }
+    } catch (error) {
+      console.error('Cancel subscription error:', error);
+      setCancelError(error instanceof Error ? error.message : 'Failed to cancel subscription. Please try again.');
+    } finally {
+      setCanceling(false);
     }
   };
 
@@ -87,6 +168,71 @@ export default function SettingsPage() {
         </div>
 
         <div className="space-y-8">
+          {/* Subscription Management */}
+          {!loadingProfile && profile && (
+            <div className="rounded-xl p-6 bg-[rgb(var(--surface))] ring-1 ring-[rgb(var(--ring)/0.08)]">
+              <h2 className="font-serif text-xl font-semibold text-[rgb(var(--text))] mb-2">Subscription</h2>
+              {profile.plan === 'pro' ? (
+                <>
+                  <div className="mb-4">
+                    <p className="text-[rgb(var(--text))] font-medium mb-1">
+                      Current Plan: <span className="text-[rgb(var(--muted))]">Pro</span>
+                    </p>
+                    {profile.plan_status === 'canceled' ? (
+                      <p className="text-sm text-[rgb(var(--muted))]">
+                        Your subscription has been canceled. You will retain access until the end of your billing period.
+                      </p>
+                    ) : (
+                      <p className="text-sm text-[rgb(var(--muted))]">
+                        $30/month • Active subscription
+                      </p>
+                    )}
+                  </div>
+                  {cancelSuccess ? (
+                    <div className="p-3 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
+                      <p className="text-sm text-green-800 dark:text-green-400">
+                        Subscription canceled. You will retain access until the end of your billing period.
+                      </p>
+                    </div>
+                  ) : profile.plan_status !== 'canceled' ? (
+                    <>
+                      {cancelError && (
+                        <div className="mb-4 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+                          <p className="text-sm text-red-800 dark:text-red-400">{cancelError}</p>
+                        </div>
+                      )}
+                      <button
+                        onClick={handleCancelSubscription}
+                        disabled={canceling}
+                        className="px-4 py-2 border border-[rgb(var(--ring)/0.12)] text-[rgb(var(--text))] rounded-lg hover:bg-[rgb(var(--surface2))] transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {canceling ? 'Canceling...' : 'Cancel Subscription'}
+                      </button>
+                      <p className="text-xs text-[rgb(var(--muted))] mt-2">
+                        Canceling will stop future charges. You'll keep access until the end of your billing period.
+                      </p>
+                    </>
+                  ) : null}
+                </>
+              ) : (
+                <div>
+                  <p className="text-[rgb(var(--text))] font-medium mb-1">
+                    Current Plan: <span className="text-[rgb(var(--muted))]">Free</span>
+                  </p>
+                  <p className="text-sm text-[rgb(var(--muted))] mb-4">
+                    Upgrade to Pro for unlimited projects, full imports, and more.
+                  </p>
+                  <Link
+                    href="/pricing"
+                    className="inline-block px-4 py-2 bg-[rgb(var(--text))] text-[rgb(var(--bg))] rounded-lg hover:opacity-90 transition-opacity font-medium"
+                  >
+                    View Pricing
+                  </Link>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Data Export */}
           <div className="rounded-xl p-6 bg-[rgb(var(--surface))] ring-1 ring-[rgb(var(--ring)/0.08)]">
             <h2 className="font-serif text-xl font-semibold text-[rgb(var(--text))] mb-2">Export Your Data</h2>

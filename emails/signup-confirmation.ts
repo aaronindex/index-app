@@ -1,0 +1,119 @@
+// emails/signup-confirmation.ts
+/**
+ * Email template for signup confirmation
+ * Simple inline HTML, no external CSS
+ * This template can be copied into Supabase Auth email templates
+ */
+
+export function renderSignupConfirmationEmail(confirmationUrl: string): string {
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Confirm your INDEX account</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #faf8f6; color: #121211;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #faf8f6; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; padding: 40px;">
+          <tr>
+            <td>
+              <h1 style="margin: 0 0 8px 0; font-size: 24px; font-weight: 600; color: #121211;">
+                INDEX
+              </h1>
+              <h2 style="margin: 24px 0 16px 0; font-size: 20px; font-weight: 600; color: #121211;">
+                Confirm your account
+              </h2>
+              <p style="margin: 0 0 16px 0; font-size: 16px; line-height: 1.6; color: #121211;">
+                Click the button below to confirm your email address and activate your INDEX account.
+              </p>
+              <div style="margin: 32px 0;">
+                <a href="${confirmationUrl}" style="display: inline-block; padding: 12px 24px; background-color: #121211; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 500; font-size: 16px;">
+                  Confirm email
+                </a>
+              </div>
+              <p style="margin: 24px 0 0 0; font-size: 14px; line-height: 1.6; color: #666666;">
+                Or copy and paste this link into your browser:
+              </p>
+              <p style="margin: 8px 0 0 0; font-size: 14px; line-height: 1.6; color: #666666; word-break: break-all;">
+                ${confirmationUrl}
+              </p>
+              <p style="margin: 32px 0 0 0; font-size: 14px; color: #666666; font-style: italic;">
+                — INDEX
+              </p>
+              <p style="margin: 32px 0 0 0; font-size: 12px; color: #999999;">
+                If you didn't create this account, ignore this email.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `.trim();
+}
+
+/**
+ * Supabase Email Template (HTML only, for copy-paste)
+ * 
+ * To use in Supabase:
+ * 1. Go to Authentication > Email Templates > Confirm signup
+ * 2. Replace the HTML body with the content below
+ * 3. Use {{ .ConfirmationURL }} for the confirmation link
+ */
+export const SUPABASE_EMAIL_TEMPLATE = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Confirm your INDEX account</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #faf8f6; color: #121211;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #faf8f6; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; padding: 40px;">
+          <tr>
+            <td>
+              <h1 style="margin: 0 0 8px 0; font-size: 24px; font-weight: 600; color: #121211;">
+                INDEX
+              </h1>
+              <h2 style="margin: 24px 0 16px 0; font-size: 20px; font-weight: 600; color: #121211;">
+                Confirm your account
+              </h2>
+              <p style="margin: 0 0 16px 0; font-size: 16px; line-height: 1.6; color: #121211;">
+                Click the button below to confirm your email address and activate your INDEX account.
+              </p>
+              <div style="margin: 32px 0;">
+                <a href="{{ .ConfirmationURL }}" style="display: inline-block; padding: 12px 24px; background-color: #121211; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 500; font-size: 16px;">
+                  Confirm email
+                </a>
+              </div>
+              <p style="margin: 24px 0 0 0; font-size: 14px; line-height: 1.6; color: #666666;">
+                Or copy and paste this link into your browser:
+              </p>
+              <p style="margin: 8px 0 0 0; font-size: 14px; line-height: 1.6; color: #666666; word-break: break-all;">
+                {{ .ConfirmationURL }}
+              </p>
+              <p style="margin: 32px 0 0 0; font-size: 14px; color: #666666; font-style: italic;">
+                — INDEX
+              </p>
+              <p style="margin: 32px 0 0 0; font-size: 12px; color: #999999;">
+                If you didn't create this account, ignore this email.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+`.trim();
+
