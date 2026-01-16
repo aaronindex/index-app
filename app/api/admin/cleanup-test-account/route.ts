@@ -20,12 +20,14 @@ function getSupabaseServiceClient() {
     throw new Error('Supabase service role credentials not configured');
   }
   
-  return createClient(url, serviceRoleKey, {
+  const client = createClient(url, serviceRoleKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,
     },
   });
+  
+  return client;
 }
 
 export async function POST(request: NextRequest) {
@@ -62,11 +64,25 @@ export async function POST(request: NextRequest) {
     requireStripeEnabled();
 
     // Find user by email (listUsers and filter, as getUserByEmail may not be available)
-    const { data: authUsersData, error: authError } = await supabase.auth.admin.listUsers();
+    let authUsersData;
+    let authError;
+    
+    try {
+      const result = await supabase.auth.admin.listUsers();
+      authUsersData = result.data;
+      authError = result.error;
+    } catch (err) {
+      console.error('Error calling listUsers:', err);
+      return NextResponse.json(
+        { error: `Failed to fetch users: ${err instanceof Error ? err.message : 'Unknown error'}` },
+        { status: 500 }
+      );
+    }
     
     if (authError) {
+      console.error('listUsers error:', authError);
       return NextResponse.json(
-        { error: 'Failed to fetch users' },
+        { error: `Failed to fetch users: ${authError.message || 'Unknown error'}` },
         { status: 500 }
       );
     }
