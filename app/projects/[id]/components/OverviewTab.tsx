@@ -2,7 +2,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import WhatChangedThisWeek from './WhatChangedThisWeek';
 import Card from '@/app/components/ui/Card';
 import Button from '@/app/components/ui/Button';
@@ -13,6 +13,7 @@ interface OverviewTabProps {
 }
 
 export default function OverviewTab({ projectId, projectName }: OverviewTabProps) {
+  const router = useRouter();
   const [hasConversations, setHasConversations] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -48,11 +49,12 @@ export default function OverviewTab({ projectId, projectName }: OverviewTabProps
           <p className="text-sm text-[rgb(var(--muted))] mb-6">
             Once you import a conversation, INDEX will extract insights, tasks, and decisions.
           </p>
-          <Link href="/import">
-            <Button variant="primary">
-              Import chat
-            </Button>
-          </Link>
+          <Button 
+            variant="primary"
+            onClick={() => router.push(`/import?project=${projectId}`)}
+          >
+            Import chat
+          </Button>
         </Card>
       </div>
     );
