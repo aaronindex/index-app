@@ -60,17 +60,26 @@ export async function POST(request: NextRequest) {
     const stripe = getStripeClient();
     requireStripeEnabled();
 
-    // Find user by email
-    const { data: authUser, error: authError } = await supabase.auth.admin.getUserByEmail(email);
+    // Find user by email (listUsers and filter, as getUserByEmail may not be available)
+    const { data: authUsersData, error: authError } = await supabase.auth.admin.listUsers();
     
-    if (authError || !authUser) {
+    if (authError) {
+      return NextResponse.json(
+        { error: 'Failed to fetch users' },
+        { status: 500 }
+      );
+    }
+
+    const authUser = authUsersData?.users?.find((u) => u.email === email);
+    
+    if (!authUser) {
       return NextResponse.json(
         { error: 'User not found' },
         { status: 404 }
       );
     }
 
-    const userId = authUser.user.id;
+    const userId = authUser.id;
 
     // Get profile to find Stripe customer ID
     const { data: profile } = await supabase
