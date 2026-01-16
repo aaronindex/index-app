@@ -6,6 +6,7 @@ import { getCurrentUser } from '@/lib/getUser';
 import { getSupabaseServerClient } from '@/lib/supabaseServer';
 import { requireStripeEnabled, stripeConfig } from '@/lib/stripe/config';
 import { getStripeClient } from '@/lib/stripe/service';
+import Stripe from 'stripe';
 
 export async function POST(request: NextRequest) {
   try {
@@ -40,7 +41,7 @@ export async function POST(request: NextRequest) {
     const stripe = getStripeClient();
     const subscription = await stripe.subscriptions.update(profile.stripe_subscription_id, {
       cancel_at_period_end: true, // Cancel at end of billing period
-    });
+    }) as Stripe.Subscription;
 
     // Update profile to reflect cancellation
     await supabase
