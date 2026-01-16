@@ -6,6 +6,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { stripeConfig, requireStripeEnabled } from '@/lib/stripe/config';
 import { getStripeClient } from '@/lib/stripe/service';
 import Stripe from 'stripe';
+import { Resend } from 'resend';
+import { renderSubscriptionConfirmationEmail } from '@/emails/subscription-confirmation';
 
 // Force Node.js runtime for raw body access
 export const runtime = 'nodejs';
@@ -138,6 +140,37 @@ export async function POST(request: NextRequest) {
       if (insertError) {
         console.error('Error inserting billing event:', insertError);
         // Don't fail the webhook if billing event insert fails, but log it
+      }
+
+      // Send subscription confirmation email
+      try {
+        // Get user email from Stripe customer
+        const customer = await stripe.customers.retrieve(subscription.customer as string);
+        const customerEmail = (customer as Stripe.Customer).email;
+
+        if (customerEmail) {
+          const resend = new Resend(process.env.RESEND_API_KEY);
+          const fromEmail = process.env.RESEND_FROM_EMAIL || 'INDEX <hello@indexapp.co>';
+
+          const result = await resend.emails.send({
+            from: fromEmail,
+            to: customerEmail,
+            subject: 'Welcome to INDEX Pro',
+            html: renderSubscriptionConfirmationEmail(),
+          });
+
+          if (result.error) {
+            console.error('Resend email error:', result.error);
+            // Don't fail the webhook if email fails, but log it
+          } else {
+            console.log(`[Webhook] Sent subscription confirmation email to ${customerEmail}`);
+          }
+        } else {
+          console.warn(`[Webhook] No email found for customer ${subscription.customer}`);
+        }
+      } catch (emailError) {
+        console.error('Error sending subscription confirmation email:', emailError);
+        // Don't fail the webhook if email fails, but log it
       }
 
       console.log(`[Webhook] Successfully processed checkout.session.completed for user ${userId}, plan: ${plan}`);
