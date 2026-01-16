@@ -2,7 +2,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
 import Card from './ui/Card';
 import Button from './ui/Button';
 
@@ -158,52 +157,43 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
           {/* Step Content with transition */}
           <div 
             key={currentStep}
-            className="text-center mb-10 onboarding-step-fade-in"
+            className="text-center mb-12 onboarding-step-fade-in"
           >
             <h2 className="font-serif text-3xl font-semibold text-[rgb(var(--text))] mb-4 max-w-2xl mx-auto">
               {currentStepData.title}
             </h2>
-            <p className="text-[rgb(var(--text))] text-lg leading-relaxed max-w-xl mx-auto">
+            <p className="text-[rgb(var(--text))] text-lg leading-relaxed max-w-xl mx-auto mb-8">
               {currentStepData.description}
             </p>
           </div>
 
-          {/* Actions */}
-          <div className="flex items-center justify-center gap-4 mb-6">
-            {/* Previous Button */}
+          {/* Navigation */}
+          <div className="relative flex items-center justify-center">
+            {/* Previous Button - Bottom Left */}
             {currentStep > 0 && (
               <button
                 onClick={handlePrevious}
-                className="px-5 py-2.5 text-sm font-medium text-[rgb(var(--text))] hover:bg-[rgb(var(--surface2))] rounded-lg transition-colors border border-[rgb(var(--ring)/0.12)]"
+                className="absolute left-0 px-5 py-2.5 text-sm font-medium text-[rgb(var(--text))] hover:bg-[rgb(var(--surface2))] rounded-lg transition-colors border border-[rgb(var(--ring)/0.12)]"
               >
                 ← Previous
               </button>
             )}
             
-            {/* Primary Action Button */}
-            {currentStepData.action.href === '#' ? (
-              <Button
-                variant={currentStepData.action.primary ? 'primary' : 'secondary'}
-                onClick={handleAction}
-              >
-                {currentStepData.action.label}
-              </Button>
-            ) : (
-              <Link href={currentStepData.action.href} onClick={handleAction}>
-                <Button variant={currentStepData.action.primary ? 'primary' : 'secondary'}>
-                  {currentStepData.action.label}
-                </Button>
-              </Link>
-            )}
-            
-            {/* Next Button */}
-            {currentStep < steps.length - 1 && (
+            {/* Next/Continue Button - Centered */}
+            {currentStep < steps.length - 1 ? (
               <button
                 onClick={handleNext}
                 className="px-5 py-2.5 text-sm font-medium text-[rgb(var(--text))] hover:bg-[rgb(var(--surface2))] rounded-lg transition-colors border border-[rgb(var(--ring)/0.12)]"
               >
                 Next →
               </button>
+            ) : (
+              <Button
+                variant="primary"
+                onClick={handleAction}
+              >
+                Continue
+              </Button>
             )}
           </div>
         </Card>
