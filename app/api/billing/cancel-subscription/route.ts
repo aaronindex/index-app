@@ -39,9 +39,12 @@ export async function POST(request: NextRequest) {
 
     // Cancel subscription in Stripe
     const stripe = getStripeClient();
-    const subscription = await stripe.subscriptions.update(profile.stripe_subscription_id, {
+    await stripe.subscriptions.update(profile.stripe_subscription_id, {
       cancel_at_period_end: true, // Cancel at end of billing period
-    }) as Stripe.Subscription;
+    });
+
+    // Retrieve the updated subscription to get all properties
+    const subscription = await stripe.subscriptions.retrieve(profile.stripe_subscription_id);
 
     // Update profile to reflect cancellation
     await supabase
