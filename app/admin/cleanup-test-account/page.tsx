@@ -12,6 +12,7 @@ export default function CleanupTestAccountPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [confirm, setConfirm] = useState('');
+  const [mode, setMode] = useState<'soft' | 'hard'>('soft');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
@@ -37,7 +38,7 @@ export default function CleanupTestAccountPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, confirm }),
+        body: JSON.stringify({ email, confirm, mode }),
       });
 
       const data = await response.json();
@@ -61,9 +62,56 @@ export default function CleanupTestAccountPage() {
           Cleanup Test Account
         </h1>
         <p className="text-sm text-[rgb(var(--muted))] mb-6">
-          This will permanently delete the account, profile, Stripe subscription, and all related data.
-          <strong className="text-red-600 dark:text-red-400"> This action cannot be undone.</strong>
+          Choose cleanup mode. <strong className="text-red-600 dark:text-red-400">This action cannot be undone.</strong>
         </p>
+
+        <div className="mb-6 p-4 bg-zinc-50 dark:bg-zinc-900/50 rounded-lg">
+          <label className="block text-sm font-medium text-[rgb(var(--text))] mb-3">
+            Cleanup Mode
+          </label>
+          <div className="space-y-2">
+            <label className="flex items-start gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="mode"
+                value="soft"
+                checked={mode === 'soft'}
+                onChange={(e) => setMode(e.target.value as 'soft' | 'hard')}
+                className="mt-1"
+              />
+              <div>
+                <div className="font-medium text-[rgb(var(--text))]">Soft Delete (Recommended)</div>
+                <div className="text-xs text-[rgb(var(--muted))]">
+                  • Cancels Stripe subscription<br/>
+                  • Preserves Stripe customer for audit trail<br/>
+                  • Updates email to free it up for reuse<br/>
+                  • Preserves billing events and profile data<br/>
+                  <strong>Best for: Testing with email reuse</strong>
+                </div>
+              </div>
+            </label>
+            <label className="flex items-start gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="mode"
+                value="hard"
+                checked={mode === 'hard'}
+                onChange={(e) => setMode(e.target.value as 'soft' | 'hard')}
+                className="mt-1"
+              />
+              <div>
+                <div className="font-medium text-[rgb(var(--text))]">Hard Delete</div>
+                <div className="text-xs text-[rgb(var(--muted))]">
+                  • Cancels and deletes Stripe subscription<br/>
+                  • Deletes Stripe customer completely<br/>
+                  • Deletes all database records<br/>
+                  • Deletes auth user<br/>
+                  <strong>Best for: Complete cleanup, no audit trail needed</strong>
+                </div>
+              </div>
+            </label>
+          </div>
+        </div>
 
         <div className="space-y-4">
           <div>
@@ -98,9 +146,9 @@ export default function CleanupTestAccountPage() {
             onClick={handleCleanup}
             disabled={loading || confirm !== 'DELETE' || !email}
             variant="primary"
-            className="w-full bg-red-600 hover:bg-red-700"
+            className={`w-full ${mode === 'hard' ? 'bg-red-600 hover:bg-red-700' : 'bg-orange-600 hover:bg-orange-700'}`}
           >
-            {loading ? 'Cleaning up...' : 'Delete Account & Subscription'}
+            {loading ? 'Cleaning up...' : mode === 'hard' ? 'Hard Delete Account' : 'Soft Delete Account'}
           </Button>
         </div>
 
@@ -109,6 +157,12 @@ export default function CleanupTestAccountPage() {
             <h3 className="font-semibold mb-2">Cleanup Complete</h3>
             <p className="text-sm mb-2">Account: {result.email}</p>
             <p className="text-sm mb-2">User ID: {result.userId}</p>
+            <p className="text-sm mb-2">Mode: <strong>{result.mode === 'soft' ? 'Soft Delete' : 'Hard Delete'}</strong></p>
+            {result.note && (
+              <p className="text-sm mb-3 p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-blue-800 dark:text-blue-400">
+                {result.note}
+              </p>
+            )}
             <div className="text-sm mt-2">
               <p className="font-medium mb-1">Steps completed:</p>
               <ul className="list-disc list-inside space-y-1">
