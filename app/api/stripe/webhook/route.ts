@@ -115,6 +115,21 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Failed to fetch profile' }, { status: 500 });
       }
 
+      // First, check current profile plan and fix if it's 'trial'
+      const { data: currentProfile } = await supabase
+        .from('profiles')
+        .select('plan')
+        .eq('id', userId)
+        .single();
+
+      if (currentProfile?.plan === 'trial') {
+        console.log(`[Webhook] Profile has 'trial' plan, fixing to 'free' first`);
+        await supabase
+          .from('profiles')
+          .update({ plan: 'free' })
+          .eq('id', userId);
+      }
+
       // Update profile
       const plan = subscription.status === 'active' || subscription.status === 'trialing' ? 'pro' : 'free';
       console.log(`[Webhook] Updating profile to plan: ${plan}, status: ${subscription.status}`);
@@ -135,6 +150,8 @@ export async function POST(request: NextRequest) {
       if (updateError) {
         console.error('[Webhook] Error updating profile:', updateError);
         console.error('[Webhook] Update error details:', JSON.stringify(updateError));
+        console.error('[Webhook] Update error code:', updateError.code);
+        console.error('[Webhook] Update error message:', updateError.message);
         return NextResponse.json({ error: 'Failed to update profile' }, { status: 500 });
       }
 
@@ -171,6 +188,7 @@ export async function POST(request: NextRequest) {
           const resend = new Resend(process.env.RESEND_API_KEY);
           const fromEmail = process.env.RESEND_FROM_EMAIL || 'INDEX <hello@indexapp.co>';
 
+          console.log(`[Webhook] Attempting to send email to ${customerEmail}`);
           const result = await resend.emails.send({
             from: fromEmail,
             to: customerEmail,
@@ -179,16 +197,18 @@ export async function POST(request: NextRequest) {
           });
 
           if (result.error) {
-            console.error('Resend email error:', result.error);
+            console.error('[Webhook] Resend email error:', result.error);
+            console.error('[Webhook] Resend error details:', JSON.stringify(result.error));
             // Don't fail the webhook if email fails, but log it
           } else {
-            console.log(`[Webhook] Sent subscription confirmation email to ${customerEmail}`);
+            console.log(`[Webhook] Successfully sent subscription confirmation email to ${customerEmail}, email ID: ${result.data?.id}`);
           }
         } else {
           console.warn(`[Webhook] No email found for customer ${subscription.customer}`);
         }
       } catch (emailError) {
-        console.error('Error sending subscription confirmation email:', emailError);
+        console.error('[Webhook] Error sending subscription confirmation email:', emailError);
+        console.error('[Webhook] Email error details:', emailError instanceof Error ? emailError.message : String(emailError));
         // Don't fail the webhook if email fails, but log it
       }
 
