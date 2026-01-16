@@ -59,6 +59,8 @@ export async function POST(request: NextRequest) {
 
     const supabase = getSupabaseServiceClient();
 
+    console.log(`[Webhook] Received event: ${event.type}, event ID: ${event.id}`);
+
     // Handle event types
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object as Stripe.Checkout.Session;
@@ -91,16 +93,21 @@ export async function POST(request: NextRequest) {
       }
 
       // Get user profile for UTM attribution
-      const { data: profile } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('utm_source, utm_medium, utm_campaign, utm_content, utm_term')
         .eq('id', userId)
         .single();
 
+      if (profileError) {
+        console.error('Error fetching profile:', profileError);
+        return NextResponse.json({ error: 'Failed to fetch profile' }, { status: 500 });
+      }
+
       // Update profile
       const plan = subscription.status === 'active' || subscription.status === 'trialing' ? 'pro' : 'free';
 
-      await supabase
+      const { error: updateError } = await supabase
         .from('profiles')
         .update({
           plan,
@@ -111,8 +118,13 @@ export async function POST(request: NextRequest) {
         })
         .eq('id', userId);
 
+      if (updateError) {
+        console.error('Error updating profile:', updateError);
+        return NextResponse.json({ error: 'Failed to update profile' }, { status: 500 });
+      }
+
       // Insert billing event
-      await supabase.from('billing_events').insert({
+      const { error: insertError } = await supabase.from('billing_events').insert({
         user_id: userId,
         event_type: 'subscription_activated',
         plan,
@@ -123,6 +135,12 @@ export async function POST(request: NextRequest) {
         utm_campaign: profile?.utm_campaign || null,
       });
 
+      if (insertError) {
+        console.error('Error inserting billing event:', insertError);
+        // Don't fail the webhook if billing event insert fails, but log it
+      }
+
+      console.log(`[Webhook] Successfully processed checkout.session.completed for user ${userId}, plan: ${plan}`);
       return NextResponse.json({ received: true });
     }
 
