@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { getSupabaseBrowserClient } from '@/lib/supabaseClient';
+import { track } from '@/lib/analytics/track';
 
 interface Profile {
   plan: string;
@@ -84,6 +85,12 @@ export default function SettingsPage() {
       return;
     }
 
+    // Fire cancel click event
+    track('billing_cancel_clicked', {
+      plan: 'pro',
+      price_usd: 30,
+    });
+
     setCanceling(true);
     setCancelError(null);
     try {
@@ -97,6 +104,13 @@ export default function SettingsPage() {
       }
 
       const data = await response.json();
+      
+      // Fire cancel success event
+      track('billing_subscription_canceled', {
+        plan: 'pro',
+        price_usd: 30,
+      });
+      
       setCancelSuccess(true);
       
       // Refresh profile to show updated status
