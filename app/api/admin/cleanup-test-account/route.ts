@@ -8,6 +8,7 @@ import { getSupabaseServerClient } from '@/lib/supabaseServer';
 import { getStripeClient } from '@/lib/stripe/service';
 import { requireStripeEnabled } from '@/lib/stripe/config';
 import Stripe from 'stripe';
+import type { User } from '@supabase/supabase-js';
 
 // Get Supabase service role client for admin operations
 function getSupabaseServiceClient() {
@@ -70,7 +71,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const authUser = authUsersData?.users?.find((u) => u.email === email);
+    const authUser = authUsersData?.users?.find((u: User) => u.email === email);
     
     if (!authUser) {
       return NextResponse.json(
