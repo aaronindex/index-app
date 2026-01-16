@@ -474,17 +474,18 @@ export default function MagicHomeScreen() {
               })}
           </div>
         </div>
-      ) : (
-        !showOnboarding && (
-          <div>
-            <SectionHeader>What still deserves attention</SectionHeader>
-            <Card className="p-8 text-center">
-              <p className="text-[rgb(var(--muted))]">
-                No priority items yet. Import a conversation, create a highlight, or ask INDEX a question.
-              </p>
-            </Card>
-          </div>
-        )
+      )}
+
+      {/* Empty state - only show when not onboarding */}
+      {!hasUnifiedItems && !showOnboarding && (
+        <div>
+          <SectionHeader>What still deserves attention</SectionHeader>
+          <Card className="p-8 text-center">
+            <p className="text-[rgb(var(--muted))]">
+              No priority items yet. Import a conversation, create a highlight, or ask INDEX a question.
+            </p>
+          </Card>
+        </div>
       )}
 
       {/* Empty state message when onboarding is active */}
