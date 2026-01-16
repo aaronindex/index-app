@@ -4,6 +4,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { track } from '@/lib/analytics/track';
 
 interface ExtractInsightsButtonProps {
   conversationId: string;
@@ -45,6 +46,20 @@ export default function ExtractInsightsButton({ conversationId, projectId }: Ext
 
       const data = await response.json();
       setResult(data);
+
+      // Track insights extraction event
+      if (data.success) {
+        track('insights_extracted', {
+          conversation_id: conversationId,
+          project_id: projectId || null,
+          total_insights: data.created,
+          decisions_count: data.insights.decisions,
+          commitments_count: data.insights.commitments,
+          blockers_count: data.insights.blockers,
+          open_loops_count: data.insights.openLoops,
+          highlights_count: data.insights.suggestedHighlights,
+        });
+      }
 
       // Refresh the page after a short delay to show new insights
       setTimeout(() => {
