@@ -126,6 +126,32 @@ export default function TasksTab({ tasks, projectId }: TasksTabProps) {
     const canMoveUp = index > 0;
     const canMoveDown = index < sortedTasks.length - 1;
 
+    // Detect task type from description prefix
+    const isCommitment = task.description?.includes('[Commitment]');
+    const isBlocker = task.description?.includes('[Blocker]');
+    const isOpenLoop = task.description?.includes('[Open Loop]');
+    
+    // Determine badge color and label
+    let badgeColor = '';
+    let badgeLabel = '';
+    if (isCommitment) {
+      badgeColor = 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400';
+      badgeLabel = 'Commitment';
+    } else if (isBlocker) {
+      badgeColor = 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400';
+      badgeLabel = 'Blocker';
+    } else if (isOpenLoop) {
+      badgeColor = 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-400';
+      badgeLabel = 'Open Loop';
+    }
+
+    // Clean description (remove prefix for display)
+    const cleanDescription = task.description
+      ?.replace(/^\[Commitment\]\s*/, '')
+      .replace(/^\[Blocker\]\s*/, '')
+      .replace(/^\[Open Loop\]\s*/, '')
+      .trim();
+
     return (
       <Card
         key={task.id}
@@ -133,7 +159,7 @@ export default function TasksTab({ tasks, projectId }: TasksTabProps) {
       >
         <div className="p-4">
           <div className="flex items-start justify-between mb-2">
-            <div className="flex-1 flex items-center gap-2">
+            <div className="flex-1 flex items-center gap-2 flex-wrap">
               <PinTaskButton
                 taskId={task.id}
                 isPinned={task.is_pinned || false}
@@ -147,6 +173,11 @@ export default function TasksTab({ tasks, projectId }: TasksTabProps) {
                 canMoveDown={canMoveDown}
               />
               <h3 className="font-medium text-[rgb(var(--text))]">{task.title}</h3>
+              {badgeLabel && (
+                <span className={`px-2 py-0.5 text-xs font-medium rounded-md ${badgeColor}`}>
+                  {badgeLabel}
+                </span>
+              )}
               {task.is_inactive && (
                 <span className="px-2 py-0.5 text-xs font-medium rounded-md bg-[rgb(var(--surface2))] text-[rgb(var(--muted))]">
                   Inactive
@@ -155,9 +186,9 @@ export default function TasksTab({ tasks, projectId }: TasksTabProps) {
             </div>
             <TaskStatusControl taskId={task.id} currentStatus={task.status} />
           </div>
-          {task.description && (
+          {cleanDescription && (
             <p className="text-[rgb(var(--text))] mb-3 text-sm">
-              {task.description}
+              {cleanDescription}
             </p>
           )}
           <div className="flex items-center justify-between">
