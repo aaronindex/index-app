@@ -315,7 +315,7 @@ export default async function ProjectDetailPage({
           
           <div className="mt-4">
             {activeTab === 'overview' && (
-              <OverviewTab projectId={id} projectName={project.name} />
+              <OverviewTab projectId={id} projectName={project.name} projectDescription={project.description} />
             )}
             {activeTab === 'chats' && (
               <ChatsTab conversations={chatsData} projectId={id} />
