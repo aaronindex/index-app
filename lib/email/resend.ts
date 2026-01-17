@@ -49,18 +49,26 @@ export async function sendEmail(
   try {
     const resend = getResendClient();
 
-    const result = await resend.emails.send({
+    // Build email options object conditionally to satisfy Resend's strict types
+    const baseOptions = {
       from: options.from || DEFAULT_FROM,
       to: options.to,
       replyTo: options.replyTo || DEFAULT_REPLY_TO,
       subject: options.subject,
-      html: options.html,
-      text: options.text,
       headers: {
         ...DEFAULT_HEADERS,
         ...options.headers,
       },
-    });
+    };
+
+    // Resend requires at least one of html or text, so we conditionally add them
+    const emailOptions = options.html
+      ? { ...baseOptions, html: options.html, ...(options.text && { text: options.text }) }
+      : options.text
+      ? { ...baseOptions, text: options.text }
+      : { ...baseOptions, html: '' }; // Fallback to empty html if neither provided
+
+    const result = await resend.emails.send(emailOptions as any);
 
     if (result.error) {
       return {
