@@ -76,6 +76,9 @@ export async function GET(
       isBlocker: boolean;
       isOpenLoop: boolean;
       updatedAt: string;
+      conversationId?: string | null;
+      conversationTitle?: string | null;
+      isAIGenerated?: boolean;
       priority: number;
     }> = [];
 
