@@ -3,17 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/getUser';
 import { getSupabaseServerClient } from '@/lib/supabaseServer';
 import { createClient } from '@supabase/supabase-js';
-import { Resend } from 'resend';
 import { renderWelcomeEmail } from '@/emails/welcome';
-
-// Lazy initialization for Resend
-function getResend() {
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
-    throw new Error('RESEND_API_KEY is not configured');
-  }
-  return new Resend(apiKey);
-}
+import { sendEmail } from '@/lib/email/resend';
 
 // Get Supabase service role client (bypasses RLS)
 function getSupabaseServiceClient() {
@@ -73,18 +64,15 @@ export async function POST(request: NextRequest) {
 
     // Send welcome email
     try {
-      const resend = getResend();
-      const fromEmail = process.env.RESEND_FROM_EMAIL || 'INDEX <hello@indexapp.co>';
       const emailHtml = renderWelcomeEmail();
 
-      const result = await resend.emails.send({
-        from: fromEmail,
+      const result = await sendEmail({
         to: userEmail,
         subject: 'Welcome to INDEX',
         html: emailHtml,
       });
 
-      if (result.error) {
+      if (!result.success) {
         console.error('Resend email error:', result.error);
         return NextResponse.json({ error: 'Failed to send email' }, { status: 500 });
       }

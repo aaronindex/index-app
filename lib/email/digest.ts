@@ -3,16 +3,7 @@
  * Email sending for weekly digests using Resend
  */
 
-import { Resend } from 'resend';
-
-// Lazy initialization - only create Resend instance when needed
-function getResend() {
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
-    throw new Error('RESEND_API_KEY is not configured');
-  }
-  return new Resend(apiKey);
-}
+import { sendEmail } from './resend';
 
 interface DigestEmailData {
   summary: string;
@@ -118,28 +109,13 @@ export async function sendDigestEmail(
   data: DigestEmailData
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
   try {
-    if (!process.env.RESEND_API_KEY) {
-      throw new Error('RESEND_API_KEY not configured');
-    }
-
-    const fromEmail = process.env.RESEND_FROM_EMAIL || 'INDEX <noreply@indexapp.co>';
-
-    const resend = getResend();
-    const result = await resend.emails.send({
-      from: fromEmail,
+    const result = await sendEmail({
       to,
       subject: `Your Weekly INDEX Digest: ${new Date(data.weekStart).toLocaleDateString()} - ${new Date(data.weekEnd).toLocaleDateString()}`,
       html: generateDigestEmailHTML(data),
     });
 
-    if (result.error) {
-      throw new Error(result.error.message || 'Failed to send email');
-    }
-
-    return {
-      success: true,
-      messageId: result.data?.id,
-    };
+    return result;
   } catch (error) {
     console.error('Send digest email error:', error);
     return {

@@ -2,16 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabaseServer';
 import { getCurrentUser } from '@/lib/getUser';
-import { Resend } from 'resend';
-
-// Lazy initialization - only create Resend instance when needed
-function getResend() {
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
-    throw new Error('RESEND_API_KEY is not configured');
-  }
-  return new Resend(apiKey);
-}
+import { sendEmail } from '@/lib/email/resend';
 
 export async function POST(request: NextRequest) {
   try {
@@ -40,7 +31,6 @@ export async function POST(request: NextRequest) {
     // For now, we'll just email it
 
     // Send feedback email
-    const fromEmail = process.env.RESEND_FROM_EMAIL || 'INDEX <noreply@indexapp.co>';
     const feedbackEmail = process.env.FEEDBACK_EMAIL || 'aaron@indexapp.co';
 
     const emailSubject = `[Alpha Feedback - ${type}] ${subject}`;
@@ -57,11 +47,9 @@ This feedback was submitted from INDEX alpha.
     `.trim();
 
     try {
-      const resend = getResend();
-      await resend.emails.send({
-        from: fromEmail,
+      await sendEmail({
         to: feedbackEmail,
-        replyTo: userEmail,
+        replyTo: userEmail, // Override default reply-to to use user's email
         subject: emailSubject,
         text: emailBody,
       });

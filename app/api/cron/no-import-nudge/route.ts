@@ -1,17 +1,8 @@
 // app/api/cron/no-import-nudge/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { Resend } from 'resend';
 import { renderNoImportNudgeEmail } from '@/emails/no-import-nudge';
-
-// Lazy initialization for Resend
-function getResend() {
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
-    throw new Error('RESEND_API_KEY is not configured');
-  }
-  return new Resend(apiKey);
-}
+import { sendEmail } from '@/lib/email/resend';
 
 // Get Supabase service role client (bypasses RLS)
 function getSupabaseServiceClient() {
@@ -108,8 +99,6 @@ export async function GET(request: NextRequest) {
     }
 
     // Send nudge emails
-    const resend = getResend();
-    const fromEmail = process.env.RESEND_FROM_EMAIL || 'INDEX <hello@indexapp.co>';
     const emailHtml = renderNoImportNudgeEmail(siteUrl);
 
     // Get user emails from auth.users via admin API
@@ -140,14 +129,13 @@ export async function GET(request: NextRequest) {
       }
 
       try {
-        const result = await resend.emails.send({
-          from: fromEmail,
+        const result = await sendEmail({
           to: userEmail,
           subject: 'One small way to try INDEX',
           html: emailHtml,
         });
 
-        if (result.error) {
+        if (!result.success) {
           console.error(`Failed to send nudge email to ${userEmail}:`, result.error);
           failed++;
           continue;

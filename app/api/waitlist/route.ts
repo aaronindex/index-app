@@ -1,17 +1,8 @@
 // app/api/waitlist/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { Resend } from 'resend';
 import { renderWaitlistConfirmationEmail } from '@/emails/waitlist-confirmation';
-
-// Lazy initialization for Resend
-function getResend() {
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
-    throw new Error('RESEND_API_KEY is not configured');
-  }
-  return new Resend(apiKey);
-}
+import { sendEmail } from '@/lib/email/resend';
 
 // Get Supabase service role client (bypasses RLS)
 function getSupabaseServiceClient() {
@@ -97,19 +88,15 @@ export async function POST(request: NextRequest) {
 
     // Attempt to send confirmation email
     try {
-      const resend = getResend();
-      const fromEmail = process.env.RESEND_FROM_EMAIL || 'INDEX <hello@indexapp.co>';
-      
       const emailHtml = renderWaitlistConfirmationEmail();
 
-      const result = await resend.emails.send({
-        from: fromEmail,
+      const result = await sendEmail({
         to: trimmedEmail,
         subject: "You're on the INDEX early list",
         html: emailHtml,
       });
 
-      if (result.error) {
+      if (!result.success) {
         console.error('Resend email error:', result.error);
         // Don't fail the request - user is still added to waitlist
         // Just don't update confirmed_at

@@ -6,8 +6,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { stripeConfig, requireStripeEnabled } from '@/lib/stripe/config';
 import { getStripeClient } from '@/lib/stripe/service';
 import Stripe from 'stripe';
-import { Resend } from 'resend';
 import { renderSubscriptionConfirmationEmail } from '@/emails/subscription-confirmation';
+import { sendEmail } from '@/lib/email/resend';
 
 // Force Node.js runtime for raw body access
 export const runtime = 'nodejs';
@@ -185,24 +185,18 @@ export async function POST(request: NextRequest) {
         const customerEmail = (customer as Stripe.Customer).email;
 
         if (customerEmail) {
-          const resend = new Resend(process.env.RESEND_API_KEY);
-          const fromEmail = process.env.RESEND_FROM_EMAIL || 'INDEX <hello@indexapp.co>';
-
           console.log(`[Webhook] Attempting to send email to ${customerEmail}`);
-          const result = await resend.emails.send({
-            from: fromEmail,
+          const result = await sendEmail({
             to: customerEmail,
-            replyTo: process.env.RESEND_REPLY_TO || 'support@indexapp.co',
-            subject: 'Welcome to INDEX Pro',
+            subject: 'Your INDEX Pro access is ready',
             html: renderSubscriptionConfirmationEmail(),
           });
 
-          if (result.error) {
+          if (!result.success) {
             console.error('[Webhook] Resend email error:', result.error);
-            console.error('[Webhook] Resend error details:', JSON.stringify(result.error));
             // Don't fail the webhook if email fails, but log it
           } else {
-            console.log(`[Webhook] Successfully sent subscription confirmation email to ${customerEmail}, email ID: ${result.data?.id}`);
+            console.log(`[Webhook] Successfully sent subscription confirmation email to ${customerEmail}, email ID: ${result.messageId}`);
           }
         } else {
           console.warn(`[Webhook] No email found for customer ${subscription.customer}`);
