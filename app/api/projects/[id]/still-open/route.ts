@@ -40,7 +40,7 @@ export async function GET(
     // Only active decisions
     let decisionsQuery = supabase
       .from('decisions')
-      .select('id, title, content, created_at, is_pinned, conversation_id')
+      .select('id, title, content, created_at, is_pinned, conversation_id, conversations(title)')
       .eq('user_id', user.id)
       .eq('is_inactive', false);
 
@@ -59,7 +59,7 @@ export async function GET(
     // Get tasks for this project (only active, not completed/cancelled)
     const { data: tasks } = await supabase
       .from('tasks')
-      .select('id, title, description, status, created_at, updated_at, is_pinned, conversation_id')
+      .select('id, title, description, status, created_at, updated_at, is_pinned, conversation_id, source_query, conversations(title)')
       .eq('project_id', id)
       .eq('user_id', user.id)
       .eq('is_inactive', false)
@@ -90,6 +90,8 @@ export async function GET(
           isBlocker: false,
           isOpenLoop: false,
           updatedAt: decision.created_at,
+          conversationId: decision.conversation_id,
+          conversationTitle: (decision.conversations as any)?.title || null,
           priority: decision.is_pinned ? 1 : 4, // Pinned = priority 1, else 4
         });
       });
@@ -100,6 +102,7 @@ export async function GET(
       tasks.forEach((task) => {
         const isBlocker = task.description?.includes('[Blocker]') || false;
         const isOpenLoop = task.description?.includes('[Open Loop]') || false;
+        const isAIGenerated = task.source_query === 'AI Insight Extraction';
         
         let priority = 4; // Default: recently updated
         if (task.is_pinned) {
@@ -117,7 +120,10 @@ export async function GET(
           isPinned: task.is_pinned || false,
           isBlocker,
           isOpenLoop,
+          isAIGenerated,
           updatedAt: task.updated_at || task.created_at,
+          conversationId: task.conversation_id,
+          conversationTitle: (task.conversations as any)?.title || null,
           priority,
         });
       });
@@ -138,6 +144,9 @@ export async function GET(
       title: item.title,
       isBlocker: item.isBlocker,
       isOpenLoop: item.isOpenLoop,
+      conversationId: item.conversationId || null,
+      conversationTitle: item.conversationTitle || null,
+      isAIGenerated: (item as any).isAIGenerated || false,
     }));
 
     return NextResponse.json({

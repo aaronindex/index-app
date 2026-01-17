@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     // Get all decisions (active, across all projects)
     const { data: decisions } = await supabase
       .from('decisions')
-      .select('id, title, created_at, is_pinned, project_id, projects(name)')
+      .select('id, title, created_at, is_pinned, project_id, conversation_id, projects(name), conversations(title)')
       .eq('user_id', user.id)
       .eq('is_inactive', false)
       .order('is_pinned', { ascending: false })
@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     // Get all tasks (active, not completed/cancelled, across all projects)
     const { data: tasks } = await supabase
       .from('tasks')
-      .select('id, title, description, status, created_at, updated_at, is_pinned, project_id, projects(name)')
+      .select('id, title, description, status, created_at, updated_at, is_pinned, project_id, conversation_id, source_query, projects(name), conversations(title)')
       .eq('user_id', user.id)
       .eq('is_inactive', false)
       .not('status', 'in', '(complete,cancelled)')
@@ -56,6 +56,8 @@ export async function GET(request: NextRequest) {
           updatedAt: decision.created_at,
           projectId: decision.project_id,
           projectName: (decision.projects as any)?.name || null,
+          conversationId: decision.conversation_id,
+          conversationTitle: (decision.conversations as any)?.title || null,
           priority: decision.is_pinned ? 1 : 2, // Pinned = 1, open = 2
         });
       });
@@ -65,6 +67,9 @@ export async function GET(request: NextRequest) {
     if (tasks) {
       tasks.forEach((task) => {
         const isOpen = task.status === 'open' || task.status === 'in_progress' || task.status === 'priority';
+        const isBlocker = task.description?.includes('[Blocker]') || false;
+        const isOpenLoop = task.description?.includes('[Open Loop]') || false;
+        const isAIGenerated = task.source_query === 'AI Insight Extraction';
         
         let priority = 3; // Default: recency fallback
         if (task.is_pinned) {
@@ -79,9 +84,14 @@ export async function GET(request: NextRequest) {
           title: task.title || 'Untitled Task',
           isPinned: task.is_pinned || false,
           isOpen,
+          isBlocker,
+          isOpenLoop,
+          isAIGenerated,
           updatedAt: task.updated_at || task.created_at,
           projectId: task.project_id,
           projectName: (task.projects as any)?.name || null,
+          conversationId: task.conversation_id,
+          conversationTitle: (task.conversations as any)?.title || null,
           priority,
         });
       });
@@ -102,6 +112,11 @@ export async function GET(request: NextRequest) {
       title: item.title,
       projectId: item.projectId,
       projectName: item.projectName,
+      conversationId: item.conversationId || null,
+      conversationTitle: item.conversationTitle || null,
+      isBlocker: (item as any).isBlocker || false,
+      isOpenLoop: (item as any).isOpenLoop || false,
+      isAIGenerated: (item as any).isAIGenerated || false,
     }));
 
     return NextResponse.json({
