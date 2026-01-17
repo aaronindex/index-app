@@ -85,7 +85,18 @@ export default function ChatsTab({ conversations, projectId }: ChatsTabProps) {
 
   return (
     <div className="space-y-6">
-      <SectionHeader>Chats</SectionHeader>
+      <SectionHeader
+        action={
+          <button
+            onClick={() => router.push(`/import?project=${projectId}`)}
+            className="px-4 py-2 bg-[rgb(var(--text))] text-[rgb(var(--bg))] rounded-lg hover:opacity-90 transition-opacity font-medium text-sm"
+          >
+            Import chats
+          </button>
+        }
+      >
+        Chats
+      </SectionHeader>
 
       {conversations.length > 0 && (
         <ActiveFilterPills
@@ -108,58 +119,48 @@ export default function ChatsTab({ conversations, projectId }: ChatsTabProps) {
           </button>
         </div>
       ) : (
-        <>
-          <div className="space-y-3">
-            {filteredConversations.map((conversation) => (
-              <div
-                key={conversation.id}
-                className={`rounded-xl bg-[rgb(var(--surface))] shadow-sm ring-1 ring-[rgb(var(--ring)/0.08)] p-4 transition-all ${
-                  conversation.is_inactive
-                    ? 'opacity-60'
-                    : 'hover:shadow-md hover:ring-[rgb(var(--ring)/0.12)]'
-                }`}
-              >
-                <div className="flex items-start justify-between">
-                  <Link
-                    href={`/conversations/${conversation.id}`}
-                    className="flex-1"
-                  >
-                    <div className="flex items-center gap-3 mb-2">
-                      <h3 className="font-medium text-[rgb(var(--text))]">
-                        {conversation.title || 'Untitled Chat'}
-                      </h3>
-                      <StatusPill status={conversation.status} />
-                      {conversation.is_inactive && (
-                        <span className="px-2 py-0.5 text-xs font-medium rounded-md bg-[rgb(var(--surface2))] text-[rgb(var(--muted))]">
-                          Inactive
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-4 text-sm text-[rgb(var(--muted))]">
-                      <span>Updated: {formatDate(conversation.updated_at)}</span>
-                      <span>Highlights: {conversation.highlights_count}</span>
-                    </div>
-                  </Link>
-                  <div className="ml-4" onClick={(e) => e.stopPropagation()}>
-                    <ToggleInactiveButton
-                      type="conversation"
-                      id={conversation.id}
-                      isInactive={conversation.is_inactive || false}
-                    />
+        <div className="space-y-3">
+          {filteredConversations.map((conversation) => (
+            <div
+              key={conversation.id}
+              className={`rounded-xl bg-[rgb(var(--surface))] shadow-sm ring-1 ring-[rgb(var(--ring)/0.08)] p-4 transition-all ${
+                conversation.is_inactive
+                  ? 'opacity-60'
+                  : 'hover:shadow-md hover:ring-[rgb(var(--ring)/0.12)]'
+              }`}
+            >
+              <div className="flex items-start justify-between">
+                <Link
+                  href={`/conversations/${conversation.id}`}
+                  className="flex-1"
+                >
+                  <div className="flex items-center gap-3 mb-2">
+                    <h3 className="font-medium text-[rgb(var(--text))]">
+                      {conversation.title || 'Untitled Chat'}
+                    </h3>
+                    <StatusPill status={conversation.status} />
+                    {conversation.is_inactive && (
+                      <span className="px-2 py-0.5 text-xs font-medium rounded-md bg-[rgb(var(--surface2))] text-[rgb(var(--muted))]">
+                        Inactive
+                      </span>
+                    )}
                   </div>
+                  <div className="flex items-center gap-4 text-sm text-[rgb(var(--muted))]">
+                    <span>Updated: {formatDate(conversation.updated_at)}</span>
+                    <span>Highlights: {conversation.highlights_count}</span>
+                  </div>
+                </Link>
+                <div className="ml-4" onClick={(e) => e.stopPropagation()}>
+                  <ToggleInactiveButton
+                    type="conversation"
+                    id={conversation.id}
+                    isInactive={conversation.is_inactive || false}
+                  />
                 </div>
               </div>
-            ))}
-          </div>
-          <div className="pt-4 border-t border-[rgb(var(--ring)/0.08)]">
-            <button 
-              onClick={() => router.push(`/import?project=${projectId}`)}
-              className="px-4 py-2 bg-[rgb(var(--text))] text-[rgb(var(--bg))] rounded-lg hover:opacity-90 transition-opacity font-medium text-sm"
-            >
-              Import Chats Into This Project
-            </button>
-          </div>
-        </>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );
