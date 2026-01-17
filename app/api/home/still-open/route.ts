@@ -41,6 +41,11 @@ export async function GET(request: NextRequest) {
       updatedAt: string;
       projectId: string | null;
       projectName: string | null;
+      conversationId?: string | null;
+      conversationTitle?: string | null;
+      isBlocker?: boolean;
+      isOpenLoop?: boolean;
+      isAIGenerated?: boolean;
       priority: number;
     }> = [];
 
