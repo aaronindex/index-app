@@ -4,6 +4,15 @@
 ALTER TABLE profiles
 ADD COLUMN IF NOT EXISTS has_created_project BOOLEAN DEFAULT FALSE;
 
+-- Backfill: Set has_created_project = true for existing users who already have projects
+UPDATE profiles
+SET has_created_project = TRUE
+WHERE id IN (
+  SELECT DISTINCT user_id 
+  FROM projects 
+  WHERE user_id IS NOT NULL
+);
+
 -- Index for efficient querying
 CREATE INDEX IF NOT EXISTS idx_profiles_has_created_project 
 ON profiles(has_created_project)
