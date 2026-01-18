@@ -164,19 +164,19 @@ export default function OverviewTab({ projectId, projectName, projectDescription
             onChange={(e) => setOrientation(e.target.value)}
             onBlur={handleOrientationBlur}
             onKeyDown={handleOrientationKeyDown}
-            className="w-full text-lg font-serif text-[rgb(var(--text))] bg-transparent border-none outline-none resize-none focus:ring-0 p-0"
+            className="w-full text-xl font-serif font-medium text-[rgb(var(--text))] bg-transparent border-none outline-none resize-none focus:ring-0 p-0"
             rows={1}
-            style={{ minHeight: '1.5rem' }}
+            style={{ minHeight: '1.75rem' }}
             placeholder="What is this project about right now?"
           />
         ) : (
           <div
             onClick={handleOrientationClick}
-            className="text-lg font-serif text-[rgb(var(--text))] cursor-text hover:opacity-70 transition-opacity min-h-[1.5rem]"
+            className="text-xl font-serif font-medium text-[rgb(var(--text))] cursor-text hover:opacity-70 transition-opacity min-h-[1.75rem]"
           >
             {orientation || (
-              <span className="text-[rgb(var(--muted))] italic">
-                What is this project about right now?
+              <span className="text-[rgb(var(--muted))] italic font-normal">
+                Click to add a project orientation
               </span>
             )}
           </div>
