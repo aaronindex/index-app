@@ -202,7 +202,7 @@ export default function OverviewTab({ projectId, projectName, projectDescription
                 <Card className="p-4 hover:shadow-md transition-shadow">
                   <div className="flex items-start gap-3">
                     <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
+                      <div className="flex items-center gap-2 mb-1.5">
                         <span className="text-xs font-medium text-[rgb(var(--muted))] uppercase tracking-wider">
                           {item.type === 'decision' ? 'Decision' : 'Task'}
                         </span>
@@ -217,7 +217,7 @@ export default function OverviewTab({ projectId, projectName, projectDescription
                           </span>
                         )}
                       </div>
-                      <h3 className="font-medium text-[rgb(var(--text))] mb-1">
+                      <h3 className="font-medium text-[rgb(var(--text))] mb-1.5">
                         {item.title}
                       </h3>
                       <div className="flex items-center gap-2 text-xs text-[rgb(var(--muted))]">
