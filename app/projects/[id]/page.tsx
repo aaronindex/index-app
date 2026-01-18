@@ -11,9 +11,9 @@ import HighlightsTab from './components/HighlightsTab';
 import DecisionsTab from './components/DecisionsTab';
 import TasksTab from './components/TasksTab';
 import LibraryTab from './components/LibraryTab';
-import DeleteProjectButton from './components/DeleteProjectButton';
 import ProjectStartChatButton from './components/ProjectStartChatButton';
 import ExportChecklistButton from './components/ExportChecklistButton';
+import ProjectOverflowMenu from './components/ProjectOverflowMenu';
 
 type Status = 'priority' | 'open' | 'complete' | 'dormant';
 
@@ -280,34 +280,49 @@ export default async function ProjectDetailPage({
           >
             ← Back to Projects
           </Link>
-          {/* Mobile: Stack buttons, name, description on separate rows */}
-          {/* Desktop: Keep horizontal layout */}
-          <div className="mt-4">
-            {/* Mobile: Stack layout */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              {/* Buttons row - full width on mobile, right side on desktop */}
-              <div className="flex items-center gap-3 w-full sm:w-auto sm:order-2">
-                <StatusPill status={project.status} />
-                <ExportChecklistButton projectId={id} />
-                <ProjectStartChatButton projectId={id} projectName={project.name} />
-                <DeleteProjectButton projectId={id} projectName={project.name} />
-              </div>
-              
-              {/* Project name row - full width on mobile, left side on desktop */}
-              <div className="w-full sm:w-auto sm:order-1">
-                <h1 className="font-serif text-3xl font-semibold text-[rgb(var(--text))]">
-                  {project.name}
-                </h1>
-              </div>
+          
+          {/* Status + Actions Row */}
+          <div className="mt-4 flex items-center justify-between gap-4">
+            {/* Status pill on left */}
+            <div className="flex-shrink-0">
+              <StatusPill status={project.status} />
             </div>
             
-            {/* Description row - full width on mobile, below on desktop */}
-            {project.description && (
-              <p className="mt-4 text-[rgb(var(--muted))]">
-                {project.description}
-              </p>
-            )}
+            {/* Actions on right - desktop: inline, mobile: overflow menu only */}
+            <div className="flex items-center gap-2 sm:gap-3">
+              {/* Desktop: Show all actions inline */}
+              <div className="hidden sm:flex items-center gap-3">
+                <ProjectStartChatButton projectId={id} projectName={project.name} />
+                <ExportChecklistButton projectId={id} />
+                <ProjectOverflowMenu projectId={id} projectName={project.name} />
+              </div>
+              
+              {/* Mobile: Show overflow menu only */}
+              <div className="sm:hidden">
+                <ProjectOverflowMenu projectId={id} projectName={project.name} />
+              </div>
+            </div>
           </div>
+          
+          {/* Mobile: Action buttons stack below as full-width */}
+          <div className="mt-4 sm:hidden flex flex-col gap-2">
+            <ProjectStartChatButton projectId={id} projectName={project.name} />
+            <ExportChecklistButton projectId={id} />
+          </div>
+          
+          {/* Project Title */}
+          <div className="mt-4">
+            <h1 className="font-serif text-3xl font-semibold text-[rgb(var(--text))]">
+              {project.name}
+            </h1>
+          </div>
+          
+          {/* Project Orientation / Description */}
+          {project.description && (
+            <p className="mt-4 text-[rgb(var(--muted))]">
+              {project.description}
+            </p>
+          )}
         </div>
 
         <div className="mt-8">

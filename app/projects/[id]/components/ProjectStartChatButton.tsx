@@ -34,7 +34,7 @@ export default function ProjectStartChatButton({ projectId, projectName }: Proje
     <>
       <button
         onClick={() => setIsModalOpen(true)}
-        className="px-3 py-1.5 text-sm border border-[rgb(var(--ring)/0.12)] rounded-lg hover:bg-[rgb(var(--surface2))] transition-colors text-[rgb(var(--text))]"
+        className="w-full sm:w-auto px-4 py-2 text-sm font-medium bg-[rgb(var(--text))] text-[rgb(var(--bg))] rounded-lg hover:opacity-90 transition-opacity"
       >
         Resume
       </button>
