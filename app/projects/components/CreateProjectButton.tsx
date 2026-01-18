@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { getSupabaseBrowserClient } from '@/lib/supabaseClient';
 import { showError, showSuccess } from '@/app/components/ErrorNotification';
 import UpgradeModal from '@/app/components/billing/UpgradeModal';
+import { track } from '@/lib/analytics/track';
 
 export default function CreateProjectButton() {
   const router = useRouter();
@@ -45,6 +46,15 @@ export default function CreateProjectButton() {
       return;
     }
 
+    // Check if this is the user's first project (before creating)
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('has_created_project')
+      .eq('id', user.id)
+      .single();
+
+    const isFirstProject = !profile?.has_created_project;
+
     const { data, error: insertError } = await supabase
       .from('projects')
       .insert({
@@ -61,6 +71,21 @@ export default function CreateProjectButton() {
       showError(errorMessage);
       setLoading(false);
       return;
+    }
+
+    // Track first project created event (only once per user)
+    if (isFirstProject && data) {
+      // Fire analytics event
+      track('first_project_created', {
+        project_id_present: true,
+        source: 'create_project',
+      });
+
+      // Update profile to mark that user has created a project
+      await supabase
+        .from('profiles')
+        .update({ has_created_project: true })
+        .eq('id', user.id);
     }
 
     // Reset form and close modal
