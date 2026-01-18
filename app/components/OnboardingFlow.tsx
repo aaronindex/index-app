@@ -79,7 +79,16 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   const currentStepData = steps[currentStep];
 
   const markCompleted = () => {
-    localStorage.setItem(ONBOARDING_COMPLETED_KEY, 'true');
+    try {
+      localStorage.setItem(ONBOARDING_COMPLETED_KEY, 'true');
+      // Force a synchronous write on mobile Safari
+      if (typeof Storage !== 'undefined' && localStorage.setItem) {
+        // Trigger a dummy read to ensure write is persisted
+        localStorage.getItem(ONBOARDING_COMPLETED_KEY);
+      }
+    } catch (error) {
+      console.error('Error saving onboarding completion:', error);
+    }
     setIsVisible(false);
     if (onComplete) {
       onComplete();
@@ -168,33 +177,40 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
           </div>
 
           {/* Navigation */}
-          <div className="relative flex items-center justify-center">
-            {/* Previous Button - Bottom Left */}
-            {currentStep > 0 && (
-              <button
-                onClick={handlePrevious}
-                className="absolute left-0 px-5 py-2.5 text-sm font-medium text-[rgb(var(--text))] hover:bg-[rgb(var(--surface2))] rounded-lg transition-colors border border-[rgb(var(--ring)/0.12)]"
-              >
-                ← Previous
-              </button>
-            )}
+          <div className="flex items-center justify-between gap-4">
+            {/* Previous Button - Left */}
+            <div className="flex-1">
+              {currentStep > 0 ? (
+                <button
+                  onClick={handlePrevious}
+                  className="w-full sm:w-auto px-5 py-2.5 text-sm font-medium text-[rgb(var(--text))] hover:bg-[rgb(var(--surface2))] rounded-lg transition-colors border border-[rgb(var(--ring)/0.12)]"
+                >
+                  ← Previous
+                </button>
+              ) : (
+                <div></div>
+              )}
+            </div>
             
-            {/* Next/Continue Button - Centered */}
-            {currentStep < steps.length - 1 ? (
-              <button
-                onClick={handleNext}
-                className="px-5 py-2.5 text-sm font-medium text-[rgb(var(--text))] hover:bg-[rgb(var(--surface2))] rounded-lg transition-colors border border-[rgb(var(--ring)/0.12)]"
-              >
-                Next →
-              </button>
-            ) : (
-              <Button
-                variant="primary"
-                onClick={handleAction}
-              >
-                Continue
-              </Button>
-            )}
+            {/* Next/Continue Button - Right */}
+            <div className="flex-1 flex justify-end">
+              {currentStep < steps.length - 1 ? (
+                <button
+                  onClick={handleNext}
+                  className="w-full sm:w-auto px-5 py-2.5 text-sm font-medium text-[rgb(var(--text))] hover:bg-[rgb(var(--surface2))] rounded-lg transition-colors border border-[rgb(var(--ring)/0.12)]"
+                >
+                  Next →
+                </button>
+              ) : (
+                <Button
+                  variant="primary"
+                  onClick={handleAction}
+                  className="w-full sm:w-auto"
+                >
+                  Continue
+                </Button>
+              )}
+            </div>
           </div>
         </Card>
       </div>

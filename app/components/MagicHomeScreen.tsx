@@ -118,8 +118,27 @@ export default function MagicHomeScreen() {
 
   // Check onboarding completion status
   useEffect(() => {
-    const completed = localStorage.getItem('index_onboarding_completed');
-    setOnboardingCompleted(completed === 'true');
+    // Use a more robust check that handles mobile Safari localStorage quirks
+    const checkOnboarding = () => {
+      try {
+        const completed = localStorage.getItem('index_onboarding_completed');
+        const isCompleted = completed === 'true';
+        setOnboardingCompleted(isCompleted);
+        // If completed, ensure it stays completed (defensive check)
+        if (isCompleted && !completed) {
+          localStorage.setItem('index_onboarding_completed', 'true');
+        }
+      } catch (error) {
+        // If localStorage fails, assume not completed (safer default)
+        console.error('Error checking onboarding status:', error);
+        setOnboardingCompleted(false);
+      }
+    };
+    
+    checkOnboarding();
+    // Re-check after a short delay to handle mobile Safari timing issues
+    const timeout = setTimeout(checkOnboarding, 100);
+    return () => clearTimeout(timeout);
   }, []);
 
   // Early returns after all hooks
