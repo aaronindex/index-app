@@ -81,9 +81,8 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   const markCompleted = () => {
     try {
       localStorage.setItem(ONBOARDING_COMPLETED_KEY, 'true');
-      // Force a synchronous write on mobile Safari
-      if (typeof Storage !== 'undefined' && localStorage.setItem) {
-        // Trigger a dummy read to ensure write is persisted
+      // Force a synchronous write on mobile Safari by triggering a dummy read
+      if (typeof Storage !== 'undefined') {
         localStorage.getItem(ONBOARDING_COMPLETED_KEY);
       }
     } catch (error) {
