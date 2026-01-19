@@ -10,6 +10,7 @@ import ExtractInsightsButton from './components/ExtractInsightsButton';
 import CreateTaskFromHighlightButton from './components/CreateTaskFromHighlightButton';
 import DeleteHighlightButton from '@/app/projects/[id]/components/DeleteHighlightButton';
 import MobileHighlightsPanel from './components/MobileHighlightsPanel';
+import ReduceOnboardingModal from './components/ReduceOnboardingModal';
 
 type Status = 'priority' | 'open' | 'complete' | 'dormant';
 
@@ -206,6 +207,9 @@ export default async function ConversationPage({
           </div>
         </div>
       </div>
+      
+      {/* One-time Reduce onboarding modal */}
+      <ReduceOnboardingModal />
     </main>
   );
 }

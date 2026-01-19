@@ -144,44 +144,49 @@ export default function ExtractInsightsButton({ conversationId, projectId }: Ext
             <div className="text-center mb-6">
               <div className="text-4xl mb-4">✨</div>
               <h2 className="font-serif text-2xl font-semibold text-[rgb(var(--text))] mb-2">
-                Insights Extracted!
+                Reduced
               </h2>
               <p className="text-sm text-[rgb(var(--muted))]">
-                INDEX found {result.created} insight{result.created !== 1 ? 's' : ''} in this conversation
+                {result.created} item{result.created !== 1 ? 's' : ''} carried forward
               </p>
             </div>
 
-            <div className="space-y-3 mb-6">
-              {result.insights.decisions > 0 && (
-                <div className="flex items-center justify-between p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-                  <span className="text-sm font-medium text-[rgb(var(--text))]">Decisions</span>
-                  <span className="text-sm text-[rgb(var(--muted))]">{result.insights.decisions}</span>
-                </div>
-              )}
-              {result.insights.commitments > 0 && (
-                <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                  <span className="text-sm font-medium text-[rgb(var(--text))]">Commitments</span>
-                  <span className="text-sm text-[rgb(var(--muted))]">{result.insights.commitments}</span>
-                </div>
-              )}
-              {result.insights.blockers > 0 && (
-                <div className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
-                  <span className="text-sm font-medium text-[rgb(var(--text))]">Blockers</span>
-                  <span className="text-sm text-[rgb(var(--muted))]">{result.insights.blockers}</span>
-                </div>
-              )}
-              {result.insights.openLoops > 0 && (
-                <div className="flex items-center justify-between p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
-                  <span className="text-sm font-medium text-[rgb(var(--text))]">Open Loops</span>
-                  <span className="text-sm text-[rgb(var(--muted))]">{result.insights.openLoops}</span>
-                </div>
-              )}
-              {result.insights.suggestedHighlights > 0 && (
-                <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                  <span className="text-sm font-medium text-[rgb(var(--text))]">Highlights</span>
-                  <span className="text-sm text-[rgb(var(--muted))]">{result.insights.suggestedHighlights}</span>
-                </div>
-              )}
+            <div className="mb-6">
+              <h3 className="text-sm font-medium text-[rgb(var(--text))] mb-3">
+                What remains
+              </h3>
+              <div className="space-y-2">
+                {result.insights.decisions > 0 && (
+                  <div className="flex items-center justify-between p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                    <span className="text-sm font-medium text-[rgb(var(--text))]">Decisions</span>
+                    <span className="text-sm text-[rgb(var(--muted))]">{result.insights.decisions}</span>
+                  </div>
+                )}
+                {result.insights.commitments > 0 && (
+                  <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                    <span className="text-sm font-medium text-[rgb(var(--text))]">Commitments</span>
+                    <span className="text-sm text-[rgb(var(--muted))]">{result.insights.commitments}</span>
+                  </div>
+                )}
+                {result.insights.blockers > 0 && (
+                  <div className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                    <span className="text-sm font-medium text-[rgb(var(--text))]">Blockers</span>
+                    <span className="text-sm text-[rgb(var(--muted))]">{result.insights.blockers}</span>
+                  </div>
+                )}
+                {result.insights.openLoops > 0 && (
+                  <div className="flex items-center justify-between p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+                    <span className="text-sm font-medium text-[rgb(var(--text))]">Open Loops</span>
+                    <span className="text-sm text-[rgb(var(--muted))]">{result.insights.openLoops}</span>
+                  </div>
+                )}
+                {result.insights.suggestedHighlights > 0 && (
+                  <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                    <span className="text-sm font-medium text-[rgb(var(--text))]">Highlights</span>
+                    <span className="text-sm text-[rgb(var(--muted))]">{result.insights.suggestedHighlights}</span>
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="flex justify-center">
