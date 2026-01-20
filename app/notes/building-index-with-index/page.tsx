@@ -17,6 +17,27 @@ export default function BuildingIndexWithIndex() {
         <div className="prose prose-lg max-w-none">
           <section className="mb-12">
             <h2 className="font-serif text-2xl font-semibold text-[rgb(var(--text))] mb-4">
+              If you use AI to think through work, decisions, or complex problems, you may have noticed something strange.
+            </h2>
+            <p className="text-[rgb(var(--text))] leading-relaxed mb-4">
+              The conversations pile up. They feel useful in the moment — sometimes even clarifying — but weeks later, very little seems to carry forward. Decisions were made somewhere inside long threads. Tasks appeared mid-paragraph and dissolved again. When you return to a topic, you often find yourself starting over — not because you didn't think about it, but because there was no clean way to finish the thinking.
+            </p>
+            <p className="text-[rgb(var(--text))] leading-relaxed mb-4">
+              INDEX exists to solve that problem — not by saving more, but by helping you know what to keep and what to let go.
+            </p>
+            <p className="text-[rgb(var(--text))] leading-relaxed mb-4">
+              If that sounds familiar, you can request alpha access here:{' '}
+              <a
+                href="https://indexapp.co"
+                className="text-[rgb(var(--text))] underline hover:opacity-70 transition-opacity"
+              >
+                👉 https://indexapp.co
+              </a>
+            </p>
+          </section>
+
+          <section className="mb-12">
+            <h2 className="font-serif text-2xl font-semibold text-[rgb(var(--text))] mb-4">
               1. The problem I actually had
             </h2>
             <p className="text-[rgb(var(--text))] leading-relaxed mb-4">
