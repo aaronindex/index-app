@@ -26,7 +26,7 @@ const darkText = '#121211'; // warm ink
 async function generatePNGIcon(size, filename, isMaskable = false) {
   const safeZone = isMaskable ? size * 0.1 : 0;
   const contentSize = size - safeZone * 2;
-  const fontSize = size * 0.5;
+  const fontSize = size * 0.625; // Larger "I" (62.5% of size, was 50%)
   const x = size / 2;
   const y = size / 2; // Properly centered vertically
 
@@ -36,7 +36,7 @@ async function generatePNGIcon(size, filename, isMaskable = false) {
   <text 
     x="${x}" 
     y="${y}" 
-    font-family="system-ui, -apple-system, sans-serif" 
+    font-family="'Playfair Display', Georgia, serif" 
     font-size="${fontSize}" 
     font-weight="600" 
     fill="${darkText}" 
@@ -58,7 +58,7 @@ async function generatePNGIcon(size, filename, isMaskable = false) {
 
 async function generateAppleTouchIcon() {
   const size = 180;
-  const fontSize = size * 0.5;
+  const fontSize = size * 0.625; // Larger "I" (62.5% of size, was 50%)
   const x = size / 2;
   const y = size / 2; // Properly centered vertically
 
@@ -68,7 +68,7 @@ async function generateAppleTouchIcon() {
   <text 
     x="${x}" 
     y="${y}" 
-    font-family="system-ui, -apple-system, sans-serif" 
+    font-family="'Playfair Display', Georgia, serif" 
     font-size="${fontSize}" 
     font-weight="600" 
     fill="${darkText}" 

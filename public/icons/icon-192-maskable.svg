@@ -4,8 +4,8 @@
   <text 
     x="96" 
     y="96" 
-    font-family="system-ui, -apple-system, sans-serif" 
-    font-size="96" 
+    font-family="'Playfair Display', Georgia, serif" 
+    font-size="120" 
     font-weight="600" 
     fill="#121211" 
     text-anchor="middle" 
