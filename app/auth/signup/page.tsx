@@ -8,7 +8,6 @@ import Link from 'next/link';
 import { showError } from '@/lib/error-handling';
 import { trackEvent } from '@/lib/analytics';
 import { getStoredUTMParams, clearUTMParams } from '@/lib/utm';
-import { ALPHA_MODE } from '@/lib/config/flags';
 
 function SignUpForm() {
   const router = useRouter();
@@ -39,34 +38,32 @@ function SignUpForm() {
     setError(null);
     setEmailSent(false);
 
-    // Verify invite code first (only if ALPHA_MODE is enabled)
-    if (ALPHA_MODE) {
-      if (!inviteCode.trim()) {
-        setError('Invite code is required');
+    // Always verify invite code (server-side will check ALPHA_MODE)
+    if (!inviteCode.trim()) {
+      setError('Invite code is required');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      // Verify invite code (server handles ALPHA_MODE check)
+      const verifyResponse = await fetch('/api/invite-codes/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: inviteCode }),
+      });
+
+      const verifyData = await verifyResponse.json();
+
+      if (!verifyData.valid) {
+        setError(verifyData.error || 'Invalid invite code');
         setLoading(false);
         return;
       }
-
-      try {
-        // Verify invite code
-        const verifyResponse = await fetch('/api/invite-codes/verify', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ code: inviteCode }),
-        });
-
-        const verifyData = await verifyResponse.json();
-
-        if (!verifyData.valid) {
-          setError(verifyData.error || 'Invalid invite code');
-          setLoading(false);
-          return;
-        }
-      } catch (err) {
-        setError('Failed to verify invite code. Please try again.');
-        setLoading(false);
-        return;
-      }
+    } catch (err) {
+      setError('Failed to verify invite code. Please try again.');
+      setLoading(false);
+      return;
     }
 
     try {
@@ -107,6 +104,21 @@ function SignUpForm() {
         return;
       }
 
+      // Use invite code (increment uses) - do this before email confirmation check
+      // so it increments even if email confirmation is required
+      if (inviteCode.trim()) {
+        try {
+          await fetch('/api/invite-codes/use', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code: inviteCode }),
+          });
+        } catch (err) {
+          // Log but don't block signup if usage tracking fails
+          console.error('Failed to increment invite code usage:', err);
+        }
+      }
+
       // Check if email confirmation is required
       // Supabase returns a user object even when email confirmation is required
       // Check if user exists and if email is confirmed
@@ -122,15 +134,6 @@ function SignUpForm() {
         setLoading(false);
         setEmailSent(true);
         return;
-      }
-
-      // Use invite code (increment uses) - only if ALPHA_MODE is enabled
-      if (ALPHA_MODE && inviteCode.trim()) {
-        await fetch('/api/invite-codes/use', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ code: inviteCode }),
-        });
       }
 
       // Track successful signup (privacy-safe: no code string)

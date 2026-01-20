@@ -28,7 +28,7 @@ async function generatePNGIcon(size, filename, isMaskable = false) {
   const contentSize = size - safeZone * 2;
   const fontSize = size * 0.5;
   const x = size / 2;
-  const y = size / 2 + fontSize * 0.35;
+  const y = size / 2; // Properly centered vertically
 
   const svg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
@@ -60,7 +60,7 @@ async function generateAppleTouchIcon() {
   const size = 180;
   const fontSize = size * 0.5;
   const x = size / 2;
-  const y = size / 2 + fontSize * 0.35;
+  const y = size / 2; // Properly centered vertically
 
   const svg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
