@@ -1,7 +1,7 @@
 // app/import/page.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSupabaseBrowserClient } from '@/lib/supabaseClient';
 import { parseChatGPTExport } from '@/lib/parsers/chatgpt';
@@ -52,6 +52,7 @@ export default function ImportPage() {
   const [quickLoading, setQuickLoading] = useState(false);
   const [quickError, setQuickError] = useState<string | null>(null);
   const [quickSuccess, setQuickSuccess] = useState<{ conversationId: string; title: string; messageCount: number } | null>(null);
+  const lastTranscriptLengthRef = useRef<number>(0);
 
   // Fetch projects on mount
   useEffect(() => {
@@ -88,6 +89,45 @@ export default function ImportPage() {
     }
   }, [projects]);
 
+  // Helper function to detect if content has recognizable role markers
+  const hasRoleMarkers = (text: string): boolean => {
+    if (!text.trim()) return false;
+    const lines = text.split(/\r?\n/);
+    const USER_MARKERS = [
+      /^\s*\*\*User:\*\*\s*/i,
+      /^\s*\*\*Me:\*\*\s*/i,
+      /^\s*\*\*Human:\*\*\s*/i,
+      /^\s*User:\s*/i,
+      /^\s*Me:\s*/i,
+      /^\s*Human:\s*/i,
+      /^\s*USER:\s*/,
+      /^\s*ME:\s*/,
+      /^\s*HUMAN:\s*/,
+    ];
+    const ASSISTANT_MARKERS = [
+      /^\s*\*\*Assistant:\*\*\s*/i,
+      /^\s*\*\*AI:\*\*\s*/i,
+      /^\s*\*\*ChatGPT:\*\*\s*/i,
+      /^\s*\*\*Claude:\*\*\s*/i,
+      /^\s*Assistant:\s*/i,
+      /^\s*AI:\s*/i,
+      /^\s*ChatGPT:\s*/i,
+      /^\s*Claude:\s*/i,
+      /^\s*ASSISTANT:\s*/,
+      /^\s*AI:\s*/,
+      /^\s*CHATGPT:\s*/,
+      /^\s*CLAUDE:\s*/,
+    ];
+    for (const line of lines) {
+      for (const marker of [...USER_MARKERS, ...ASSISTANT_MARKERS]) {
+        if (marker.test(line)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  };
+
   // Parse quick import transcript on change
   useEffect(() => {
     if (quickTranscript.trim()) {
@@ -100,6 +140,23 @@ export default function ImportPage() {
       setQuickParsedInfo(null);
     }
   }, [quickTranscript, quickSwapRoles, quickTreatAsSingleBlock]);
+
+  // Guardrail: Auto-enable single block mode if no role markers detected
+  // Only auto-enables when new content is pasted (transcript length increases), not on manual checkbox toggles
+  useEffect(() => {
+    const currentLength = quickTranscript.trim().length;
+    const isNewContent = currentLength > lastTranscriptLengthRef.current && currentLength > 50;
+    
+    if (isNewContent) {
+      const hasMarkers = hasRoleMarkers(quickTranscript);
+      if (!hasMarkers) {
+        // Non-blocking: default to single block for content without recognizable role markers
+        setQuickTreatAsSingleBlock(true);
+      }
+    }
+    
+    lastTranscriptLengthRef.current = currentLength;
+  }, [quickTranscript]);
 
   // Quick imports are now always processed synchronously (no polling needed)
 
@@ -529,7 +586,7 @@ export default function ImportPage() {
   return (
     <main className="min-h-screen bg-[rgb(var(--bg))]">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <h1 className="font-serif text-3xl font-semibold text-[rgb(var(--text))] mb-8">Import Conversations</h1>
+        <h1 className="font-serif text-3xl font-semibold text-[rgb(var(--text))] mb-8">Import Content</h1>
 
         {(error || quickError) && (
           <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
@@ -544,8 +601,7 @@ export default function ImportPage() {
               <div className="mb-4">
                 <h2 className="text-2xl font-semibold text-[rgb(var(--text))] mb-2">Quick Import (Recommended)</h2>
                 <p className="text-[rgb(var(--muted))]">
-                  Paste one conversation transcript from ChatGPT, Claude, Cursor, or any other AI chat tool. 
-                  Indexes immediately — perfect for first run, testing, or importing a single project thread.
+                  Paste text from an AI chat, meeting notes, emails, or any working document. INDEX reduces it immediately — ideal for a first run or importing a single thread of work.
                 </p>
               </div>
 
@@ -589,12 +645,15 @@ export default function ImportPage() {
 
                     <div>
                       <label className="block text-sm font-medium text-[rgb(var(--text))] mb-2">
-                        Paste Chat Transcript
+                        Paste Content
                       </label>
+                      <p className="text-xs text-[rgb(var(--muted))] mb-2">
+                        AI chats, notes, emails, or drafts
+                      </p>
                       <textarea
                         value={quickTranscript}
                         onChange={(e) => setQuickTranscript(e.target.value)}
-                        placeholder="User: Hello&#10;Assistant: Hi there&#10;User: How are you?"
+                        placeholder="Paste text here…&#10;&#10;This can be an AI conversation, notes, an email thread, or any material you want to reduce."
                         className="w-full h-48 p-3 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-[rgb(var(--surface))] text-[rgb(var(--text))] font-mono text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[rgb(var(--ring)/0.2)]"
                         disabled={quickLoading}
                       />
@@ -612,7 +671,10 @@ export default function ImportPage() {
                             className="w-3 h-3"
                             disabled={quickLoading}
                           />
-                          Swap roles
+                          <span>
+                            Swap roles
+                            <span className="block text-[10px] text-[rgb(var(--muted))] mt-0.5">Flip speaker roles if the transcript is reversed</span>
+                          </span>
                         </label>
                         <label className="flex items-center gap-2 text-xs text-[rgb(var(--muted))] cursor-pointer">
                           <input
@@ -622,9 +684,15 @@ export default function ImportPage() {
                             className="w-3 h-3"
                             disabled={quickLoading}
                           />
-                          Treat as single block
+                          <span>
+                            Treat as single block
+                            <span className="block text-[10px] text-[rgb(var(--muted))] mt-0.5">Process the content as plain text (no speaker parsing)</span>
+                          </span>
                         </label>
                       </div>
+                      <p className="mt-2 text-xs text-[rgb(var(--muted))] italic">
+                        Tip: If your text doesn't include clear speaker labels, treating it as a single block often works best.
+                      </p>
                     </div>
 
                     <div>

@@ -17,10 +17,13 @@ export default function BuildingIndexWithIndex() {
         <div className="prose prose-lg max-w-none">
           <section className="mb-12">
             <h2 className="font-serif text-2xl font-semibold text-[rgb(var(--text))] mb-4">
-              If you use AI to think through work, decisions, or complex problems, you may have noticed something strange.
+              If you use AI — or any text-based thinking — to work through decisions or complex problems, you may have noticed something strange.
             </h2>
             <p className="text-[rgb(var(--text))] leading-relaxed mb-4">
               The conversations pile up. They feel useful in the moment — sometimes even clarifying — but weeks later, very little seems to carry forward. Decisions were made somewhere inside long threads. Tasks appeared mid-paragraph and dissolved again. When you return to a topic, you often find yourself starting over — not because you didn't think about it, but because there was no clean way to finish the thinking.
+            </p>
+            <p className="text-[rgb(var(--text))] leading-relaxed mb-4">
+              The same thing happens with notes, drafts, and meeting write-ups — anywhere thinking is captured but never resolved.
             </p>
             <p className="text-[rgb(var(--text))] leading-relaxed mb-4">
               INDEX exists to solve that problem — not by saving more, but by helping you know what to keep and what to let go.
@@ -54,6 +57,9 @@ export default function BuildingIndexWithIndex() {
             </p>
             <p className="text-[rgb(var(--text))] leading-relaxed">
               AI helped me think. It didn't help me finish.
+            </p>
+            <p className="text-[rgb(var(--text))] leading-relaxed">
+              Later, I realized this wasn't unique to AI — it was just where the problem showed up first.
             </p>
           </section>
 
@@ -107,7 +113,7 @@ export default function BuildingIndexWithIndex() {
               4. Building INDEX inside INDEX
             </h2>
             <p className="text-[rgb(var(--text))] leading-relaxed mb-4">
-              The first real test was obvious: I built INDEX by using it on itself. I imported my own AI conversations — the messy ones, the loops, the half-formed thoughts — into a project called "INDEX." I didn't organize them up front or try to clean anything up. I let them land as they were. Patterns showed up quickly. Questions I thought were still open had already been answered, just not acknowledged. Decisions I assumed were pending had been made weeks earlier and forgotten. Tasks I believed were underway had never been named clearly enough to become real.
+              The first real test was obvious: I built INDEX by using it on itself. I imported my own AI conversations — the messy ones, the loops, the half-formed thoughts — and later, other working notes and drafts built the same way, into a project called "INDEX." I didn't organize them up front or try to clean anything up. I let them land as they were. Patterns showed up quickly. Questions I thought were still open had already been answered, just not acknowledged. Decisions I assumed were pending had been made weeks earlier and forgotten. Tasks I believed were underway had never been named clearly enough to become real.
             </p>
             <p className="text-[rgb(var(--text))] leading-relaxed mb-4">
               What surprised me wasn't what surfaced.
@@ -182,7 +188,7 @@ export default function BuildingIndexWithIndex() {
               But it will help you see what you've already decided — and what's still open — without asking you to relive the thinking that got you there.
             </p>
             <p className="text-[rgb(var(--text))] leading-relaxed mb-4">
-              If this way of working resonates, you can{' '}
+              If this way of working resonates — whether your thinking starts in AI or elsewhere — you can{' '}
               <a
                 href="mailto:hello@indexapp.co"
                 className="text-[rgb(var(--text))] underline hover:opacity-70 transition-opacity"

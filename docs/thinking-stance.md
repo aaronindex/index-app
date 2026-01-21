@@ -20,6 +20,9 @@ INDEX exists to help people **think cleaner, not more**.
 INDEX is not where thinking happens —
 it’s where thinking is made usable.
 
+Thinking may originate anywhere — AI conversations, documents, notes, meetings, drafts, or lived experience.
+INDEX is agnostic to source and opinionated about outcome.
+
 We favor:
 - clarity over cleverness  
 - containment over expansion  
@@ -48,9 +51,9 @@ it is suspect by default.
 
 ## Conversations vs Thought Objects
 
-INDEX distinguishes sharply between **input** and **meaning**.
+INDEX distinguishes sharply between **input material** and **meaning**.
 
-- Conversations are raw input.
+- Conversations, notes, drafts, and documents are raw input.
 - Thought Objects are distilled meaning.
 
 The only atomic units of meaning in INDEX are:
@@ -119,6 +122,7 @@ If Start Chat increases chaos, it is misused.
 
 AI in INDEX is a **supporting intelligence**, not the protagonist.
 
+- AI is one source of input — not a privileged one.
 - AI may suggest; the user decides.
 - AI must reduce, not expand.
 - AI should surface uncertainty explicitly, not resolve it by ideation.
