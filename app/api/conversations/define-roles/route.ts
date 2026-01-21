@@ -1,5 +1,5 @@
 // app/api/conversations/define-roles/route.ts
-// API endpoint to update message roles in a conversation
+// API endpoint to update message roles and handle splits in a conversation
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabaseServer';
@@ -13,9 +13,9 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { conversationId, roleUpdates } = body;
+    const { conversationId, messages, originalMessageIds } = body;
 
-    if (!conversationId || !Array.isArray(roleUpdates)) {
+    if (!conversationId || !Array.isArray(messages)) {
       return NextResponse.json(
         { error: 'Invalid request body' },
         { status: 400 }
@@ -39,11 +39,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify all message IDs belong to this conversation
+    // Get existing messages
     const { data: existingMessages, error: messagesError } = await supabase
       .from('messages')
-      .select('id')
-      .eq('conversation_id', conversationId);
+      .select('id, index_in_conversation')
+      .eq('conversation_id', conversationId)
+      .order('index_in_conversation', { ascending: true });
 
     if (messagesError) {
       return NextResponse.json(
@@ -53,53 +54,115 @@ export async function POST(request: NextRequest) {
     }
 
     const existingMessageIds = new Set(existingMessages?.map((m) => m.id) || []);
-    const updateMessageIds = new Set(roleUpdates.map((u: any) => u.messageId));
-
-    // Check all message IDs are valid
-    for (const messageId of updateMessageIds) {
-      if (!existingMessageIds.has(messageId)) {
-        return NextResponse.json(
-          { error: `Message ${messageId} not found in conversation` },
-          { status: 400 }
-        );
-      }
-    }
+    const newMessageIds = new Set(messages.map((m: any) => m.id).filter((id: string) => !id.startsWith('temp-')));
+    const originalIds = new Set(originalMessageIds || []);
 
     // Validate roles
     const validRoles = ['user', 'assistant', 'system', 'tool'];
-    for (const update of roleUpdates) {
-      if (!validRoles.includes(update.role)) {
+    for (const msg of messages) {
+      if (!validRoles.includes(msg.role)) {
         return NextResponse.json(
-          { error: `Invalid role: ${update.role}` },
+          { error: `Invalid role: ${msg.role}` },
+          { status: 400 }
+        );
+      }
+      if (!msg.content || typeof msg.content !== 'string') {
+        return NextResponse.json(
+          { error: 'Invalid message content' },
           { status: 400 }
         );
       }
     }
 
-    // Update messages in batch
-    const updatePromises = roleUpdates.map((update: { messageId: string; role: string }) =>
-      supabase
-        .from('messages')
-        .update({ role: update.role })
-        .eq('id', update.messageId)
-        .eq('conversation_id', conversationId)
-    );
+    // Delete messages that are no longer in the new array (but were in original)
+    const messagesToDelete = existingMessages?.filter(
+      (m) => originalIds.has(m.id) && !newMessageIds.has(m.id)
+    ) || [];
 
-    const results = await Promise.all(updatePromises);
-    
-    // Check for errors
-    const errors = results.filter((r) => r.error);
-    if (errors.length > 0) {
-      console.error('Errors updating messages:', errors);
-      return NextResponse.json(
-        { error: 'Failed to update some messages' },
-        { status: 500 }
-      );
+    if (messagesToDelete.length > 0) {
+      const deleteIds = messagesToDelete.map((m) => m.id);
+      const { error: deleteError } = await supabase
+        .from('messages')
+        .delete()
+        .in('id', deleteIds)
+        .eq('conversation_id', conversationId);
+
+      if (deleteError) {
+        console.error('Error deleting messages:', deleteError);
+        return NextResponse.json(
+          { error: 'Failed to delete messages' },
+          { status: 500 }
+        );
+      }
     }
+
+    // Process messages: update existing, create new ones
+    const updates: Promise<any>[] = [];
+    const inserts: any[] = [];
+
+    for (const msg of messages) {
+      if (msg.id.startsWith('temp-')) {
+        // New message from split - insert
+        inserts.push({
+          conversation_id: conversationId,
+          role: msg.role,
+          content: msg.content,
+          index_in_conversation: msg.index_in_conversation,
+          source_message_id: null,
+          raw_payload: null,
+        });
+      } else if (existingMessageIds.has(msg.id)) {
+        // Existing message - update role, content, and index
+        updates.push(
+          supabase
+            .from('messages')
+            .update({
+              role: msg.role,
+              content: msg.content,
+              index_in_conversation: msg.index_in_conversation,
+            })
+            .eq('id', msg.id)
+            .eq('conversation_id', conversationId)
+        );
+      }
+    }
+
+    // Execute updates
+    if (updates.length > 0) {
+      const updateResults = await Promise.all(updates);
+      const updateErrors = updateResults.filter((r) => r.error);
+      if (updateErrors.length > 0) {
+        console.error('Errors updating messages:', updateErrors);
+        return NextResponse.json(
+          { error: 'Failed to update some messages' },
+          { status: 500 }
+        );
+      }
+    }
+
+    // Execute inserts
+    if (inserts.length > 0) {
+      const { error: insertError } = await supabase
+        .from('messages')
+        .insert(inserts);
+
+      if (insertError) {
+        console.error('Error inserting messages:', insertError);
+        return NextResponse.json(
+          { error: 'Failed to create new messages' },
+          { status: 500 }
+        );
+      }
+    }
+
+    // Note: We don't delete chunks/embeddings here - they'll be regenerated on next use
+    // or we could trigger a background job to re-chunk, but that's out of scope for now
 
     return NextResponse.json({
       success: true,
-      updated: roleUpdates.length,
+      updated: updates.length,
+      created: inserts.length,
+      deleted: messagesToDelete.length,
     });
   } catch (error) {
     console.error('Error in define-roles API:', error);

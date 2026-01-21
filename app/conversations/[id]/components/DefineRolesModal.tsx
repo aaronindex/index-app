@@ -3,7 +3,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { showError, showSuccess } from '@/app/components/ErrorNotification';
 
@@ -12,6 +12,7 @@ interface Message {
   role: 'user' | 'assistant' | 'system' | 'tool';
   content: string;
   index_in_conversation: number;
+  isTemporary?: boolean; // For newly split messages
 }
 
 interface DefineRolesModalProps {
@@ -33,26 +34,241 @@ export default function DefineRolesModal({
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [saving, setSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  const [selection, setSelection] = useState<{
+    messageId: string;
+    startOffset: number;
+    endOffset: number;
+    text: string;
+  } | null>(null);
+  const [splitButtonPosition, setSplitButtonPosition] = useState<{
+    top: number;
+    left: number;
+  } | null>(null);
+  const messageRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
+  const tempIdCounter = useRef(0);
 
   // Reset to original when modal opens
   useEffect(() => {
     if (isOpen) {
       setMessages(originalMessages);
       setHasChanges(false);
+      setSelection(null);
+      setSplitButtonPosition(null);
+      tempIdCounter.current = 0;
     }
   }, [isOpen, originalMessages]);
 
-  const toggleRole = (messageId: string) => {
-    setMessages((prev) =>
-      prev.map((msg) =>
-        msg.id === messageId
-          ? {
-              ...msg,
-              role: msg.role === 'user' ? 'assistant' : 'user',
+  // Handle text selection
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleSelection = () => {
+      const sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0 || sel.isCollapsed) {
+        setSelection(null);
+        setSplitButtonPosition(null);
+        return;
+      }
+
+      const range = sel.getRangeAt(0);
+      const selectedText = sel.toString().trim();
+
+      if (!selectedText) {
+        setSelection(null);
+        setSplitButtonPosition(null);
+        return;
+      }
+
+      // Find which message block contains this selection
+      for (const [messageId, element] of Object.entries(messageRefs.current)) {
+        if (!element) continue;
+
+        // Find the content paragraph within this message
+        const contentElement = element.querySelector('p');
+        if (!contentElement) continue;
+
+        // Check if selection is entirely within this message's content
+        if (contentElement.contains(range.commonAncestorContainer) || contentElement === range.commonAncestorContainer) {
+          const messageRange = document.createRange();
+          messageRange.selectNodeContents(contentElement);
+          
+          if (
+            range.compareBoundaryPoints(Range.START_TO_START, messageRange) >= 0 &&
+            range.compareBoundaryPoints(Range.END_TO_END, messageRange) <= 0
+          ) {
+            const message = messages.find((m) => m.id === messageId);
+            if (!message) break;
+
+            // Calculate offsets within the message content
+            const beforeRange = document.createRange();
+            beforeRange.setStart(contentElement, 0);
+            beforeRange.setEnd(range.startContainer, range.startOffset);
+            const startOffset = beforeRange.toString().length;
+
+            const afterRange = document.createRange();
+            afterRange.setStart(contentElement, 0);
+            afterRange.setEnd(range.endContainer, range.endOffset);
+            const endOffset = afterRange.toString().length;
+
+            // Position split button near selection (relative to scrollable container)
+            const rect = range.getBoundingClientRect();
+            const scrollContainer = element.closest('.overflow-y-auto');
+            if (scrollContainer) {
+              const containerRect = scrollContainer.getBoundingClientRect();
+              setSplitButtonPosition({
+                top: rect.top - containerRect.top + scrollContainer.scrollTop - 40,
+                left: rect.left - containerRect.left + rect.width / 2,
+              });
             }
-          : msg
-      )
-    );
+
+            setSelection({
+              messageId,
+              startOffset,
+              endOffset,
+              text: selectedText,
+            });
+            return;
+          }
+        }
+      }
+
+      // Selection spans multiple blocks - clear it
+      setSelection(null);
+      setSplitButtonPosition(null);
+    };
+
+    document.addEventListener('selectionchange', handleSelection);
+    return () => document.removeEventListener('selectionchange', handleSelection);
+  }, [isOpen, messages]);
+
+  // Auto-assign alternating roles
+  const applyAlternatingRoles = (msgs: Message[]): Message[] => {
+    if (msgs.length === 0) return msgs;
+
+    // Determine starting role from first message (or default to user)
+    const startRole = msgs[0].role === 'assistant' ? 'assistant' : 'user';
+    
+    return msgs.map((msg, index) => {
+      const expectedRole = index % 2 === 0 ? startRole : (startRole === 'user' ? 'assistant' : 'user');
+      return {
+        ...msg,
+        role: expectedRole,
+      };
+    });
+  };
+
+  // Split a message block
+  const handleSplit = () => {
+    if (!selection) return;
+
+    const messageIndex = messages.findIndex((m) => m.id === selection.messageId);
+    if (messageIndex === -1) return;
+
+    const message = messages[messageIndex];
+    // Preserve exact text content - only skip blocks that are empty after trimming
+    const beforeTextRaw = message.content.slice(0, selection.startOffset);
+    const selectedTextRaw = message.content.slice(selection.startOffset, selection.endOffset);
+    const afterTextRaw = message.content.slice(selection.endOffset);
+    
+    // Use original text if not empty (after trim check), empty string if empty
+    const beforeText = beforeTextRaw.trim() ? beforeTextRaw : '';
+    const selectedText = selectedTextRaw.trim() ? selectedTextRaw : '';
+    const afterText = afterTextRaw.trim() ? afterTextRaw : '';
+
+    // Create new messages array
+    const newMessages: Message[] = [];
+
+    // Before text block (keep original ID if it's the first part)
+    if (beforeText) {
+      newMessages.push({
+        ...message,
+        id: message.id, // Keep original ID for first part
+        content: beforeText,
+        index_in_conversation: message.index_in_conversation,
+      });
+    }
+
+    // Selected text block
+    if (selectedText) {
+      // If no beforeText, use original ID for selected text
+      if (!beforeText) {
+        newMessages.push({
+          ...message,
+          id: message.id,
+          content: selectedText,
+          index_in_conversation: message.index_in_conversation,
+        });
+      } else {
+        tempIdCounter.current++;
+        newMessages.push({
+          id: `temp-${tempIdCounter.current}`,
+          role: message.role,
+          content: selectedText,
+          index_in_conversation: message.index_in_conversation + newMessages.length,
+          isTemporary: true,
+        });
+      }
+    }
+
+    // After text block
+    if (afterText) {
+      tempIdCounter.current++;
+      newMessages.push({
+        id: `temp-${tempIdCounter.current}`,
+        role: message.role,
+        content: afterText,
+        index_in_conversation: message.index_in_conversation + newMessages.length,
+        isTemporary: true,
+      });
+    }
+
+    // Rebuild messages array
+    const updatedMessages = [
+      ...messages.slice(0, messageIndex),
+      ...newMessages,
+      ...messages.slice(messageIndex + 1),
+    ];
+
+    // Re-index all messages
+    const reindexed = updatedMessages.map((msg, idx) => ({
+      ...msg,
+      index_in_conversation: idx,
+    }));
+
+    // Apply alternating roles from the split point
+    const withAlternatingRoles = applyAlternatingRoles(reindexed);
+
+    setMessages(withAlternatingRoles);
+    setHasChanges(true);
+    setSelection(null);
+    setSplitButtonPosition(null);
+
+    // Clear selection
+    window.getSelection()?.removeAllRanges();
+  };
+
+  // Toggle role with downstream propagation
+  const toggleRole = (messageId: string) => {
+    const messageIndex = messages.findIndex((m) => m.id === messageId);
+    if (messageIndex === -1) return;
+
+    const message = messages[messageIndex];
+    const newRole = message.role === 'user' ? 'assistant' : 'user';
+
+    // Flip this message and all downstream messages
+    setMessages((prev) => {
+      return prev.map((msg, idx) => {
+        if (idx >= messageIndex) {
+          // Flip role for this and all downstream
+          return {
+            ...msg,
+            role: msg.role === 'user' ? 'assistant' : 'user',
+          };
+        }
+        return msg;
+      });
+    });
+
     setHasChanges(true);
   };
 
@@ -64,10 +280,14 @@ export default function DefineRolesModal({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           conversationId,
-          roleUpdates: messages.map((msg) => ({
-            messageId: msg.id,
+          messages: messages.map((msg) => ({
+            id: msg.id,
             role: msg.role,
+            content: msg.content,
+            index_in_conversation: msg.index_in_conversation,
+            isTemporary: msg.isTemporary,
           })),
+          originalMessageIds: originalMessages.map((m) => m.id),
         }),
       });
 
@@ -148,11 +368,29 @@ export default function DefineRolesModal({
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-6 relative">
+          {/* Split button - floating action */}
+          {selection && splitButtonPosition && (
+            <button
+              onClick={handleSplit}
+              className="absolute z-10 px-3 py-1.5 bg-[rgb(var(--text))] text-[rgb(var(--bg))] text-xs font-medium rounded-lg shadow-lg hover:opacity-90 transition-opacity"
+              style={{
+                top: `${splitButtonPosition.top}px`,
+                left: `${splitButtonPosition.left}px`,
+                transform: 'translateX(-50%)',
+              }}
+            >
+              Split
+            </button>
+          )}
+
           <div className="space-y-3">
             {messages.map((message) => (
               <div
                 key={message.id}
+                ref={(el) => {
+                  messageRefs.current[message.id] = el;
+                }}
                 className="flex items-start gap-3 p-4 border border-[rgb(var(--ring)/0.12)] rounded-lg hover:border-[rgb(var(--ring)/0.2)] transition-colors"
               >
                 <button
@@ -166,7 +404,7 @@ export default function DefineRolesModal({
                   {message.role === 'user' ? 'Me' : 'AI'}
                 </button>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm text-[rgb(var(--text))] whitespace-pre-wrap break-words">
+                  <p className="text-sm text-[rgb(var(--text))] whitespace-pre-wrap break-words select-text">
                     {message.content}
                   </p>
                 </div>
