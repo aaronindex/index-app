@@ -64,12 +64,12 @@ export default function LandingPage() {
                 The memory your AI doesn't have.
               </h1>
               <p className="text-lg sm:text-xl lg:text-xl opacity-80 max-w-xl mx-auto lg:mx-0 mb-8 text-white leading-tight lg:whitespace-nowrap">
-                Personal Business Intelligence for your thinking.
+                Personal Business Intelligence for your AI thinking.
               </p>
               
               {/* Bulletless list */}
               <div className="space-y-2.5 text-base sm:text-lg opacity-75 mb-10 text-white max-w-xl mx-auto lg:mx-0">
-                <p>Import conversations, notes, or drafts — from ChatGPT, Claude, Cursor, or anywhere else.</p>
+                <p>Import conversations from ChatGPT, Claude, and Cursor.</p>
                 <p>Organize into projects, highlights, tasks, decisions</p>
                 <p>Move with what matters next — without continuing the loop</p>
               </div>
@@ -151,7 +151,7 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-12">
             <ValueCard
               title="Import"
-              body="Paste or upload conversations, notes, or drafts — from AI tools or anywhere else."
+              body="Paste or upload conversations from ChatGPT, Claude, and Cursor."
               imageSrc="/import-icon-cubes.png"
             />
             <ValueCard
@@ -186,7 +186,7 @@ export default function LandingPage() {
                   <div className="inline-block text-xs font-semibold tracking-wider uppercase opacity-60 mb-2 text-[#121211] dark:text-[#FAF8F6]">
                     Think
                   </div>
-                  <p className="text-base opacity-75 text-[#121211] dark:text-[#FAF8F6]">In AI, meetings, documents, or anywhere ideas form</p>
+                  <p className="text-base opacity-75 text-[#121211] dark:text-[#FAF8F6]">In ChatGPT, Claude, Cursor</p>
                 </div>
                 <div>
                   <div className="inline-block text-xs font-semibold tracking-wider uppercase opacity-60 mb-2 text-[#121211] dark:text-[#FAF8F6]">

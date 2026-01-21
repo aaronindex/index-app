@@ -586,7 +586,7 @@ export default function ImportPage() {
   return (
     <main className="min-h-screen bg-[rgb(var(--bg))]">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <h1 className="font-serif text-3xl font-semibold text-[rgb(var(--text))] mb-8">Import Content</h1>
+        <h1 className="font-serif text-3xl font-semibold text-[rgb(var(--text))] mb-8">Import Conversations</h1>
 
         {(error || quickError) && (
           <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
@@ -601,7 +601,7 @@ export default function ImportPage() {
               <div className="mb-4">
                 <h2 className="text-2xl font-semibold text-[rgb(var(--text))] mb-2">Quick Import (Recommended)</h2>
                 <p className="text-[rgb(var(--muted))]">
-                  Paste text from an AI chat, meeting notes, emails, or any working document. INDEX reduces it immediately — ideal for a first run or importing a single thread of work.
+                  Paste or upload a conversation from ChatGPT, Claude, or Cursor. INDEX will help you reduce it to what still matters.
                 </p>
               </div>
 
@@ -645,15 +645,12 @@ export default function ImportPage() {
 
                     <div>
                       <label className="block text-sm font-medium text-[rgb(var(--text))] mb-2">
-                        Paste Content
+                        Paste Chat Transcript
                       </label>
-                      <p className="text-xs text-[rgb(var(--muted))] mb-2">
-                        AI chats, notes, emails, or drafts
-                      </p>
                       <textarea
                         value={quickTranscript}
                         onChange={(e) => setQuickTranscript(e.target.value)}
-                        placeholder="Paste text here…&#10;&#10;This can be an AI conversation, notes, an email thread, or any material you want to reduce."
+                        placeholder="Paste a chat transcript here…"
                         className="w-full h-48 p-3 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-[rgb(var(--surface))] text-[rgb(var(--text))] font-mono text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[rgb(var(--ring)/0.2)]"
                         disabled={quickLoading}
                       />
@@ -686,13 +683,10 @@ export default function ImportPage() {
                           />
                           <span>
                             Treat as single block
-                            <span className="block text-[10px] text-[rgb(var(--muted))] mt-0.5">Process the content as plain text (no speaker parsing)</span>
+                            <span className="block text-[10px] text-[rgb(var(--muted))] mt-0.5">Process the transcript as plain text (no speaker parsing)</span>
                           </span>
                         </label>
                       </div>
-                      <p className="mt-2 text-xs text-[rgb(var(--muted))] italic">
-                        Tip: If your text doesn't include clear speaker labels, treating it as a single block often works best.
-                      </p>
                     </div>
 
                     <div>

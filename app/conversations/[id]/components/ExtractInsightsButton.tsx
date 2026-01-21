@@ -3,7 +3,6 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { track } from '@/lib/analytics/track';
 
 interface ExtractInsightsButtonProps {
@@ -91,25 +90,17 @@ export default function ExtractInsightsButton({ conversationId, projectId }: Ext
 
   if (!projectId) {
     return (
-      <div className="space-y-2">
-        <div className="relative group">
-          <button
-            disabled
-            className="px-4 py-2 text-sm bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-600 rounded-lg cursor-not-allowed font-medium"
-          >
-            ✨ Reduce
-          </button>
-          <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
-            Link conversation to a project first
-            <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-zinc-900 dark:border-t-zinc-100"></div>
-          </div>
-        </div>
-        <Link
-          href="/unassigned"
-          className="text-xs text-zinc-600 dark:text-zinc-400 hover:text-foreground transition-colors underline"
+      <div className="relative group">
+        <button
+          disabled
+          className="px-4 py-2 text-sm bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-600 rounded-lg cursor-not-allowed font-medium"
         >
-          Assign to project →
-        </Link>
+          ✨ Reduce
+        </button>
+        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
+          Assign this conversation to a project to enable Reduce.
+          <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-zinc-900 dark:border-t-zinc-100"></div>
+        </div>
       </div>
     );
   }

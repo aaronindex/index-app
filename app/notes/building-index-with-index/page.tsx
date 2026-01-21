@@ -23,9 +23,6 @@ export default function BuildingIndexWithIndex() {
               The conversations pile up. They feel useful in the moment — sometimes even clarifying — but weeks later, very little seems to carry forward. Decisions were made somewhere inside long threads. Tasks appeared mid-paragraph and dissolved again. When you return to a topic, you often find yourself starting over — not because you didn't think about it, but because there was no clean way to finish the thinking.
             </p>
             <p className="text-[rgb(var(--text))] leading-relaxed mb-4">
-              The same thing happens with notes, drafts, and meeting write-ups — anywhere thinking is captured, but never resolved.
-            </p>
-            <p className="text-[rgb(var(--text))] leading-relaxed mb-4">
               INDEX exists to solve that problem — not by saving more, but by helping you know what to keep and what to let go.
             </p>
             <p className="text-[rgb(var(--text))] leading-relaxed mb-4">

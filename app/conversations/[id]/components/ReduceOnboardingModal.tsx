@@ -7,11 +7,21 @@ import { useEffect, useState } from 'react';
 
 const STORAGE_KEY = 'index_reduce_onboarding_dismissed';
 
-export default function ReduceOnboardingModal() {
+interface ReduceOnboardingModalProps {
+  projectId: string | null;
+}
+
+export default function ReduceOnboardingModal({ projectId }: ReduceOnboardingModalProps) {
   const [show, setShow] = useState(false);
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
+    // Only show modal if conversation is assigned to a project
+    if (!projectId) {
+      setChecking(false);
+      return;
+    }
+
     // Check if modal has already been dismissed
     const dismissed = localStorage.getItem(STORAGE_KEY) === 'true';
     if (dismissed) {
@@ -25,7 +35,7 @@ export default function ReduceOnboardingModal() {
       setChecking(false);
     }, 500);
     return () => clearTimeout(timer);
-  }, []);
+  }, [projectId]);
 
   const handleDismiss = () => {
     setShow(false);

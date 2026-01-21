@@ -11,6 +11,8 @@ import CreateTaskFromHighlightButton from './components/CreateTaskFromHighlightB
 import DeleteHighlightButton from '@/app/projects/[id]/components/DeleteHighlightButton';
 import MobileHighlightsPanel from './components/MobileHighlightsPanel';
 import ReduceOnboardingModal from './components/ReduceOnboardingModal';
+import DefineRolesButton from './components/DefineRolesButton';
+import { isRoleAmbiguous } from '@/lib/conversations/roleAmbiguity';
 
 type Status = 'priority' | 'open' | 'complete' | 'dormant';
 
@@ -140,9 +142,18 @@ export default async function ConversationPage({
               </div>
               {/* Title row - full width on mobile */}
               <div className="flex-1 min-w-0 w-full sm:order-1">
-                <h1 className="text-2xl font-semibold text-foreground mb-2">
-                  {conversation.title || 'Untitled Conversation'}
-                </h1>
+                <div className="flex items-center gap-3 mb-2">
+                  <h1 className="text-2xl font-semibold text-foreground">
+                    {conversation.title || 'Untitled Conversation'}
+                  </h1>
+                  {messages && messages.length > 0 && (
+                    <DefineRolesButton
+                      conversationId={id}
+                      messages={messages}
+                      isRoleAmbiguous={isRoleAmbiguous(messages)}
+                    />
+                  )}
+                </div>
               </div>
             </div>
 
@@ -209,7 +220,7 @@ export default async function ConversationPage({
       </div>
       
       {/* One-time Reduce onboarding modal */}
-      <ReduceOnboardingModal />
+      <ReduceOnboardingModal projectId={project?.id || null} />
     </main>
   );
 }
