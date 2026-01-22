@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import ConversionTile from '@/app/ask/components/ConversionTile';
 
@@ -35,6 +35,7 @@ interface SynthesizedAnswer {
 
 export default function AskPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [answer, setAnswer] = useState<SynthesizedAnswer | null>(null);
@@ -42,6 +43,31 @@ export default function AskPage() {
   // Update page title
   useEffect(() => {
     document.title = 'Ask Index | INDEX';
+  }, []);
+
+  // Restore from sessionStorage on mount if URL has q param
+  useEffect(() => {
+    const urlQuery = searchParams.get('q');
+    if (urlQuery && !hasSearched) {
+      const cacheKey = `ask_index_${urlQuery}`;
+      const cached = sessionStorage.getItem(cacheKey);
+      if (cached) {
+        try {
+          const data = JSON.parse(cached);
+          setQuery(urlQuery);
+          setResults(data.results || []);
+          setAnswer(data.answer || null);
+          setRelatedContent(data.relatedContent || null);
+          setAskIndexRunId(data.ask_index_run_id || null);
+          setHasSearched(true);
+          setEvidenceExpanded(false);
+          setShowAllTiles(false);
+        } catch (e) {
+          console.error('Error restoring from cache:', e);
+        }
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const [relatedContent, setRelatedContent] = useState<{
     highlights: Array<{
@@ -69,6 +95,7 @@ export default function AskPage() {
   const [askIndexRunId, setAskIndexRunId] = useState<string | null>(null);
   const [evidenceExpanded, setEvidenceExpanded] = useState(false);
   const [showAllTiles, setShowAllTiles] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
 
   const performSearch = async (searchQuery?: string) => {
     const queryToUse = searchQuery || query;
@@ -76,6 +103,7 @@ export default function AskPage() {
 
     setLoading(true);
     setError(null);
+    setHasSearched(true);
     setResults([]);
     setAnswer(null);
     setRelatedContent(null);
@@ -161,12 +189,27 @@ export default function AskPage() {
         }
       }
       
+      const normalizedQuery = queryToUse.trim();
       setResults(data.results || []);
       setAnswer(data.answer || null);
       setRelatedContent(data.relatedContent || null);
       setAskIndexRunId(data.ask_index_run_id || null);
       setEvidenceExpanded(false); // Collapse evidence by default
       setShowAllTiles(false); // Show max 2 tiles by default
+
+      // Store in sessionStorage for back navigation
+      const cacheKey = `ask_index_${normalizedQuery}`;
+      sessionStorage.setItem(cacheKey, JSON.stringify({
+        results: data.results || [],
+        answer: data.answer || null,
+        relatedContent: data.relatedContent || null,
+        ask_index_run_id: data.ask_index_run_id || null,
+      }));
+
+      // Update URL with query param
+      const url = new URL(window.location.href);
+      url.searchParams.set('q', normalizedQuery);
+      router.replace(url.pathname + url.search, { scroll: false });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Search failed');
       console.error('[Ask Page] Search error:', err);
@@ -185,8 +228,11 @@ export default function AskPage() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="mb-8">
           <h1 className="font-serif text-3xl font-semibold text-[rgb(var(--text))] mb-2">Ask Index</h1>
-          <p className="text-[rgb(var(--muted))]">
-            Search across all your conversations using semantic search
+          <p className="text-[rgb(var(--muted))] mb-1">
+            Find what still matters across your projects.
+          </p>
+          <p className="text-sm text-[rgb(var(--muted))]">
+            Search your past thinking to surface decisions, open loops, and unresolved questions.
           </p>
         </div>
 
@@ -196,7 +242,7 @@ export default function AskPage() {
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Ask anything about your conversations..."
+              placeholder="What's still unresolved?"
               className="flex-1 px-4 py-3 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-950 text-foreground focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:focus:ring-zinc-400"
               disabled={loading}
             />
@@ -233,7 +279,7 @@ export default function AskPage() {
               {/* Convert Tiles */}
               {answer.followUpQuestions.length > 0 && (
                 <div className="mt-6 pt-6 border-t border-zinc-200 dark:border-zinc-800">
-                  <h3 className="text-sm font-semibold text-foreground mb-4">Convert</h3>
+                  <h3 className="text-sm font-semibold text-foreground mb-4">Make this actionable</h3>
                   <div className="space-y-3">
                     {(showAllTiles ? answer.followUpQuestions : answer.followUpQuestions.slice(0, 2)).map((question, idx) => {
                       // Map follow-up type to tile type
@@ -262,171 +308,169 @@ export default function AskPage() {
                       </button>
                     )}
                   </div>
-                  
-                  {/* Demoted Start Chat */}
-                  <div className="mt-4 pt-4 border-t border-zinc-200 dark:border-zinc-800">
-                    <p className="text-xs text-zinc-500 dark:text-zinc-500">
-                      Need more clarity?{' '}
-                      <span className="text-zinc-600 dark:text-zinc-400">
-                        Start chat from an artifact
-                      </span>
-                    </p>
-                  </div>
                 </div>
               )}
 
-              {/* Evidence (Collapsed by default) */}
-              {((answer && answer.citations.length > 0) || results.length > 0 || (relatedContent && (relatedContent.highlights.length > 0 || relatedContent.threads.length > 0 || relatedContent.projects.length > 0))) && (
-                <div className="mt-6 pt-6 border-t border-zinc-200 dark:border-zinc-800">
-                  <button
-                    onClick={() => setEvidenceExpanded(!evidenceExpanded)}
-                    className="flex items-center justify-between w-full text-sm font-semibold text-foreground hover:opacity-80 transition-opacity"
-                  >
-                    <span>
-                      Evidence ({(answer ? answer.citations.length : 0) + results.length + (relatedContent ? relatedContent.highlights.length + relatedContent.threads.length + relatedContent.projects.length : 0)})
-                    </span>
-                    <span className="text-zinc-500 dark:text-zinc-400">
-                      {evidenceExpanded ? '−' : '+'}
-                    </span>
-                  </button>
-                  
-                  {evidenceExpanded && (
-                    <div className="mt-4 space-y-4">
-                      {/* Citations */}
-                      {answer && answer.citations.length > 0 && (
-                        <div className="space-y-2">
-                          {answer.citations.map((citation, idx) => (
-                            <div
-                              key={citation.chunk_id}
-                              className="p-3 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg"
-                            >
-                              <div className="flex items-start justify-between mb-1">
-                                <Link
-                                  href={`/conversations/${citation.conversation_id}`}
-                                  className="text-sm font-medium text-foreground hover:opacity-80 transition-opacity"
-                                >
-                                  {citation.conversation_title || 'Untitled Conversation'}
-                                </Link>
-                                <span className="text-xs text-zinc-500 dark:text-zinc-500">
-                                  {(citation.similarity * 100).toFixed(0)}% match
-                                </span>
-                              </div>
-                              <p className="text-xs text-zinc-600 dark:text-zinc-400 mt-1 truncate">
-                                {citation.excerpt.substring(0, 120)}
-                                {citation.excerpt.length > 120 ? '...' : ''}
-                              </p>
+              {/* Evidence (Collapsed by default, deduped, capped at 5) */}
+              {(() => {
+                // Combine citations and results, dedupe by conversation_id, take top 5 by similarity
+                const allSources: Array<{
+                  conversation_id: string;
+                  conversation_title: string | null;
+                  similarity: number;
+                  excerpt: string;
+                }> = [];
+                
+                if (answer) {
+                  answer.citations.forEach(c => {
+                    allSources.push({
+                      conversation_id: c.conversation_id,
+                      conversation_title: c.conversation_title,
+                      similarity: c.similarity,
+                      excerpt: c.excerpt,
+                    });
+                  });
+                }
+                
+                results.forEach(r => {
+                  allSources.push({
+                    conversation_id: r.conversation_id,
+                    conversation_title: r.conversation_title,
+                    similarity: r.similarity,
+                    excerpt: r.content,
+                  });
+                });
+                
+                // Dedupe by conversation_id, keep highest similarity
+                const deduped = new Map<string, typeof allSources[0]>();
+                allSources.forEach(source => {
+                  const existing = deduped.get(source.conversation_id);
+                  if (!existing || source.similarity > existing.similarity) {
+                    deduped.set(source.conversation_id, source);
+                  }
+                });
+                
+                const topSources = Array.from(deduped.values())
+                  .sort((a, b) => b.similarity - a.similarity)
+                  .slice(0, 5);
+                
+                return topSources.length > 0 ? (
+                  <div className="mt-6 pt-6 border-t border-zinc-200 dark:border-zinc-800">
+                    <button
+                      onClick={() => setEvidenceExpanded(!evidenceExpanded)}
+                      className="flex items-center justify-between w-full text-sm font-semibold text-foreground hover:opacity-80 transition-opacity"
+                    >
+                      <span>Evidence ({topSources.length})</span>
+                      <span className="text-zinc-500 dark:text-zinc-400">
+                        {evidenceExpanded ? '−' : '+'}
+                      </span>
+                    </button>
+                    
+                    {evidenceExpanded && (
+                      <div className="mt-4 space-y-2">
+                        {topSources.map((source) => (
+                          <div
+                            key={source.conversation_id}
+                            className="p-3 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg"
+                          >
+                            <div className="flex items-start justify-between mb-1">
+                              <Link
+                                href={`/conversations/${source.conversation_id}`}
+                                className="text-sm font-medium text-foreground hover:opacity-80 transition-opacity"
+                              >
+                                {source.conversation_title || 'Untitled Conversation'}
+                              </Link>
+                              <span className="text-xs text-zinc-500 dark:text-zinc-500">
+                                {Math.round(source.similarity * 100)}% match
+                              </span>
                             </div>
-                          ))}
-                        </div>
-                      )}
-                      
-                      {/* Search Results */}
-                      {results.length > 0 && (
-                        <div className="space-y-2">
-                          {results.map((result) => (
-                            <div
-                              key={result.chunk_id}
-                              className="p-3 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg"
-                            >
-                              <div className="flex items-start justify-between mb-1">
-                                <Link
-                                  href={`/conversations/${result.conversation_id}`}
-                                  className="text-sm font-medium text-foreground hover:opacity-80 transition-opacity"
-                                >
-                                  {result.conversation_title || 'Untitled Conversation'}
-                                </Link>
-                                <span className="text-xs text-zinc-500 dark:text-zinc-500">
-                                  {(result.similarity * 100).toFixed(0)}% match
-                                </span>
-                              </div>
-                      <p className="text-xs text-zinc-600 dark:text-zinc-400 mt-1 truncate">
-                        {result.content.substring(0, 120)}
-                        {result.content.length > 120 ? '...' : ''}
-                      </p>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      
-                      {/* Related Content (minimal) */}
-                      {relatedContent && (relatedContent.highlights.length > 0 || relatedContent.threads.length > 0 || relatedContent.projects.length > 0) && (
-                        <div className="space-y-2">
-                          {relatedContent.highlights.map((highlight) => (
+                            <p className="text-xs text-zinc-600 dark:text-zinc-400 mt-1 truncate">
+                              {source.excerpt.substring(0, 120)}
+                              {source.excerpt.length > 120 ? '...' : ''}
+                            </p>
                             <Link
-                              key={highlight.id}
-                              href={`/conversations/${highlight.conversation_id}`}
-                              className="block p-2 text-xs text-zinc-600 dark:text-zinc-400 hover:text-foreground"
+                              href={`/conversations/${source.conversation_id}`}
+                              className="text-xs text-zinc-500 dark:text-zinc-400 hover:text-foreground mt-1 inline-block"
                             >
-                              Highlight: {highlight.label || highlight.content.substring(0, 50)}...
+                              View chat →
                             </Link>
-                          ))}
-                          {relatedContent.projects.map((project) => (
-                            <Link
-                              key={project.id}
-                              href={`/projects/${project.id}`}
-                              className="block p-2 text-xs text-zinc-600 dark:text-zinc-400 hover:text-foreground"
-                            >
-                              Project: {project.name}
-                            </Link>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : null;
+              })()}
             </div>
           </div>
         )}
 
 
-        {/* Evidence drawer for results without answer */}
-        {!answer && results.length > 0 && (
-          <div className="mb-8">
-            <div className="border border-zinc-200 dark:border-zinc-800 rounded-lg p-6">
-              <button
-                onClick={() => setEvidenceExpanded(!evidenceExpanded)}
-                className="flex items-center justify-between w-full text-sm font-semibold text-foreground hover:opacity-80 transition-opacity mb-4"
-              >
-                <span>
-                  Evidence ({results.length + (relatedContent ? relatedContent.highlights.length + relatedContent.threads.length + relatedContent.projects.length : 0)})
-                </span>
-                <span className="text-zinc-500 dark:text-zinc-400">
-                  {evidenceExpanded ? '−' : '+'}
-                </span>
-              </button>
-              
-              {evidenceExpanded && (
-                <div className="space-y-2">
-                  {results.map((result) => (
-                    <div
-                      key={result.chunk_id}
-                      className="p-3 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg"
-                    >
-                      <div className="flex items-start justify-between mb-1">
+        {/* Evidence drawer for results without answer (deduped, capped) */}
+        {!answer && results.length > 0 && (() => {
+          // Dedupe by conversation_id, keep highest similarity, cap at 5
+          const deduped = new Map<string, SearchResult>();
+          results.forEach(r => {
+            const existing = deduped.get(r.conversation_id);
+            if (!existing || r.similarity > existing.similarity) {
+              deduped.set(r.conversation_id, r);
+            }
+          });
+          const topResults = Array.from(deduped.values())
+            .sort((a, b) => b.similarity - a.similarity)
+            .slice(0, 5);
+          
+          return topResults.length > 0 ? (
+            <div className="mb-8">
+              <div className="border border-zinc-200 dark:border-zinc-800 rounded-lg p-6">
+                <button
+                  onClick={() => setEvidenceExpanded(!evidenceExpanded)}
+                  className="flex items-center justify-between w-full text-sm font-semibold text-foreground hover:opacity-80 transition-opacity mb-4"
+                >
+                  <span>Evidence ({topResults.length})</span>
+                  <span className="text-zinc-500 dark:text-zinc-400">
+                    {evidenceExpanded ? '−' : '+'}
+                  </span>
+                </button>
+                
+                {evidenceExpanded && (
+                  <div className="space-y-2">
+                    {topResults.map((result) => (
+                      <div
+                        key={result.chunk_id}
+                        className="p-3 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg"
+                      >
+                        <div className="flex items-start justify-between mb-1">
+                          <Link
+                            href={`/conversations/${result.conversation_id}`}
+                            className="text-sm font-medium text-foreground hover:opacity-80 transition-opacity"
+                          >
+                            {result.conversation_title || 'Untitled Conversation'}
+                          </Link>
+                          <span className="text-xs text-zinc-500 dark:text-zinc-500">
+                            {Math.round(result.similarity * 100)}% match
+                          </span>
+                        </div>
+                        <p className="text-xs text-zinc-600 dark:text-zinc-400 mt-1 truncate">
+                          {result.content.substring(0, 120)}
+                          {result.content.length > 120 ? '...' : ''}
+                        </p>
                         <Link
                           href={`/conversations/${result.conversation_id}`}
-                          className="text-sm font-medium text-foreground hover:opacity-80 transition-opacity"
+                          className="text-xs text-zinc-500 dark:text-zinc-400 hover:text-foreground mt-1 inline-block"
                         >
-                          {result.conversation_title || 'Untitled Conversation'}
+                          View chat →
                         </Link>
-                        <span className="text-xs text-zinc-500 dark:text-zinc-500">
-                          {(result.similarity * 100).toFixed(0)}% match
-                        </span>
                       </div>
-                      <p className="text-xs text-zinc-600 dark:text-zinc-400 mt-1 truncate">
-                        {result.content.substring(0, 120)}
-                        {result.content.length > 120 ? '...' : ''}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              )}
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          ) : null;
+        })()}
 
-        {!loading && results.length === 0 && query && !error && (
+        {!loading && hasSearched && results.length === 0 && !answer && !error && (
           <div className="text-center py-12">
             <p className="text-zinc-600 dark:text-zinc-400">
               No results found. Try rephrasing your query.
@@ -434,17 +478,14 @@ export default function AskPage() {
           </div>
         )}
 
-        {!query && !loading && (
+        {!hasSearched && !loading && (
           <div className="text-center py-12">
-            <p className="text-zinc-600 dark:text-zinc-400 mb-4">
-              Enter a question to search across all your conversations
-            </p>
-            <div className="text-sm text-zinc-500 dark:text-zinc-500 space-y-1">
-              <p>Example queries:</p>
-              <ul className="list-disc list-inside space-y-1 mt-2">
-                <li>"What did I discuss about pricing?"</li>
-                <li>"Show me conversations about project architecture"</li>
-                <li>"What decisions did I make last week?"</li>
+            <div className="text-sm text-zinc-500 dark:text-zinc-500 space-y-2">
+              <p className="text-zinc-600 dark:text-zinc-400 mb-3">Example queries:</p>
+              <ul className="list-none space-y-2">
+                <li>"What did I decide about pricing?"</li>
+                <li>"What's blocking my project?"</li>
+                <li>"What's the next step on this topic?"</li>
               </ul>
             </div>
           </div>

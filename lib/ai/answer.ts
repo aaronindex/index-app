@@ -63,7 +63,6 @@ Based on the following excerpts from their conversations, provide a SHORT, ACTIO
 STRUCTURE:
 1) What the record suggests (1-3 lines)
 2) What remains unresolved (1 line, optional if truly resolved)
-3) Convert recommendation (1 line: "Convert this into: [Decision] / [Task]")
 
 RULES:
 - Max 8-12 lines total
