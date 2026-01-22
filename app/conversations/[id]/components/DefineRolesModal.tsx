@@ -63,82 +63,104 @@ export default function DefineRolesModal({
     if (!isOpen) return;
 
     const handleSelection = () => {
-      const sel = window.getSelection();
-      if (!sel || sel.rangeCount === 0 || sel.isCollapsed) {
-        setSelection(null);
-        setSplitButtonPosition(null);
-        return;
-      }
+      // Small delay to ensure selection is complete
+      setTimeout(() => {
+        const sel = window.getSelection();
+        if (!sel || sel.rangeCount === 0 || sel.isCollapsed) {
+          setSelection(null);
+          setSplitButtonPosition(null);
+          return;
+        }
 
-      const range = sel.getRangeAt(0);
-      const selectedText = sel.toString().trim();
+        const range = sel.getRangeAt(0);
+        const selectedText = sel.toString().trim();
 
-      if (!selectedText) {
-        setSelection(null);
-        setSplitButtonPosition(null);
-        return;
-      }
+        if (!selectedText) {
+          setSelection(null);
+          setSplitButtonPosition(null);
+          return;
+        }
 
-      // Find which message block contains this selection
-      for (const [messageId, element] of Object.entries(messageRefs.current)) {
-        if (!element) continue;
+        // Find which message block contains this selection
+        for (const [messageId, element] of Object.entries(messageRefs.current)) {
+          if (!element) continue;
 
-        // Find the content paragraph within this message
-        const contentElement = element.querySelector('p');
-        if (!contentElement) continue;
+          // Find the content paragraph within this message
+          const contentElement = element.querySelector('p');
+          if (!contentElement) continue;
 
-        // Check if selection is entirely within this message's content
-        if (contentElement.contains(range.commonAncestorContainer) || contentElement === range.commonAncestorContainer) {
-          const messageRange = document.createRange();
-          messageRange.selectNodeContents(contentElement);
-          
-          if (
-            range.compareBoundaryPoints(Range.START_TO_START, messageRange) >= 0 &&
-            range.compareBoundaryPoints(Range.END_TO_END, messageRange) <= 0
-          ) {
-            const message = messages.find((m) => m.id === messageId);
-            if (!message) break;
+          // Check if selection is entirely within this message's content
+          // Use a more lenient check - if the common ancestor is within the message block
+          const isWithinMessage = 
+            element.contains(range.commonAncestorContainer) || 
+            element === range.commonAncestorContainer ||
+            contentElement.contains(range.commonAncestorContainer) ||
+            contentElement === range.commonAncestorContainer;
 
-            // Calculate offsets within the message content
-            const beforeRange = document.createRange();
-            beforeRange.setStart(contentElement, 0);
-            beforeRange.setEnd(range.startContainer, range.startOffset);
-            const startOffset = beforeRange.toString().length;
+          if (isWithinMessage) {
+            // Verify selection is within content bounds
+            const messageRange = document.createRange();
+            try {
+              messageRange.selectNodeContents(contentElement);
+              
+              const isWithinBounds = 
+                range.compareBoundaryPoints(Range.START_TO_START, messageRange) >= 0 &&
+                range.compareBoundaryPoints(Range.END_TO_END, messageRange) <= 0;
 
-            const afterRange = document.createRange();
-            afterRange.setStart(contentElement, 0);
-            afterRange.setEnd(range.endContainer, range.endOffset);
-            const endOffset = afterRange.toString().length;
+              if (isWithinBounds) {
+                const message = messages.find((m) => m.id === messageId);
+                if (!message) continue;
 
-            // Position split button near selection (relative to scrollable container)
-            const rect = range.getBoundingClientRect();
-            const scrollContainer = element.closest('.overflow-y-auto');
-            if (scrollContainer) {
-              const containerRect = scrollContainer.getBoundingClientRect();
-              setSplitButtonPosition({
-                top: rect.top - containerRect.top + scrollContainer.scrollTop - 40,
-                left: rect.left - containerRect.left + rect.width / 2,
-              });
+                // Calculate offsets within the message content
+                const beforeRange = document.createRange();
+                beforeRange.setStart(contentElement, 0);
+                beforeRange.setEnd(range.startContainer, range.startOffset);
+                const startOffset = beforeRange.toString().length;
+
+                const afterRange = document.createRange();
+                afterRange.setStart(contentElement, 0);
+                afterRange.setEnd(range.endContainer, range.endOffset);
+                const endOffset = afterRange.toString().length;
+
+                // Position split button near selection (use fixed positioning relative to viewport)
+                const rect = range.getBoundingClientRect();
+                setSplitButtonPosition({
+                  top: rect.top + window.scrollY - 50, // Position above selection
+                  left: rect.left + window.scrollX + rect.width / 2,
+                });
+
+                setSelection({
+                  messageId,
+                  startOffset,
+                  endOffset,
+                  text: selectedText,
+                });
+                return;
+              }
+            } catch (e) {
+              // Range error - continue to next message
+              continue;
             }
-
-            setSelection({
-              messageId,
-              startOffset,
-              endOffset,
-              text: selectedText,
-            });
-            return;
           }
         }
-      }
 
-      // Selection spans multiple blocks - clear it
-      setSelection(null);
-      setSplitButtonPosition(null);
+        // Selection spans multiple blocks - clear it
+        setSelection(null);
+        setSplitButtonPosition(null);
+      }, 10);
+    };
+
+    const handleMouseUp = () => {
+      // Also check selection on mouseup as backup
+      handleSelection();
     };
 
     document.addEventListener('selectionchange', handleSelection);
-    return () => document.removeEventListener('selectionchange', handleSelection);
+    document.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      document.removeEventListener('selectionchange', handleSelection);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
   }, [isOpen, messages]);
 
   // Auto-assign alternating roles
@@ -368,20 +390,28 @@ export default function DefineRolesModal({
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6 relative">
+        <div className="flex-1 overflow-y-auto p-6 relative" id="define-roles-content">
           {/* Split button - floating action */}
           {selection && splitButtonPosition && (
             <button
               onClick={handleSplit}
-              className="absolute z-10 px-3 py-1.5 bg-[rgb(var(--text))] text-[rgb(var(--bg))] text-xs font-medium rounded-lg shadow-lg hover:opacity-90 transition-opacity"
+              className="fixed z-50 px-4 py-2 bg-[rgb(var(--text))] text-[rgb(var(--bg))] text-sm font-medium rounded-lg shadow-xl hover:opacity-90 transition-opacity border-2 border-[rgb(var(--bg))]"
               style={{
-                top: `${splitButtonPosition.top}px`,
+                top: `${Math.max(10, splitButtonPosition.top)}px`,
                 left: `${splitButtonPosition.left}px`,
                 transform: 'translateX(-50%)',
               }}
+              onMouseDown={(e) => e.preventDefault()} // Prevent selection from clearing
             >
               Split
             </button>
+          )}
+          
+          {/* Debug: Show selection info (temporary) */}
+          {selection && (
+            <div className="fixed bottom-4 right-4 z-50 px-3 py-2 bg-blue-500 text-white text-xs rounded shadow-lg">
+              Selection detected: {selection.text.substring(0, 20)}...
+            </div>
           )}
 
           <div className="space-y-3">
