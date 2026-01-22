@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import ConversionTile from '@/app/ask/components/ConversionTile';
 
@@ -35,7 +35,6 @@ interface SynthesizedAnswer {
 
 export default function AskPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [answer, setAnswer] = useState<SynthesizedAnswer | null>(null);
@@ -47,7 +46,10 @@ export default function AskPage() {
 
   // Restore from sessionStorage on mount if URL has q param
   useEffect(() => {
-    const urlQuery = searchParams.get('q');
+    if (typeof window === 'undefined') return;
+    
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlQuery = urlParams.get('q');
     if (urlQuery && !hasSearched) {
       const cacheKey = `ask_index_${urlQuery}`;
       const cached = sessionStorage.getItem(cacheKey);
