@@ -9,6 +9,7 @@ import { THINKING_STANCE } from './stance';
 export interface FollowUpQuestion {
   type: 'clarify' | 'decide' | 'commit' | 'deprioritize';
   text: string;
+  tileType?: 'decision' | 'task' | 'clarify_task'; // Original tile type from generation
 }
 
 export interface SynthesizedAnswer {
@@ -57,17 +58,26 @@ ${thinkingStance}
 
 The user asked: "${query}"
 
-Based on the following excerpts from their conversations, provide:
-1. A clear, synthesized answer that directly addresses their question
-2. Be specific and cite which conversations/excerpts support your answer
-3. If the information is incomplete or unclear, say so explicitly rather than expanding scope
-4. Write in a structured, calm, decisive tone
-5. Prefer reduction over expansion
+Based on the following excerpts from their conversations, provide a SHORT, ACTION-ORIENTED answer (max 8-12 lines):
+
+STRUCTURE:
+1) What the record suggests (1-3 lines)
+2) What remains unresolved (1 line, optional if truly resolved)
+3) Convert recommendation (1 line: "Convert this into: [Decision] / [Task]")
+
+RULES:
+- Max 8-12 lines total
+- No boilerplate headers like "### Answer" or "This structured approach..."
+- No numbered essay blocks unless truly necessary and still short
+- Be specific and direct
+- If information is incomplete, say so explicitly
+- Write in a calm, decisive tone
+- Prefer reduction over expansion
 
 Conversation excerpts:
 ${context}
 
-Provide your answer in a clear, well-structured format. Be concise but thorough.`;
+Return ONLY the answer text (no headers, no meta-commentary).`;
 
   try {
     const apiKey = process.env.OPENAI_API_KEY;
@@ -95,7 +105,7 @@ Provide your answer in a clear, well-structured format. Be concise but thorough.
           },
         ],
         temperature: 0.7,
-        max_tokens: 1000,
+        max_tokens: 300, // Reduced for brevity
       }),
     });
 
@@ -111,9 +121,8 @@ Provide your answer in a clear, well-structured format. Be concise but thorough.
       throw new Error('No answer in OpenAI response');
     }
 
-    // Generate constrained follow-up questions using taxonomy
-    // Follow-ups must be one of: clarify, decide, commit, deprioritize
-    const followUpPrompt = `Based on the user's question "${query}" and the answer provided below, generate 2-4 follow-up prompts using ONLY these categories:
+    // Generate conversion tiles (Decision/Task/Clarify Task) - max 2
+    const conversionPrompt = `Based on the user's question "${query}" and the answer provided below, generate 1-2 conversion tiles (NOT questions).
 
 THINKING STANCE:
 ${thinkingStance}
@@ -121,33 +130,33 @@ ${thinkingStance}
 Answer provided:
 ${answer}
 
-FOLLOW-UP TAXONOMY (choose one type per prompt):
-- "clarify": Questions that seek to resolve uncertainty or ambiguity
-- "decide": Questions that require a decision between options
-- "commit": Questions that lead to concrete next actions or commitments
-- "deprioritize": Questions that help identify what can be set aside
+CONVERSION TILE TYPES:
+- "decision": A decision that needs to be made (e.g., "Choose between X and Y")
+- "task": A concrete actionable next step (e.g., "Research pricing options")
+- "clarify_task": Information needed to make a decision (still a Task type)
 
 RULES:
-- No brainstorming or exploration prompts
-- No open-ended "what else?" questions
-- Each prompt must be phrased to convert cleanly into a Task or Decision
-- Maximum 4 follow-ups total
+- Maximum 2 tiles total
+- Each tile must be a concrete artifact, not a question
+- No open-ended exploration
+- Phrase as commitments, not prompts
+- Decision tiles: frame as "Decide: [what to decide]"
+- Task tiles: frame as "Task: [what to do]"
+- Clarify Task tiles: frame as "Get [info] needed to decide"
 
 Return ONLY a JSON object with this exact structure:
 {
-  "followUps": [
-    {"type": "clarify", "text": "What specific uncertainty needs resolution?"},
-    {"type": "decide", "text": "What decision does this require?"},
-    {"type": "commit", "text": "What concrete action should be taken?"},
-    {"type": "deprioritize", "text": "What can be set aside?"}
+  "tiles": [
+    {"type": "decision", "text": "Decide: Choose between X and Y"},
+    {"type": "task", "text": "Task: Research pricing options"}
   ]
 }
 
-Example format: {"followUps": [{"type": "decide", "text": "Should I prioritize X or Y?"}, {"type": "commit", "text": "What are the next 3 concrete steps?"}]}`;
+Example: {"tiles": [{"type": "decision", "text": "Decide: Prioritize feature X or Y"}, {"type": "task", "text": "Task: Get user feedback on pricing"}]}`;
 
     let followUpQuestions: FollowUpQuestion[] = [];
     try {
-      const followUpResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+      const conversionResponse = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -162,45 +171,52 @@ Example format: {"followUps": [{"type": "decide", "text": "Should I prioritize X
             },
             {
               role: 'user',
-              content: followUpPrompt,
+              content: conversionPrompt,
             },
           ],
           response_format: { type: 'json_object' },
           temperature: 0.7,
-          max_tokens: 300,
+          max_tokens: 200,
         }),
       });
 
-      if (followUpResponse.ok) {
-        const followUpData = await followUpResponse.json();
-        const followUpContent = followUpData.choices[0]?.message?.content;
-        if (followUpContent) {
+      if (conversionResponse.ok) {
+        const conversionData = await conversionResponse.json();
+        const conversionContent = conversionData.choices[0]?.message?.content;
+        if (conversionContent) {
           try {
-            const parsed = JSON.parse(followUpContent);
-            // Parse follow-ups with type and text
-            if (parsed.followUps && Array.isArray(parsed.followUps)) {
-              followUpQuestions = parsed.followUps
-                .filter((f: any) => {
-                  // Validate type is one of the allowed values
-                  const validTypes = ['clarify', 'decide', 'commit', 'deprioritize'];
-                  return validTypes.includes(f.type) && f.text && typeof f.text === 'string';
+            const parsed = JSON.parse(conversionContent);
+            // Parse conversion tiles - map to follow-up format for compatibility
+            if (parsed.tiles && Array.isArray(parsed.tiles)) {
+              followUpQuestions = parsed.tiles
+                .filter((t: any) => {
+                  const validTypes = ['decision', 'task', 'clarify_task'];
+                  return validTypes.includes(t.type) && t.text && typeof t.text === 'string';
                 })
-                .map((f: any) => ({
-                  type: f.type as 'clarify' | 'decide' | 'commit' | 'deprioritize',
-                  text: f.text,
-                }))
-                .slice(0, 4); // Limit to 4
+                .map((t: any) => {
+                  // Map tile types to follow-up types for backward compatibility
+                  let followUpType: 'clarify' | 'decide' | 'commit' | 'deprioritize' = 'commit';
+                  if (t.type === 'decision') {
+                    followUpType = 'decide';
+                  } else if (t.type === 'task' || t.type === 'clarify_task') {
+                    followUpType = 'commit';
+                  }
+                  return {
+                    type: followUpType,
+                    text: t.text,
+                    tileType: t.type, // Store original tile type
+                  };
+                })
+                .slice(0, 2); // Limit to 2 tiles
             }
           } catch (parseError) {
-            console.error('Error parsing follow-up questions:', parseError);
-            // Fallback: provide empty array (no follow-ups if parsing fails)
+            console.error('Error parsing conversion tiles:', parseError);
             followUpQuestions = [];
           }
         }
       }
-    } catch (followUpError) {
-      console.error('Error generating follow-up questions:', followUpError);
-      // Fallback: provide empty array (no follow-ups if generation fails)
+    } catch (conversionError) {
+      console.error('Error generating conversion tiles:', conversionError);
       followUpQuestions = [];
     }
 
@@ -216,7 +232,7 @@ Example format: {"followUps": [{"type": "decide", "text": "Should I prioritize X
     return {
       answer,
       citations,
-      followUpQuestions: followUpQuestions.slice(0, 4), // Limit to 4
+      followUpQuestions: followUpQuestions.slice(0, 2), // Limit to 2 tiles
     };
   } catch (error) {
     console.error('Answer synthesis error:', error);

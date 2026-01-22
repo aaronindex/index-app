@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import FollowUpQuestion from '@/app/ask/components/FollowUpQuestion';
+import ConversionTile from '@/app/ask/components/ConversionTile';
 
 interface SearchResult {
   chunk_id: string;
@@ -18,6 +18,7 @@ interface SearchResult {
 interface FollowUpQuestion {
   type: 'clarify' | 'decide' | 'commit' | 'deprioritize';
   text: string;
+  tileType?: 'decision' | 'task' | 'clarify_task';
 }
 
 interface SynthesizedAnswer {
@@ -65,6 +66,9 @@ export default function AskPage() {
   } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [askIndexRunId, setAskIndexRunId] = useState<string | null>(null);
+  const [evidenceExpanded, setEvidenceExpanded] = useState(false);
+  const [showAllTiles, setShowAllTiles] = useState(false);
 
   const performSearch = async (searchQuery?: string) => {
     const queryToUse = searchQuery || query;
@@ -160,6 +164,9 @@ export default function AskPage() {
       setResults(data.results || []);
       setAnswer(data.answer || null);
       setRelatedContent(data.relatedContent || null);
+      setAskIndexRunId(data.ask_index_run_id || null);
+      setEvidenceExpanded(false); // Collapse evidence by default
+      setShowAllTiles(false); // Show max 2 tiles by default
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Search failed');
       console.error('[Ask Page] Search error:', err);
@@ -217,181 +224,207 @@ export default function AskPage() {
                 <span className="text-2xl">✨</span>
                 <h2 className="text-xl font-semibold text-foreground">Answer</h2>
               </div>
-              <div className="prose prose-zinc dark:prose-invert max-w-none mb-6">
-                <p className="text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap leading-relaxed">
+              <div className="prose prose-zinc dark:prose-invert max-w-none">
+                <p className="text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap leading-relaxed text-sm">
                   {answer.answer}
                 </p>
               </div>
 
-              {/* Citations */}
-              {answer.citations.length > 0 && (
+              {/* Convert Tiles */}
+              {answer.followUpQuestions.length > 0 && (
                 <div className="mt-6 pt-6 border-t border-zinc-200 dark:border-zinc-800">
-                  <h3 className="text-sm font-semibold text-foreground mb-3">Sources</h3>
-                  <div className="space-y-2">
-                    {answer.citations.map((citation, idx) => (
-                      <div
-                        key={citation.chunk_id}
-                        className="p-3 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg"
+                  <h3 className="text-sm font-semibold text-foreground mb-4">Convert</h3>
+                  <div className="space-y-3">
+                    {(showAllTiles ? answer.followUpQuestions : answer.followUpQuestions.slice(0, 2)).map((question, idx) => {
+                      // Map follow-up type to tile type
+                      const tileType = question.tileType || (question.type === 'decide' ? 'decision' : question.type === 'commit' ? 'task' : 'task');
+                      return (
+                        <ConversionTile
+                          key={idx}
+                          type={tileType as 'decision' | 'task' | 'clarify_task'}
+                          text={question.text}
+                          conversationIds={answer.citations.map((c) => c.conversation_id)}
+                          answerContext={answer.answer}
+                          sourceQuery={query}
+                          askIndexRunId={askIndexRunId}
+                          onConvert={() => {
+                            router.refresh();
+                          }}
+                        />
+                      );
+                    })}
+                    {answer.followUpQuestions.length > 2 && !showAllTiles && (
+                      <button
+                        onClick={() => setShowAllTiles(true)}
+                        className="w-full px-4 py-2 text-sm text-zinc-600 dark:text-zinc-400 hover:text-foreground border border-zinc-200 dark:border-zinc-800 rounded-lg hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors"
                       >
-                        <div className="flex items-start justify-between mb-1">
-                          <Link
-                            href={`/conversations/${citation.conversation_id}`}
-                            className="text-sm font-medium text-foreground hover:opacity-80 transition-opacity"
-                          >
-                            {idx + 1}. {citation.conversation_title || 'Untitled Conversation'}
-                          </Link>
-                          <span className="text-xs text-zinc-500 dark:text-zinc-500">
-                            {(citation.similarity * 100).toFixed(0)}% match
-                          </span>
-                        </div>
-                        <p className="text-xs text-zinc-600 dark:text-zinc-400 mt-1">
-                          {citation.excerpt}
-                        </p>
-                      </div>
-                    ))}
+                        Show {answer.followUpQuestions.length - 2} more
+                      </button>
+                    )}
+                  </div>
+                  
+                  {/* Demoted Start Chat */}
+                  <div className="mt-4 pt-4 border-t border-zinc-200 dark:border-zinc-800">
+                    <p className="text-xs text-zinc-500 dark:text-zinc-500">
+                      Need more clarity?{' '}
+                      <span className="text-zinc-600 dark:text-zinc-400">
+                        Start chat from an artifact
+                      </span>
+                    </p>
                   </div>
                 </div>
               )}
 
-              {/* Follow-up Questions */}
-              {answer.followUpQuestions.length > 0 && (
+              {/* Evidence (Collapsed by default) */}
+              {((answer && answer.citations.length > 0) || results.length > 0 || (relatedContent && (relatedContent.highlights.length > 0 || relatedContent.threads.length > 0 || relatedContent.projects.length > 0))) && (
                 <div className="mt-6 pt-6 border-t border-zinc-200 dark:border-zinc-800">
-                  <h3 className="text-sm font-semibold text-foreground mb-3">Follow-Up Questions</h3>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-500 mb-4">
-                    Convert these prompts into branches, tasks, decisions, highlights, or continue in your chat tool.
-                  </p>
-                  <div className="space-y-3">
-                    {answer.followUpQuestions.map((question, idx) => (
-                      <FollowUpQuestion
-                        key={idx}
-                        prompt={question.text}
-                        type={question.type}
-                        conversationIds={answer.citations.map((c) => c.conversation_id)}
-                        answerContext={answer.answer}
-                        sourceQuery={query}
-                        onConvert={() => {
-                          // Refresh to show new items
-                          router.refresh();
-                        }}
-                      />
-                    ))}
-                  </div>
+                  <button
+                    onClick={() => setEvidenceExpanded(!evidenceExpanded)}
+                    className="flex items-center justify-between w-full text-sm font-semibold text-foreground hover:opacity-80 transition-opacity"
+                  >
+                    <span>
+                      Evidence ({(answer ? answer.citations.length : 0) + results.length + (relatedContent ? relatedContent.highlights.length + relatedContent.threads.length + relatedContent.projects.length : 0)})
+                    </span>
+                    <span className="text-zinc-500 dark:text-zinc-400">
+                      {evidenceExpanded ? '−' : '+'}
+                    </span>
+                  </button>
+                  
+                  {evidenceExpanded && (
+                    <div className="mt-4 space-y-4">
+                      {/* Citations */}
+                      {answer && answer.citations.length > 0 && (
+                        <div className="space-y-2">
+                          {answer.citations.map((citation, idx) => (
+                            <div
+                              key={citation.chunk_id}
+                              className="p-3 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg"
+                            >
+                              <div className="flex items-start justify-between mb-1">
+                                <Link
+                                  href={`/conversations/${citation.conversation_id}`}
+                                  className="text-sm font-medium text-foreground hover:opacity-80 transition-opacity"
+                                >
+                                  {citation.conversation_title || 'Untitled Conversation'}
+                                </Link>
+                                <span className="text-xs text-zinc-500 dark:text-zinc-500">
+                                  {(citation.similarity * 100).toFixed(0)}% match
+                                </span>
+                              </div>
+                              <p className="text-xs text-zinc-600 dark:text-zinc-400 mt-1 truncate">
+                                {citation.excerpt.substring(0, 120)}
+                                {citation.excerpt.length > 120 ? '...' : ''}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      
+                      {/* Search Results */}
+                      {results.length > 0 && (
+                        <div className="space-y-2">
+                          {results.map((result) => (
+                            <div
+                              key={result.chunk_id}
+                              className="p-3 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg"
+                            >
+                              <div className="flex items-start justify-between mb-1">
+                                <Link
+                                  href={`/conversations/${result.conversation_id}`}
+                                  className="text-sm font-medium text-foreground hover:opacity-80 transition-opacity"
+                                >
+                                  {result.conversation_title || 'Untitled Conversation'}
+                                </Link>
+                                <span className="text-xs text-zinc-500 dark:text-zinc-500">
+                                  {(result.similarity * 100).toFixed(0)}% match
+                                </span>
+                              </div>
+                      <p className="text-xs text-zinc-600 dark:text-zinc-400 mt-1 truncate">
+                        {result.content.substring(0, 120)}
+                        {result.content.length > 120 ? '...' : ''}
+                      </p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      
+                      {/* Related Content (minimal) */}
+                      {relatedContent && (relatedContent.highlights.length > 0 || relatedContent.threads.length > 0 || relatedContent.projects.length > 0) && (
+                        <div className="space-y-2">
+                          {relatedContent.highlights.map((highlight) => (
+                            <Link
+                              key={highlight.id}
+                              href={`/conversations/${highlight.conversation_id}`}
+                              className="block p-2 text-xs text-zinc-600 dark:text-zinc-400 hover:text-foreground"
+                            >
+                              Highlight: {highlight.label || highlight.content.substring(0, 50)}...
+                            </Link>
+                          ))}
+                          {relatedContent.projects.map((project) => (
+                            <Link
+                              key={project.id}
+                              href={`/projects/${project.id}`}
+                              className="block p-2 text-xs text-zinc-600 dark:text-zinc-400 hover:text-foreground"
+                            >
+                              Project: {project.name}
+                            </Link>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
           </div>
         )}
 
-        {/* Search Results (shown below answer) */}
-        {results.length > 0 && (
-          <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-foreground">
-              {answer ? 'Related Excerpts' : `Found ${results.length} result${results.length !== 1 ? 's' : ''}`}
-            </h2>
-            {results.map((result) => (
-              <div
-                key={result.chunk_id}
-                className="p-4 border border-zinc-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-950 hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors"
+
+        {/* Evidence drawer for results without answer */}
+        {!answer && results.length > 0 && (
+          <div className="mb-8">
+            <div className="border border-zinc-200 dark:border-zinc-800 rounded-lg p-6">
+              <button
+                onClick={() => setEvidenceExpanded(!evidenceExpanded)}
+                className="flex items-center justify-between w-full text-sm font-semibold text-foreground hover:opacity-80 transition-opacity mb-4"
               >
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex-1">
-                    <Link
-                      href={`/conversations/${result.conversation_id}`}
-                      className="text-sm font-medium text-foreground hover:opacity-80 transition-opacity"
-                    >
-                      {result.conversation_title || 'Untitled Conversation'}
-                    </Link>
-                    <span className="ml-2 text-xs text-zinc-500 dark:text-zinc-500">
-                      {(result.similarity * 100).toFixed(0)}% match
-                    </span>
-                  </div>
-                </div>
-                <p className="text-zinc-700 dark:text-zinc-300 text-sm leading-relaxed">
-                  {result.content}
-                </p>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Related Content */}
-        {relatedContent && (relatedContent.highlights.length > 0 || relatedContent.threads.length > 0 || relatedContent.projects.length > 0) && (
-          <div className="mt-8 space-y-6">
-            <h2 className="text-lg font-semibold text-foreground">Related Content</h2>
-
-            {/* Related Highlights */}
-            {relatedContent.highlights.length > 0 && (
-              <div>
-                <h3 className="text-sm font-semibold text-foreground mb-3">Highlights</h3>
+                <span>
+                  Evidence ({results.length + (relatedContent ? relatedContent.highlights.length + relatedContent.threads.length + relatedContent.projects.length : 0)})
+                </span>
+                <span className="text-zinc-500 dark:text-zinc-400">
+                  {evidenceExpanded ? '−' : '+'}
+                </span>
+              </button>
+              
+              {evidenceExpanded && (
                 <div className="space-y-2">
-                  {relatedContent.highlights.map((highlight) => (
-                    <Link
-                      key={highlight.id}
-                      href={`/conversations/${highlight.conversation_id}`}
-                      className="block p-3 border border-zinc-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-950 hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors"
+                  {results.map((result) => (
+                    <div
+                      key={result.chunk_id}
+                      className="p-3 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg"
                     >
-                      {highlight.label && (
-                        <div className="text-sm font-medium text-foreground mb-1">
-                          {highlight.label}
-                        </div>
-                      )}
-                      <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-1">
-                        {highlight.content.substring(0, 150)}
-                        {highlight.content.length > 150 ? '...' : ''}
-                      </p>
-                      <p className="text-xs text-zinc-500 dark:text-zinc-500">
-                        From: {highlight.conversation_title || 'Untitled Conversation'}
-                      </p>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Related Threads/Branches */}
-            {relatedContent.threads.length > 0 && (
-              <div>
-                <h3 className="text-sm font-semibold text-foreground mb-3">Related Threads</h3>
-                <div className="space-y-2">
-                  {relatedContent.threads.map((thread) => (
-                    <Link
-                      key={thread.id}
-                      href={`/conversations/${thread.id}`}
-                      className="block p-3 border border-zinc-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-950 hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors"
-                    >
-                      <div className="text-sm font-medium text-foreground mb-1">
-                        {thread.title || 'Untitled Branch'}
+                      <div className="flex items-start justify-between mb-1">
+                        <Link
+                          href={`/conversations/${result.conversation_id}`}
+                          className="text-sm font-medium text-foreground hover:opacity-80 transition-opacity"
+                        >
+                          {result.conversation_title || 'Untitled Conversation'}
+                        </Link>
+                        <span className="text-xs text-zinc-500 dark:text-zinc-500">
+                          {(result.similarity * 100).toFixed(0)}% match
+                        </span>
                       </div>
-                      <p className="text-xs text-zinc-500 dark:text-zinc-500">
-                        Branch from: {thread.conversation_title || 'Parent Conversation'}
+                      <p className="text-xs text-zinc-600 dark:text-zinc-400 mt-1 truncate">
+                        {result.content.substring(0, 120)}
+                        {result.content.length > 120 ? '...' : ''}
                       </p>
-                    </Link>
+                    </div>
                   ))}
                 </div>
-              </div>
-            )}
-
-            {/* Related Projects */}
-            {relatedContent.projects.length > 0 && (
-              <div>
-                <h3 className="text-sm font-semibold text-foreground mb-3">Projects</h3>
-                <div className="flex flex-wrap gap-2">
-                  {relatedContent.projects.map((project) => (
-                    <Link
-                      key={project.id}
-                      href={`/projects/${project.id}`}
-                      className="px-3 py-2 border border-zinc-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-950 hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors text-sm font-medium text-foreground"
-                    >
-                      {project.name}
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         )}
-        
-        {/* Start Chat removed from Ask Index results - convert to Task/Decision first */}
 
         {!loading && results.length === 0 && query && !error && (
           <div className="text-center py-12">

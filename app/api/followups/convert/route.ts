@@ -19,6 +19,7 @@ export async function POST(request: NextRequest) {
       conversationIds, // Array of conversation IDs from search results
       answerContext, // The answer text for context
       sourceQuery, // The original Ask Index query
+      ask_index_run_id, // The ask_index_run ID that generated this conversion
     } = body;
 
     if (!type || !prompt) {
@@ -68,6 +69,7 @@ export async function POST(request: NextRequest) {
             description: answerContext ? `From: ${sourceQuery}\n\n${answerContext.substring(0, 500)}` : null,
             status: 'open',
             source_query: sourceQuery || null,
+            source_ask_index_run_id: ask_index_run_id || null,
           })
           .select()
           .single();
@@ -94,6 +96,7 @@ export async function POST(request: NextRequest) {
             conversation_id: primaryConversationId,
             title: prompt,
             content: answerContext ? `From: ${sourceQuery}\n\n${answerContext.substring(0, 1000)}` : null,
+            source_ask_index_run_id: ask_index_run_id || null,
           })
           .select()
           .single();
@@ -144,6 +147,7 @@ export async function POST(request: NextRequest) {
             message_id: firstMessage.id,
             content: prompt,
             label: prompt.substring(0, 100),
+            source_ask_index_run_id: ask_index_run_id || null,
           })
           .select()
           .single();
