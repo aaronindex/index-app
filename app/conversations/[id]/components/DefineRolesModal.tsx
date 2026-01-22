@@ -406,13 +406,6 @@ export default function DefineRolesModal({
               Split
             </button>
           )}
-          
-          {/* Debug: Show selection info (temporary) */}
-          {selection && (
-            <div className="fixed bottom-4 right-4 z-50 px-3 py-2 bg-blue-500 text-white text-xs rounded shadow-lg">
-              Selection detected: {selection.text.substring(0, 20)}...
-            </div>
-          )}
 
           <div className="space-y-3">
             {messages.map((message) => (
