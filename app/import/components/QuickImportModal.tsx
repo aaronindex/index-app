@@ -22,8 +22,6 @@ export default function QuickImportModal({ isOpen, onClose }: QuickImportModalPr
   const [projectAction, setProjectAction] = useState<'none' | 'existing' | 'new'>('none');
   const [newProjectName, setNewProjectName] = useState('');
   const [newProjectDescription, setNewProjectDescription] = useState('');
-  const [swapRoles, setSwapRoles] = useState(false);
-  const [treatAsSingleBlock, setTreatAsSingleBlock] = useState(false);
   const [parsedInfo, setParsedInfo] = useState<{ userCount: number; assistantCount: number } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -59,7 +57,7 @@ export default function QuickImportModal({ isOpen, onClose }: QuickImportModalPr
   // Parse transcript on change
   useEffect(() => {
     if (transcript.trim()) {
-      const parsed = parseTranscript(transcript, { swapRoles, treatAsSingleBlock });
+      const parsed = parseTranscript(transcript);
       setParsedInfo({
         userCount: parsed.userCount,
         assistantCount: parsed.assistantCount,
@@ -67,7 +65,7 @@ export default function QuickImportModal({ isOpen, onClose }: QuickImportModalPr
     } else {
       setParsedInfo(null);
     }
-  }, [transcript, swapRoles, treatAsSingleBlock]);
+  }, [transcript]);
 
   // Poll job status if jobId exists
   useEffect(() => {
@@ -185,8 +183,6 @@ export default function QuickImportModal({ isOpen, onClose }: QuickImportModalPr
                   description: newProjectDescription.trim() || undefined,
                 }
               : undefined,
-          swapRoles,
-          treatAsSingleBlock,
         }),
       });
 
@@ -276,8 +272,6 @@ export default function QuickImportModal({ isOpen, onClose }: QuickImportModalPr
       setProjectAction('none');
       setNewProjectName('');
       setNewProjectDescription('');
-      setSwapRoles(false);
-      setTreatAsSingleBlock(false);
       setParsedInfo(null);
       setError(null);
       setSuccess(null);
@@ -351,28 +345,6 @@ export default function QuickImportModal({ isOpen, onClose }: QuickImportModalPr
                 Detected: {parsedInfo.userCount} User / {parsedInfo.assistantCount} Assistant
               </p>
             )}
-            <div className="mt-2 flex gap-4">
-              <label className="flex items-center gap-2 text-xs text-[rgb(var(--muted))] cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={swapRoles}
-                  onChange={(e) => setSwapRoles(e.target.checked)}
-                  className="w-3 h-3"
-                  disabled={loading}
-                />
-                Swap roles
-              </label>
-              <label className="flex items-center gap-2 text-xs text-[rgb(var(--muted))] cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={treatAsSingleBlock}
-                  onChange={(e) => setTreatAsSingleBlock(e.target.checked)}
-                  className="w-3 h-3"
-                  disabled={loading}
-                />
-                Treat as single block
-              </label>
-            </div>
           </div>
 
           <div>

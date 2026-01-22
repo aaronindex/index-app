@@ -12,7 +12,7 @@ import DeleteHighlightButton from '@/app/projects/[id]/components/DeleteHighligh
 import MobileHighlightsPanel from './components/MobileHighlightsPanel';
 import ReduceOnboardingModal from './components/ReduceOnboardingModal';
 import DefineRolesButton from './components/DefineRolesButton';
-import { isRoleAmbiguous } from '@/lib/conversations/roleAmbiguity';
+import { isRoleAmbiguous, isRoleConfidenceLow } from '@/lib/conversations/roleAmbiguity';
 
 type Status = 'priority' | 'open' | 'complete' | 'dormant';
 
@@ -129,9 +129,17 @@ export default async function ConversationPage({
           {/* Main Content Column */}
           <div className="lg:col-span-3 space-y-6">
             {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-              {/* Buttons row - full width on mobile */}
-              <div className="flex items-center gap-3 w-full sm:w-auto sm:order-2">
+            <div className="space-y-4">
+              {/* Row 1: Actions (right-aligned) */}
+              <div className="flex items-center justify-end gap-3">
+                {messages && messages.length > 0 && (
+                  <DefineRolesButton
+                    conversationId={id}
+                    messages={messages}
+                    isRoleAmbiguous={isRoleAmbiguous(messages)}
+                    rolesConfidenceLow={isRoleConfidenceLow(messages)}
+                  />
+                )}
                 <StatusPill status={null} />
                 <ExtractInsightsButton conversationId={id} projectId={project?.id || null} />
                 <DeleteConversationButton
@@ -140,20 +148,21 @@ export default async function ConversationPage({
                   projectId={project?.id || null}
                 />
               </div>
-              {/* Title row - full width on mobile */}
-              <div className="flex-1 min-w-0 w-full sm:order-1">
-                <div className="flex items-center gap-3 mb-2">
-                  <h1 className="text-2xl font-semibold text-foreground">
-                    {conversation.title || 'Untitled Conversation'}
-                  </h1>
-                  {messages && messages.length > 0 && (
-                    <DefineRolesButton
-                      conversationId={id}
-                      messages={messages}
-                      isRoleAmbiguous={isRoleAmbiguous(messages)}
-                    />
-                  )}
-                </div>
+              {/* Row 2: Title (full width) */}
+              <div className="w-full">
+                <h1 
+                  className="text-2xl font-semibold text-foreground break-words"
+                  style={{
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                    wordBreak: 'break-word',
+                  }}
+                  title={conversation.title || 'Untitled Conversation'}
+                >
+                  {conversation.title || 'Untitled Conversation'}
+                </h1>
               </div>
             </div>
 

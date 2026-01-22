@@ -4,7 +4,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabaseServer';
 import { getCurrentUser } from '@/lib/getUser';
-import { parseTranscript, generateAutoTitle } from '@/lib/parsers/transcript';
+import { parseTranscript } from '@/lib/parsers/transcript';
+import { generateConversationTitle } from '@/lib/ai/title';
 import { chunkText } from '@/lib/chunking';
 import { embedTexts } from '@/lib/ai/embeddings';
 import { generateDedupeHash } from '@/lib/jobs/importProcessor';
@@ -63,7 +64,7 @@ async function processQuickImportSync(
       .insert({
         user_id: userId,
         import_id: importRecord.id,
-        title,
+        title: finalTitle,
         source: 'quick_import',
         started_at: now.toISOString(),
         ended_at: now.toISOString(),
@@ -234,24 +235,47 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { transcript, title, projectId, newProject, swapRoles, treatAsSingleBlock } = body;
+    const { transcript, title, projectId, newProject } = body;
 
     if (!transcript || typeof transcript !== 'string' || transcript.trim().length === 0) {
       return NextResponse.json({ error: 'Transcript is required' }, { status: 400 });
     }
 
-    // Parse transcript
-    const parsed = parseTranscript(transcript, { swapRoles, treatAsSingleBlock });
+    // Parse transcript (no swapRoles or treatAsSingleBlock options)
+    const parsed = parseTranscript(transcript);
 
     if (parsed.messages.length === 0) {
       return NextResponse.json({ error: 'No messages found in transcript' }, { status: 400 });
     }
 
-    // Generate auto title if not provided
-    const finalTitle = title || generateAutoTitle(transcript, parsed);
+    const supabase = await getSupabaseServerClient();
+
+    // Generate title if not provided or empty
+    let finalTitle = title?.trim() || '';
+    if (!finalTitle) {
+      try {
+        // Get project name if available
+        let projectName: string | undefined;
+        if (projectId) {
+          const { data: project } = await supabase
+            .from('projects')
+            .select('name')
+            .eq('id', projectId)
+            .single();
+          projectName = project?.name;
+        } else if (newProject?.name) {
+          projectName = newProject.name;
+        }
+
+        finalTitle = await generateConversationTitle(parsed.messages, projectName);
+      } catch (error) {
+        console.error('Error generating title:', error);
+        // Fallback to simple title
+        finalTitle = 'Untitled conversation';
+      }
+    }
 
     // Check for duplicates
-    const supabase = await getSupabaseServerClient();
     const normalizedText = transcript.trim().substring(0, 4000);
     const dedupeHash = generateDedupeHash(user.id, finalTitle, normalizedText);
 

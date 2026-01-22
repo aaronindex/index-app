@@ -46,8 +46,6 @@ export default function ImportPage() {
   const [quickProjectAction, setQuickProjectAction] = useState<'none' | 'existing' | 'new'>('none');
   const [quickNewProjectName, setQuickNewProjectName] = useState('');
   const [quickNewProjectDescription, setQuickNewProjectDescription] = useState('');
-  const [quickSwapRoles, setQuickSwapRoles] = useState(false);
-  const [quickTreatAsSingleBlock, setQuickTreatAsSingleBlock] = useState(false);
   const [quickParsedInfo, setQuickParsedInfo] = useState<{ userCount: number; assistantCount: number } | null>(null);
   const [quickLoading, setQuickLoading] = useState(false);
   const [quickError, setQuickError] = useState<string | null>(null);
@@ -131,7 +129,7 @@ export default function ImportPage() {
   // Parse quick import transcript on change
   useEffect(() => {
     if (quickTranscript.trim()) {
-      const parsed = parseTranscript(quickTranscript, { swapRoles: quickSwapRoles, treatAsSingleBlock: quickTreatAsSingleBlock });
+      const parsed = parseTranscript(quickTranscript);
       setQuickParsedInfo({
         userCount: parsed.userCount,
         assistantCount: parsed.assistantCount,
@@ -139,7 +137,7 @@ export default function ImportPage() {
     } else {
       setQuickParsedInfo(null);
     }
-  }, [quickTranscript, quickSwapRoles, quickTreatAsSingleBlock]);
+  }, [quickTranscript]);
 
   // Guardrail: Auto-enable single block mode if no role markers detected
   // Only auto-enables when new content is pasted (transcript length increases), not on manual checkbox toggles
@@ -151,7 +149,6 @@ export default function ImportPage() {
       const hasMarkers = hasRoleMarkers(quickTranscript);
       if (!hasMarkers) {
         // Non-blocking: default to single block for content without recognizable role markers
-        setQuickTreatAsSingleBlock(true);
       }
     }
     
@@ -191,8 +188,6 @@ export default function ImportPage() {
                   description: quickNewProjectDescription.trim() || undefined,
                 }
               : undefined,
-          swapRoles: quickSwapRoles,
-          treatAsSingleBlock: quickTreatAsSingleBlock,
         }),
       });
 
@@ -659,34 +654,6 @@ export default function ImportPage() {
                           Detected: {quickParsedInfo.userCount} User / {quickParsedInfo.assistantCount} Assistant
                         </p>
                       )}
-                      <div className="mt-2 flex gap-4">
-                        <label className="flex items-center gap-2 text-xs text-[rgb(var(--muted))] cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={quickSwapRoles}
-                            onChange={(e) => setQuickSwapRoles(e.target.checked)}
-                            className="w-3 h-3"
-                            disabled={quickLoading}
-                          />
-                          <span>
-                            Swap roles
-                            <span className="block text-[10px] text-[rgb(var(--muted))] mt-0.5">Flip speaker roles if the transcript is reversed</span>
-                          </span>
-                        </label>
-                        <label className="flex items-center gap-2 text-xs text-[rgb(var(--muted))] cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={quickTreatAsSingleBlock}
-                            onChange={(e) => setQuickTreatAsSingleBlock(e.target.checked)}
-                            className="w-3 h-3"
-                            disabled={quickLoading}
-                          />
-                          <span>
-                            Treat as single block
-                            <span className="block text-[10px] text-[rgb(var(--muted))] mt-0.5">Process the transcript as plain text (no speaker parsing)</span>
-                          </span>
-                        </label>
-                      </div>
                     </div>
 
                     <div>

@@ -75,3 +75,61 @@ export function isRoleAmbiguous(messages: Message[]): boolean {
   // If we only have one type of role (user or assistant), it's ambiguous
   return !hasUser || !hasAssistant;
 }
+
+/**
+ * Detect if role confidence is low (for nudging users to review)
+ * 
+ * Confidence is low if:
+ * - Fewer than 2 speaker roles detected
+ * - >80% of content attributed to a single role
+ * - Long sequences of same role (bad alternation pattern)
+ */
+export function isRoleConfidenceLow(messages: Message[]): boolean {
+  if (messages.length === 0) {
+    return false;
+  }
+
+  // Single message is low confidence
+  if (messages.length === 1) {
+    return true;
+  }
+
+  const uniqueRoles = new Set(messages.map((msg) => msg.role));
+  const hasUser = uniqueRoles.has('user');
+  const hasAssistant = uniqueRoles.has('assistant');
+
+  // Fewer than 2 speaker roles detected
+  const speakerRoleCount = (hasUser ? 1 : 0) + (hasAssistant ? 1 : 0);
+  if (speakerRoleCount < 2) {
+    return true;
+  }
+
+  // Check if >80% of content is from a single role
+  const userCount = messages.filter((m) => m.role === 'user').length;
+  const assistantCount = messages.filter((m) => m.role === 'assistant').length;
+  const total = messages.length;
+  
+  if (userCount / total > 0.8 || assistantCount / total > 0.8) {
+    return true;
+  }
+
+  // Check for long sequences of same role (bad alternation)
+  let consecutiveSameRole = 1;
+  let maxConsecutive = 1;
+  
+  for (let i = 1; i < messages.length; i++) {
+    if (messages[i].role === messages[i - 1].role) {
+      consecutiveSameRole++;
+      maxConsecutive = Math.max(maxConsecutive, consecutiveSameRole);
+    } else {
+      consecutiveSameRole = 1;
+    }
+  }
+
+  // If more than 8 consecutive messages with same role, low confidence
+  if (maxConsecutive > 8) {
+    return true;
+  }
+
+  return false;
+}
