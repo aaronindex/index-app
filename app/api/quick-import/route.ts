@@ -64,7 +64,7 @@ async function processQuickImportSync(
       .insert({
         user_id: userId,
         import_id: importRecord.id,
-        title: finalTitle,
+        title: title, // Use the title parameter (already processed in POST handler)
         source: 'quick_import',
         started_at: now.toISOString(),
         ended_at: now.toISOString(),
