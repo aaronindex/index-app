@@ -40,6 +40,7 @@ export async function POST(
       summary: digest.summary,
       topThemes: (digest.top_themes as any) || [],
       openLoops: (digest.open_loops as any) || [],
+      recommendedNextSteps: (digest.recommended_next_steps as any) || [],
       weekStart: digest.week_start,
       weekEnd: digest.week_end,
       userName: authUser.user.email,

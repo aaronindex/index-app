@@ -4,11 +4,13 @@
  */
 
 import { sendEmail } from './resend';
+import { getLoopDisplayTitle, normalizeLoopSnippet, normalizeStepReason } from '../digest/helpers';
 
 interface DigestEmailData {
   summary: string;
   topThemes: Array<{ theme: string; weight: number }>;
-  openLoops: Array<{ conversation_id: string; conversation_title: string | null; snippet: string }>;
+  openLoops: Array<{ conversation_id: string; conversation_title: string | null; snippet: string; priority?: 'high' | 'medium' | 'low' }>;
+  recommendedNextSteps: Array<{ action: string; reason: string | null; priority?: 'high' | 'medium' | 'low' }>;
   weekStart: string;
   weekEnd: string;
   userName?: string;
@@ -19,37 +21,54 @@ interface DigestEmailData {
  * Generate HTML email template for weekly digest
  */
 function generateDigestEmailHTML(data: DigestEmailData): string {
-  const themesHTML = data.topThemes.length > 0
+  // Top 3 open loops only
+  const topLoops = data.openLoops.slice(0, 3);
+  const openLoopsHTML = topLoops.length > 0
     ? `
       <div style="margin: 24px 0;">
-        <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 12px; color: #18181b;">Top Themes</h3>
+        <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 12px; color: #18181b;">Open Loops</h3>
         <ul style="list-style: none; padding: 0; margin: 0;">
-          ${data.topThemes.map((theme) => `
-            <li style="margin: 8px 0; padding: 8px; background: #f4f4f5; border-radius: 4px;">
-              <strong style="color: #18181b;">${theme.theme}</strong>
-              <span style="color: #71717a; font-size: 14px; margin-left: 8px;">
-                (${Math.round(theme.weight * 100)}%)
-              </span>
+          ${topLoops.map((loop) => {
+            const displayTitle = getLoopDisplayTitle(loop);
+            const normalizedSnippet = normalizeLoopSnippet(loop.snippet || '');
+            const priorityBadge = loop.priority && (loop.priority === 'high' || loop.priority === 'medium')
+              ? `<span style="display: inline-block; padding: 2px 8px; background: ${loop.priority === 'high' ? '#fee2e2' : '#fef3c7'}; color: ${loop.priority === 'high' ? '#991b1b' : '#92400e'}; border-radius: 4px; font-size: 11px; font-weight: 500; margin-left: 8px;">${loop.priority}</span>`
+              : '';
+            return `
+            <li style="margin: 12px 0; padding: 12px; background: #fef3c7; border-left: 3px solid #f59e0b; border-radius: 4px;">
+              <strong style="color: #18181b; display: block; margin-bottom: 4px;">
+                ${displayTitle}${priorityBadge}
+              </strong>
+              ${normalizedSnippet ? `<p style="color: #52525b; font-size: 14px; margin: 0;">${normalizedSnippet}</p>` : ''}
             </li>
-          `).join('')}
+          `;
+          }).join('')}
         </ul>
       </div>
     `
     : '';
 
-  const openLoopsHTML = data.openLoops.length > 0
+  // Top 2-3 recommended next steps
+  const topSteps = data.recommendedNextSteps.slice(0, 3);
+  const nextStepsHTML = topSteps.length > 0
     ? `
       <div style="margin: 24px 0;">
-        <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 12px; color: #18181b;">Open Loops</h3>
+        <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 12px; color: #18181b;">Recommended Next Steps</h3>
         <ul style="list-style: none; padding: 0; margin: 0;">
-          ${data.openLoops.map((loop) => `
-            <li style="margin: 12px 0; padding: 12px; background: #fef3c7; border-left: 3px solid #f59e0b; border-radius: 4px;">
+          ${topSteps.map((step) => {
+            const normalizedReason = normalizeStepReason(step.reason);
+            const priorityBadge = step.priority && (step.priority === 'high' || step.priority === 'medium')
+              ? `<span style="display: inline-block; padding: 2px 8px; background: ${step.priority === 'high' ? '#fee2e2' : '#dbeafe'}; color: ${step.priority === 'high' ? '#991b1b' : '#1e40af'}; border-radius: 4px; font-size: 11px; font-weight: 500; margin-left: 8px;">${step.priority}</span>`
+              : '';
+            return `
+            <li style="margin: 12px 0; padding: 12px; background: #dbeafe; border-left: 3px solid #3b82f6; border-radius: 4px;">
               <strong style="color: #18181b; display: block; margin-bottom: 4px;">
-                ${loop.conversation_title || 'Untitled Conversation'}
+                ${step.action}${priorityBadge}
               </strong>
-              <p style="color: #52525b; font-size: 14px; margin: 0;">${loop.snippet}</p>
+              ${normalizedReason ? `<p style="color: #52525b; font-size: 14px; margin: 0;">${normalizedReason}</p>` : ''}
             </li>
-          `).join('')}
+          `;
+          }).join('')}
         </ul>
       </div>
     `
@@ -83,11 +102,11 @@ function generateDigestEmailHTML(data: DigestEmailData): string {
 
           <div style="background: #f4f4f5; padding: 20px; border-radius: 8px; margin: 24px 0;">
             <h2 style="font-size: 18px; font-weight: 600; margin: 0 0 12px 0; color: #18181b;">Summary</h2>
-            <div style="color: #52525b; white-space: pre-wrap;">${data.summary}</div>
+            <div style="color: #52525b; white-space: pre-wrap; font-size: 14px; line-height: 1.6;">${data.summary}</div>
           </div>
 
-          ${themesHTML}
           ${openLoopsHTML}
+          ${nextStepsHTML}
           ${viewDigestLink}
 
           <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #e4e4e7; text-align: center;">

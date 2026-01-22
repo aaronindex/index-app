@@ -110,41 +110,59 @@ ${THINKING_STANCE}
 Conversations this week:
 ${conversationContext}${tasksContext}${decisionsContext}${changeCountsText}
 
-Generate a comprehensive weekly digest with a multi-section narrative structure:
+Generate a weekly digest as a cognitive ledger:
 
-1. **Summary** (2-3 paragraphs): Main themes, insights, progress, and action items from the week. Avoid speculative language. Emphasize what changed, what remains open, and what deserves attention next.
-2. **What Changed** (1 paragraph narrative): A narrative description of what changed this week, highlighting key activities and progress. Be concrete and specific.
+1. **Summary** (max 3-4 sentences, prefer 3-4):
+   - MUST start with a declarative line: "You decided..." or "You committed to..." if any decisions exist.
+   - Include: open-loop count + one-line "what now".
+   - BAN phrases: "this week involved", "primarily focused on", "indicates", "suggests", "action-oriented approach", "momentum", "ensure clarity", "ongoing work related to".
+   - No backstory. No meta-analysis. No restating the same point twice.
+
+2. **What Changed** (1-3 sentences max, ledger format):
+   - Format: "2 conversations reduced → 1 decision, 5 tasks created."
+   - If deltas unavailable: "1 decision captured. 5 tasks remain open."
+   - Do NOT invent deltas. Use existing counts only.
+
 3. **Top Themes** (3-5 themes): Major themes with weights (0-1 scale) and brief descriptions. Focus on patterns that matter, not exploration.
-4. **Open Loops** (unresolved items): Unresolved questions, incomplete thoughts, or follow-ups needed, with priority levels (high/medium/low). Surface uncertainty explicitly rather than expanding scope.
-5. **Recommended Next Steps** (3-5 actions): Specific, actionable next steps with reasons and priority levels. Prefer reduction over expansion.
+
+4. **Open Loops** (unresolved items):
+   - Format snippet as imperative: "Decide whether to replace blinds" or "Identify blind model from photo".
+   - NO "we can" or "Next step we can...". Use: "Next:" or plain imperative.
+   - Include priority (high/medium/low) only if deterministically derivable.
+
+5. **Recommended Next Steps** (3-5 actions):
+   - Action: imperative, <= 60 chars.
+   - Reason: optional one line (<= 100 chars) with specific payoff, e.g., "So you can buy the correct cord lock."
+   - BAN generic filler: "will help in selecting appropriate...", "will advance the resolution...", "maintain forward momentum".
+   - If payoff unavailable, omit reason entirely.
 
 ${tasks && tasks.length > 0 ? 'Note: Include any open or in-progress tasks in the summary, open loops, and recommended next steps.' : ''}
 
 Return your response as JSON with this structure:
 {
-  "summary": "narrative summary text here (2-3 paragraphs)",
+  "summary": "declarative summary (max 3-4 sentences)",
   "whatChanged": {
     "conversations": ${changeCounts?.conversations || 0},
     "highlights": ${changeCounts?.highlights || 0},
     "tasks": ${changeCounts?.tasks || 0},
     "decisions": ${changeCounts?.decisions || 0},
-    "narrative": "narrative description of what changed (1 paragraph)"
+    "narrative": "ledger entry (1-3 sentences)"
   },
   "topThemes": [
     {"theme": "theme name", "weight": 0.8, "description": "brief description"},
     ...
   ],
   "openLoops": [
-    {"conversation_id": "uuid or empty", "conversation_title": "title or null", "snippet": "relevant text", "priority": "high|medium|low"},
+    {"conversation_id": "uuid or empty", "conversation_title": "title or null", "snippet": "imperative text (no 'we can')", "priority": "high|medium|low"},
     ...
   ],
   "recommendedNextSteps": [
-    {"action": "specific action item", "reason": "why this matters", "priority": "high|medium|low"},
+    {"action": "imperative action (<=60 chars)", "reason": "specific payoff or omit", "priority": "high|medium|low"},
     ...
   ]
 }
 
-Be concise but insightful. Focus on patterns, actionable insights, and helping the user understand their week.`;
+Be decisive. Declare signal, don't narrate activity.`;
 
   try {
     const apiKey = process.env.OPENAI_API_KEY;

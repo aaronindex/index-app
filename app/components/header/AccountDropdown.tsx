@@ -138,8 +138,8 @@ export default function AccountDropdown() {
                 setIsOpen(false);
                 const supabase = getSupabaseBrowserClient();
                 await supabase.auth.signOut();
-                router.push('/');
-                router.refresh();
+                // Use hard redirect to ensure auth state is cleared
+                window.location.href = '/';
               }}
               className="w-full text-left px-4 py-2 text-sm text-[rgb(var(--text))] hover:bg-[rgb(var(--surface2))] transition-colors focus:outline-none focus:bg-[rgb(var(--surface2))]"
             >

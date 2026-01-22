@@ -3,6 +3,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { getLoopDisplayTitle, normalizeLoopSnippet, normalizeStepReason } from '@/lib/digest/helpers';
 
 interface Digest {
   id: string;
@@ -114,7 +115,7 @@ export default function DigestDetailClient({ digest }: DigestDetailClientProps) 
             )}
           </div>
           {whatChanged.narrative && (
-            <p className="text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap">
+            <p className="text-zinc-700 dark:text-zinc-300 text-sm">
               {whatChanged.narrative}
             </p>
           )}
@@ -128,36 +129,42 @@ export default function DigestDetailClient({ digest }: DigestDetailClientProps) 
         <div className="border border-zinc-200 dark:border-zinc-800 rounded-lg p-6 bg-white dark:bg-zinc-950">
           <h2 className="text-xl font-semibold text-foreground mb-4">Open Loops</h2>
           <div className="space-y-3">
-            {openLoops.map((loop: any, idx: number) => (
-              <div
-                key={idx}
-                className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800"
-              >
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-medium text-foreground">
-                      {loop.conversation_title || 'Untitled Conversation'}
-                    </h3>
-                    {loop.priority && (
-                      <span className={`text-xs px-2 py-0.5 rounded ${getPriorityColor(loop.priority)}`}>
-                        {loop.priority}
-                      </span>
+            {openLoops.map((loop: any, idx: number) => {
+              const displayTitle = getLoopDisplayTitle(loop);
+              const normalizedSnippet = normalizeLoopSnippet(loop.snippet || '');
+              return (
+                <div
+                  key={idx}
+                  className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800"
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-medium text-foreground">
+                        {displayTitle}
+                      </h3>
+                      {loop.priority && (loop.priority === 'high' || loop.priority === 'medium') && (
+                        <span className={`text-xs px-2 py-0.5 rounded ${getPriorityColor(loop.priority)}`}>
+                          {loop.priority}
+                        </span>
+                      )}
+                    </div>
+                    {loop.conversation_id && (
+                      <Link
+                        href={`/conversations/${loop.conversation_id}`}
+                        className="text-sm text-zinc-600 dark:text-zinc-400 hover:text-foreground transition-colors"
+                      >
+                        View →
+                      </Link>
                     )}
                   </div>
-                  {loop.conversation_id && (
-                    <Link
-                      href={`/conversations/${loop.conversation_id}`}
-                      className="text-sm text-zinc-600 dark:text-zinc-400 hover:text-foreground transition-colors"
-                    >
-                      View →
-                    </Link>
+                  {normalizedSnippet && (
+                    <p className="text-sm text-zinc-700 dark:text-zinc-300">
+                      {normalizedSnippet}
+                    </p>
                   )}
                 </div>
-                <p className="text-sm text-zinc-700 dark:text-zinc-300">
-                  {loop.snippet}
-                </p>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
@@ -167,28 +174,31 @@ export default function DigestDetailClient({ digest }: DigestDetailClientProps) 
         <div className="border border-zinc-200 dark:border-zinc-800 rounded-lg p-6 bg-white dark:bg-zinc-950">
           <h2 className="text-xl font-semibold text-foreground mb-4">Recommended Next Steps</h2>
           <div className="space-y-3">
-            {recommendedNextSteps.map((step: any, idx: number) => (
-              <div
-                key={idx}
-                className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800"
-              >
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-medium text-foreground">{step.action}</h3>
-                    {step.priority && (
-                      <span className={`text-xs px-2 py-0.5 rounded ${getPriorityColor(step.priority)}`}>
-                        {step.priority}
-                      </span>
-                    )}
+            {recommendedNextSteps.map((step: any, idx: number) => {
+              const normalizedReason = normalizeStepReason(step.reason);
+              return (
+                <div
+                  key={idx}
+                  className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800"
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-medium text-foreground">{step.action}</h3>
+                      {step.priority && (step.priority === 'high' || step.priority === 'medium') && (
+                        <span className={`text-xs px-2 py-0.5 rounded ${getPriorityColor(step.priority)}`}>
+                          {step.priority}
+                        </span>
+                      )}
+                    </div>
                   </div>
+                  {normalizedReason && (
+                    <p className="text-sm text-zinc-700 dark:text-zinc-300">
+                      {normalizedReason}
+                    </p>
+                  )}
                 </div>
-                {step.reason && (
-                  <p className="text-sm text-zinc-700 dark:text-zinc-300">
-                    {step.reason}
-                  </p>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
