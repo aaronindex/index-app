@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Process messages: update existing, create new ones
-    const updates: Promise<any>[] = [];
+    const updatePromises: Promise<any>[] = [];
     const inserts: any[] = [];
 
     for (const msg of messages) {
@@ -113,8 +113,10 @@ export async function POST(request: NextRequest) {
         });
       } else if (existingMessageIds.has(msg.id)) {
         // Existing message - update role, content, and index
-        updates.push(
-          supabase
+        // Supabase queries are thenable, so we can use them directly with Promise.all
+        // Type assertion needed because TypeScript doesn't recognize PostgrestFilterBuilder as Promise
+        updatePromises.push(
+          (supabase
             .from('messages')
             .update({
               role: msg.role,
@@ -122,14 +124,14 @@ export async function POST(request: NextRequest) {
               index_in_conversation: msg.index_in_conversation,
             })
             .eq('id', msg.id)
-            .eq('conversation_id', conversationId)
+            .eq('conversation_id', conversationId) as unknown) as Promise<any>
         );
       }
     }
 
     // Execute updates
-    if (updates.length > 0) {
-      const updateResults = await Promise.all(updates);
+    if (updatePromises.length > 0) {
+      const updateResults = await Promise.all(updatePromises);
       const updateErrors = updateResults.filter((r) => r.error);
       if (updateErrors.length > 0) {
         console.error('Errors updating messages:', updateErrors);
@@ -160,7 +162,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      updated: updates.length,
+      updated: updatePromises.length,
       created: inserts.length,
       deleted: messagesToDelete.length,
     });
