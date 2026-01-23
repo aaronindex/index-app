@@ -93,11 +93,12 @@ export default function ExtractInsightsButton({ conversationId, projectId }: Ext
       <div className="relative group">
         <button
           disabled
-          className="px-4 py-2 text-sm bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-600 rounded-lg cursor-not-allowed font-medium"
+          className="px-6 py-2 text-sm bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-600 rounded-lg cursor-not-allowed font-medium min-w-[120px]"
+          aria-label="Extract tasks, decisions, and highlights"
         >
           ✨ REDUCE
         </button>
-        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
+        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-xs rounded-lg opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
           Assign this conversation to a project to enable Reduce.
           <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-zinc-900 dark:border-t-zinc-100"></div>
         </div>
@@ -107,13 +108,20 @@ export default function ExtractInsightsButton({ conversationId, projectId }: Ext
 
   return (
     <div className="space-y-2">
-      <button
-        onClick={handleExtract}
-        disabled={extracting}
-        className="px-4 py-2 text-sm bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-400 hover:bg-purple-200 dark:hover:bg-purple-900/50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-      >
-        {extracting ? 'Reducing...' : '✨ REDUCE'}
-      </button>
+      <div className="relative group">
+        <button
+          onClick={handleExtract}
+          disabled={extracting}
+          className="px-6 py-2 text-sm bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-400 hover:bg-purple-200 dark:hover:bg-purple-900/50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium min-w-[120px]"
+          aria-label="Extract tasks, decisions, and highlights"
+        >
+          {extracting ? 'Reducing...' : '✨ REDUCE'}
+        </button>
+        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-xs rounded-lg opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
+          Extract tasks, decisions, and highlights
+          <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-zinc-900 dark:border-t-zinc-100"></div>
+        </div>
+      </div>
 
       {error && (
         <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
