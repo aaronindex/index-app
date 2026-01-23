@@ -5,13 +5,12 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import ConversationViewClient from './components/ConversationViewClient';
-import DeleteConversationButton from './components/DeleteConversationButton';
 import ExtractInsightsButton from './components/ExtractInsightsButton';
 import CreateTaskFromHighlightButton from './components/CreateTaskFromHighlightButton';
 import DeleteHighlightButton from '@/app/projects/[id]/components/DeleteHighlightButton';
 import MobileHighlightsPanel from './components/MobileHighlightsPanel';
 import ReduceOnboardingModal from './components/ReduceOnboardingModal';
-import DefineRolesButton from './components/DefineRolesButton';
+import ConversationOverflowMenu from './components/ConversationOverflowMenu';
 import { isRoleAmbiguous, isRoleConfidenceLow } from '@/lib/conversations/roleAmbiguity';
 
 type Status = 'priority' | 'open' | 'complete' | 'dormant';
@@ -132,19 +131,11 @@ export default async function ConversationPage({
             <div className="space-y-4">
               {/* Row 1: Actions (right-aligned) */}
               <div className="flex items-center justify-end gap-3">
-                {messages && messages.length > 0 && (
-                  <DefineRolesButton
-                    conversationId={id}
-                    messages={messages}
-                    isRoleAmbiguous={isRoleAmbiguous(messages)}
-                    rolesConfidenceLow={isRoleConfidenceLow(messages)}
-                  />
-                )}
-                <StatusPill status={null} />
                 <ExtractInsightsButton conversationId={id} projectId={project?.id || null} />
-                <DeleteConversationButton
+                <ConversationOverflowMenu
                   conversationId={id}
                   conversationTitle={conversation.title}
+                  messages={messages || []}
                   projectId={project?.id || null}
                 />
               </div>
@@ -178,6 +169,8 @@ export default async function ConversationPage({
               conversation={conversation}
               messages={messages || []}
               highlights={highlights || []}
+              rolesConfidenceLow={messages && messages.length > 0 ? isRoleConfidenceLow(messages) : false}
+              conversationId={id}
             />
           </div>
 

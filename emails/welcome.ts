@@ -30,15 +30,20 @@ export function renderWelcomeEmail(): string {
                 INDEX is where thinking becomes usable.
               </p>
               <p style="margin: 0 0 24px 0; font-size: 16px; line-height: 1.6; color: #121211;">
-                Start small: import one conversation that matters.
+                Start small: import one conversation that still matters.
               </p>
-              <ul style="margin: 24px 0; padding-left: 20px; color: #121211;">
-                <li style="margin: 8px 0; font-size: 16px; line-height: 1.6;">Import</li>
+              <p style="margin: 0 0 16px 0; font-size: 16px; line-height: 1.6; color: #121211;">
+                Then reduce it:
+              </p>
+              <ul style="margin: 16px 0 24px 0; padding-left: 20px; color: #121211;">
                 <li style="margin: 8px 0; font-size: 16px; line-height: 1.6;">Create a project</li>
-                <li style="margin: 8px 0; font-size: 16px; line-height: 1.6;">Make 1 task/decision</li>
-                <li style="margin: 8px 0; font-size: 16px; line-height: 1.6;">Run Ask Index</li>
+                <li style="margin: 8px 0; font-size: 16px; line-height: 1.6;">Make <strong>one</strong> task or decision</li>
+                <li style="margin: 8px 0; font-size: 16px; line-height: 1.6;">Use Ask Index to see what remains</li>
                 <li style="margin: 8px 0; font-size: 16px; line-height: 1.6;">Generate a digest (optional)</li>
               </ul>
+              <p style="margin: 24px 0 0 0; font-size: 16px; line-height: 1.6; color: #121211;">
+                That's it.
+              </p>
               <p style="margin: 32px 0 0 0; font-size: 14px; color: #666666; font-style: italic;">
                 — INDEX
               </p>

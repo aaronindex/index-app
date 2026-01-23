@@ -45,11 +45,6 @@ export default function DefineRolesButton({
           Fix speaker roles by splitting and labeling blocks.
           <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-zinc-900 dark:border-t-zinc-100"></div>
         </div>
-        {rolesConfidenceLow && (
-          <div className="absolute top-full left-0 mt-1 text-xs text-amber-600 dark:text-amber-400 whitespace-nowrap">
-            Roles look unclear — review
-          </div>
-        )}
       </div>
       <DefineRolesModal
         isOpen={isModalOpen}

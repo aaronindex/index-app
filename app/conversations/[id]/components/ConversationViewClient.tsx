@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import SelectableMessage from './SelectableMessage';
 import { showError, showSuccess } from '@/app/components/ErrorNotification';
+import RolesUnclearAlert from './RolesUnclearAlert';
 
 interface Message {
   id: string;
@@ -38,12 +39,16 @@ interface ConversationViewClientProps {
   conversation: Conversation;
   messages: Message[];
   highlights: Highlight[];
+  rolesConfidenceLow?: boolean;
+  conversationId: string;
 }
 
 export default function ConversationViewClient({
   conversation,
   messages,
   highlights: initialHighlights,
+  rolesConfidenceLow = false,
+  conversationId,
 }: ConversationViewClientProps) {
   const router = useRouter();
   const [highlights, setHighlights] = useState<Highlight[]>(initialHighlights);
@@ -146,6 +151,11 @@ export default function ConversationViewClient({
 
   return (
     <div className="space-y-6">
+      {/* Roles unclear alert */}
+      {rolesConfidenceLow && (
+        <RolesUnclearAlert conversationId={conversationId} messages={messages} />
+      )}
+      
       {messages.length === 0 ? (
         <div className="text-center py-12">
           <p className="text-zinc-600 dark:text-zinc-400">
