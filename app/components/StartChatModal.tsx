@@ -33,14 +33,13 @@ const CHAT_DESTINATIONS = {
   },
 };
 
-const INTENT_DESCRIPTIONS: Record<string, string> = {
-  decide_between_options: 'Decide between options',
-  generate_next_actions: 'Generate next concrete actions',
-  resolve_blocking_uncertainty: 'Resolve a blocking uncertainty',
-  produce_plan_architecture: 'Produce a plan / architecture',
-  stress_test_direction: 'Stress-test current direction',
-  summarize_state_propose_path: 'Summarize state → propose path forward',
-};
+// User-facing Resume focus choices
+const RESUME_FOCUS_OPTIONS = [
+  { label: 'Next actions', internalIntent: 'generate_next_actions' },
+  { label: 'Decisions', internalIntent: 'decide_between_options' },
+  { label: "What's blocking me", internalIntent: 'resolve_blocking_uncertainty' },
+  { label: 'Full context', internalIntent: 'summarize_state_propose_path' },
+] as const;
 
 export default function StartChatModal({
   isOpen,
@@ -53,8 +52,7 @@ export default function StartChatModal({
   projectName,
 }: StartChatModalProps) {
   const [copied, setCopied] = useState(false);
-  const [selectedIntent, setSelectedIntent] = useState<string>('decide_between_options');
-  const [customIntent, setCustomIntent] = useState('');
+  const [selectedFocus, setSelectedFocus] = useState<string>('generate_next_actions');
   const [targetTool, setTargetTool] = useState<'chatgpt' | 'claude' | 'cursor' | 'other'>('chatgpt');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -72,6 +70,7 @@ export default function StartChatModal({
       setGeneratedPrompt(null);
       setIsExpanded(false);
       setError(null);
+      setSelectedFocus('generate_next_actions'); // Reset to default
     }
   }, [isOpen]);
 
@@ -164,9 +163,8 @@ export default function StartChatModal({
   const handleGenerate = async () => {
     if (!onGenerate) return;
     
-    const intent = selectedIntent === 'custom' ? customIntent : selectedIntent;
-    if (!intent || intent.trim().length === 0) {
-      setError('Please select or enter an intent');
+    if (!selectedFocus) {
+      setError('Please select a focus');
       return;
     }
 
@@ -181,7 +179,10 @@ export default function StartChatModal({
         objectType = 'decision';
       }
       
-      const result = await onGenerate(intent, targetTool);
+      // Map user-facing focus to internal intent
+      const internalIntent = selectedFocus;
+      
+      const result = await onGenerate(internalIntent, targetTool);
       
       // Determine prompt length
       let promptLength = 0;
@@ -195,7 +196,7 @@ export default function StartChatModal({
       const { trackEvent } = await import('@/lib/analytics');
       trackEvent('start_chat_invoked', {
         target_tool: targetTool,
-        intent_type: selectedIntent === 'custom' ? 'custom' : selectedIntent,
+        intent_type: internalIntent,
         object_type: objectType,
         has_project: !!contextBlock.project,
         prompt_length: promptLength,
@@ -275,53 +276,27 @@ export default function StartChatModal({
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-[rgb(var(--text))] mb-3">
-                Intent (required)
+                Resume with focus
               </label>
               <div className="space-y-2">
-                {Object.entries(INTENT_DESCRIPTIONS).map(([key, label]) => (
+                {RESUME_FOCUS_OPTIONS.map((option) => (
                   <label
-                    key={key}
+                    key={option.internalIntent}
                     className="flex items-center gap-2 p-2 rounded-lg hover:bg-[rgb(var(--surface2))] cursor-pointer transition-colors"
                   >
                     <input
                       type="radio"
-                      name="intent"
-                      value={key}
-                      checked={selectedIntent === key}
-                      onChange={(e) => {
-                        setSelectedIntent(e.target.value);
-                        setCustomIntent('');
-                      }}
+                      name="focus"
+                      value={option.internalIntent}
+                      checked={selectedFocus === option.internalIntent}
+                      onChange={(e) => setSelectedFocus(e.target.value)}
                       className="w-4 h-4 text-[rgb(var(--text))] focus:ring-2 focus:ring-[rgb(var(--ring)/0.2)]"
                     />
-                    <span className="text-sm text-[rgb(var(--text))]">{label}</span>
+                    <span className="text-sm text-[rgb(var(--text))]">{option.label}</span>
                   </label>
                 ))}
-                <label className="flex items-center gap-2 p-2 rounded-lg hover:bg-[rgb(var(--surface2))] cursor-pointer transition-colors">
-                  <input
-                    type="radio"
-                    name="intent"
-                    value="custom"
-                    checked={selectedIntent === 'custom'}
-                    onChange={(e) => setSelectedIntent(e.target.value)}
-                    className="w-4 h-4 text-[rgb(var(--text))] focus:ring-2 focus:ring-[rgb(var(--ring)/0.2)]"
-                  />
-                  <span className="text-sm text-[rgb(var(--text))]">Custom…</span>
-                </label>
               </div>
             </div>
-
-            {selectedIntent === 'custom' && (
-              <div>
-                <input
-                  type="text"
-                  value={customIntent}
-                  onChange={(e) => setCustomIntent(e.target.value)}
-                  placeholder="Describe your intent..."
-                  className="w-full px-3 py-2 border border-[rgb(var(--ring)/0.12)] rounded-lg bg-[rgb(var(--surface))] text-[rgb(var(--text))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--ring)/0.2)]"
-                />
-              </div>
-            )}
 
             <div>
               <label className="block text-sm font-medium text-[rgb(var(--text))] mb-2">
@@ -345,7 +320,7 @@ export default function StartChatModal({
 
             <button
               onClick={handleGenerate}
-              disabled={loading || (selectedIntent === 'custom' && !customIntent.trim())}
+              disabled={loading || !selectedFocus}
               className="w-full px-4 py-2 bg-[rgb(var(--text))] text-[rgb(var(--bg))] rounded-lg hover:opacity-90 transition-opacity font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Generating...' : 'Generate Prompt'}
@@ -390,7 +365,7 @@ export default function StartChatModal({
               onClick={handleBackToConfigure}
               className="text-sm text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] transition-colors"
             >
-              ← Edit intent
+              ← Change focus
             </button>
 
             {/* Prompt Preview */}

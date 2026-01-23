@@ -3,24 +3,6 @@
 
 import { useState } from 'react';
 import StartChatModal from '@/app/components/StartChatModal';
-// Intent descriptions - must match server-side
-const INTENT_DESCRIPTIONS: Record<string, string> = {
-  decide_between_options: 'Decide between options',
-  generate_next_actions: 'Generate next concrete actions',
-  resolve_blocking_uncertainty: 'Resolve a blocking uncertainty',
-  produce_plan_architecture: 'Produce a plan / architecture',
-  stress_test_direction: 'Stress-test current direction',
-  summarize_state_propose_path: 'Summarize state → propose path forward',
-};
-
-type StartChatIntent = 
-  | 'decide_between_options'
-  | 'generate_next_actions'
-  | 'resolve_blocking_uncertainty'
-  | 'produce_plan_architecture'
-  | 'stress_test_direction'
-  | 'summarize_state_propose_path'
-  | 'custom';
 
 interface ProjectStartChatButtonProps {
   projectId: string;

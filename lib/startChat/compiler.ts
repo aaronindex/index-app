@@ -43,6 +43,17 @@ const PROMPT_BUDGET = 7000; // Character limit for prompt
 /**
  * Calculate importance score for a thought object
  */
+// Map internal intent to continuation instruction text
+function getIntentInstruction(intent: string): string {
+  const INTENT_INSTRUCTIONS: Record<string, string> = {
+    generate_next_actions: 'Generate concrete, immediately executable next steps that move this project forward.',
+    decide_between_options: 'Identify decisions that need to be made and present clear options with tradeoffs.',
+    resolve_blocking_uncertainty: 'Identify what is blocking progress and what must be clarified to move forward.',
+    summarize_state_propose_path: 'Summarize the current state and propose a coherent path forward.',
+  };
+  return INTENT_INSTRUCTIONS[intent] || `Proceed with: ${intent}`;
+}
+
 function calculateImportanceScore(
   item: any,
   type: 'task' | 'decision' | 'highlight',
@@ -198,6 +209,9 @@ export async function compileProjectContinuityPacket(
     contextRefs.push({ type: 'highlight', id: h.id, score: h.score });
   });
 
+  // Map internal intent to instruction text
+  const continuationInstruction = getIntentInstruction(intent);
+
   // Build Continuity Packet
   let prompt = '';
 
@@ -293,12 +307,11 @@ export async function compileProjectContinuityPacket(
 
   // 7. Explicit Continuation Instruction
   prompt += `EXPLICIT CONTINUATION INSTRUCTION\n`;
-  prompt += `Based on the intent "${intent}", provide structured output that can be harvested into Tasks, Decisions, or Highlights.\n\n`;
+  prompt += `Provide structured output that can be harvested into Tasks, Decisions, or Highlights.\n\n`;
 
   // 8. User-selected Intent + Request
   prompt += `INTENT + REQUEST\n`;
-  prompt += `Intent: ${intent}\n`;
-  prompt += `Please proceed with this intent, considering the constraints, concepts, and tensions above.\n\n`;
+  prompt += `${continuationInstruction}\n\n`;
 
   // 9. Return Contract
   prompt += `RETURN CONTRACT\n`;
