@@ -3,6 +3,8 @@
  * OpenAI embeddings helper
  */
 
+import { openaiEmbeddingRequest } from './request';
+
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const OPENAI_EMBEDDING_MODEL = 'text-embedding-3-small'; // 1536 dimensions, cost-effective
 
@@ -25,7 +27,7 @@ export async function embedText(text: string): Promise<number[]> {
   }
 
   try {
-    const response = await fetch('https://api.openai.com/v1/embeddings', {
+    const response = await openaiEmbeddingRequest('https://api.openai.com/v1/embeddings', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -81,7 +83,7 @@ export async function embedTexts(texts: string[]): Promise<number[][]> {
   }
 
   try {
-    const response = await fetch('https://api.openai.com/v1/embeddings', {
+    const response = await openaiEmbeddingRequest('https://api.openai.com/v1/embeddings', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

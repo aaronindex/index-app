@@ -1,5 +1,6 @@
 // lib/ai/tagging.ts
 import OpenAI from 'openai';
+import { openaiRequest } from './request';
 
 // Lazy initialization - only create OpenAI client when needed
 function getOpenAIClient() {
@@ -64,24 +65,41 @@ Return a JSON object with:
 Extract 5-15 relevant tags. Be specific and avoid generic terms.`;
 
   try {
-    const openai = getOpenAIClient();
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
-        {
-          role: 'system',
-          content: 'You are a semantic tagging assistant. Extract meaningful tags from conversations. Return only valid JSON.',
-        },
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
-      temperature: 0.3,
-      response_format: { type: 'json_object' },
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      throw new Error('OPENAI_API_KEY not configured');
+    }
+
+    const response = await openaiRequest('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a semantic tagging assistant. Extract meaningful tags from conversations. Return only valid JSON.',
+          },
+          {
+            role: 'user',
+            content: prompt,
+          },
+        ],
+        temperature: 0.3,
+        response_format: { type: 'json_object' },
+      }),
     });
 
-    const content = response.choices[0]?.message?.content;
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`OpenAI API error: ${error}`);
+    }
+
+    const data = await response.json();
+    const content = data.choices[0]?.message?.content;
     if (!content) {
       throw new Error('No response from OpenAI');
     }

@@ -5,6 +5,7 @@
 
 import { SearchResult } from '@/lib/search';
 import { THINKING_STANCE } from './stance';
+import { openaiRequest } from './request';
 
 export interface FollowUpQuestion {
   type: 'clarify' | 'decide' | 'commit' | 'deprioritize';
@@ -84,7 +85,7 @@ Return ONLY the answer text (no headers, no meta-commentary).`;
       throw new Error('OPENAI_API_KEY not configured');
     }
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await openaiRequest('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -155,7 +156,7 @@ Example: {"tiles": [{"type": "decision", "text": "Decide: Prioritize feature X o
 
     let followUpQuestions: FollowUpQuestion[] = [];
     try {
-      const conversionResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+      const conversionResponse = await openaiRequest('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -64,10 +64,26 @@ export async function POST(request: NextRequest) {
     let totalMessages = 0;
     let totalChars = 0;
     for (const conv of conversationsToImport) {
-      totalMessages += conv.messages.length;
+      // Check individual conversation size
+      let convChars = 0;
       for (const msg of conv.messages) {
-        totalChars += msg.content.length;
+        convChars += msg.content.length;
       }
+      // Check if any single conversation exceeds limit
+      const { checkConversationSize } = await import('@/lib/limits');
+      const sizeCheck = checkConversationSize(
+        conv.messages.map((m) => m.content).join('\n')
+      );
+      if (!sizeCheck.allowed) {
+        return NextResponse.json(
+          {
+            error: sizeCheck.message || `Conversation "${conv.title || 'Untitled'}" is too large`,
+          },
+          { status: 400 }
+        );
+      }
+      totalMessages += conv.messages.length;
+      totalChars += convChars;
     }
 
     // Estimate chunks (rough: ~500 chars per chunk)

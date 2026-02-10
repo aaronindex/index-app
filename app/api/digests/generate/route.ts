@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabaseServer';
 import { getCurrentUser } from '@/lib/getUser';
 import { generateWeeklyDigest } from '@/lib/ai/digest';
+import { checkDigestLimit, DIGEST_LIMITS } from '@/lib/limits';
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,6 +19,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'weekStart and weekEnd are required (YYYY-MM-DD format)' },
         { status: 400 }
+      );
+    }
+
+    // Check digest limit
+    const limitCheck = await checkDigestLimit(user.id);
+    if (!limitCheck.allowed) {
+      return NextResponse.json(
+        { error: limitCheck.message || 'Digest limit reached' },
+        { status: 429 }
       );
     }
 
@@ -44,13 +54,15 @@ export async function POST(request: NextRequest) {
     const weekEndDate = new Date(weekEnd);
     weekEndDate.setHours(23, 59, 59, 999); // End of day
 
+    // Get conversations, capped at DIGEST_MAX_CONVERSATIONS
     const { data: conversations } = await supabase
       .from('conversations')
       .select('id, title, created_at')
       .eq('user_id', user.id)
       .gte('created_at', weekStartDate.toISOString())
       .lte('created_at', weekEndDate.toISOString())
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(DIGEST_LIMITS.maxConversations);
 
     if (!conversations || conversations.length === 0) {
       return NextResponse.json(

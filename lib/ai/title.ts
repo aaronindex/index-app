@@ -2,6 +2,7 @@
 // AI-powered conversation title generation with strict constraints
 
 import OpenAI from 'openai';
+import { openaiRequest } from './request';
 
 // Lazy initialization - only create OpenAI client when needed
 function getOpenAIClient() {
@@ -76,18 +77,36 @@ ${projectName ? `Project: ${projectName}\n` : ''}Conversation excerpt:
 Return only the title.`;
 
   try {
-    const openai = getOpenAIClient();
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
-      temperature: 0.7,
-      max_tokens: 50,
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      throw new Error('OPENAI_API_KEY not configured');
+    }
+
+    const response = await openaiRequest('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        temperature: 0.7,
+        max_tokens: 50,
+      }),
     });
 
-    let title = response.choices[0]?.message?.content?.trim() || '';
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`OpenAI API error: ${error}`);
+    }
+
+    const data = await response.json();
+
+    let title = data.choices[0]?.message?.content?.trim() || '';
 
     // Remove quotes if present
     title = title.replace(/^["']|["']$/g, '').trim();

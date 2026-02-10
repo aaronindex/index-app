@@ -4,6 +4,8 @@
  * Extracts: decisions, commitments, blockers, open loops, and suggested highlights
  */
 
+import { openaiRequest } from './request';
+
 interface ConversationContent {
   id: string;
   title: string | null;
@@ -94,7 +96,7 @@ Be selective - only extract high-quality, actionable insights. Include message_i
       throw new Error('OPENAI_API_KEY not configured');
     }
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await openaiRequest('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

@@ -4,6 +4,8 @@
  */
 
 import { THINKING_STANCE } from './stance';
+import { DIGEST_LIMITS } from '@/lib/limits';
+import { openaiRequest } from './request';
 
 interface ConversationSummary {
   id: string;
@@ -74,15 +76,28 @@ export async function generateWeeklyDigest(
     };
   }
 
-  // Build context for the LLM
-  const conversationContext = conversations
+  // Cap conversations to DIGEST_MAX_CONVERSATIONS (already capped in route, but enforce here too)
+  const cappedConversations = conversations.slice(0, DIGEST_LIMITS.maxConversations);
+
+  // Build context for the LLM with size caps
+  let conversationContext = cappedConversations
     .map((conv) => {
       const highlightsText = conv.highlights.length > 0
         ? `\nHighlights: ${conv.highlights.map((h) => h.label || h.content.substring(0, 100)).join('; ')}`
         : '';
-      return `- "${conv.title || 'Untitled'}" (${conv.messageCount} messages)${highlightsText}`;
+      // Cap per-conversation excerpt
+      const excerpt = conv.firstMessage
+        ? conv.firstMessage.substring(0, DIGEST_LIMITS.maxConvoExcerptChars)
+        : '';
+      return `- "${conv.title || 'Untitled'}" (${conv.messageCount} messages)${excerpt ? `\n  ${excerpt}${excerpt.length >= DIGEST_LIMITS.maxConvoExcerptChars ? '...' : ''}` : ''}${highlightsText}`;
     })
     .join('\n');
+
+  // Truncate conversation context if it exceeds budget
+  if (conversationContext.length > DIGEST_LIMITS.promptBudgetChars * 0.6) {
+    // Reserve 40% for other sections
+    conversationContext = conversationContext.substring(0, Math.floor(DIGEST_LIMITS.promptBudgetChars * 0.6));
+  }
 
   const tasksContext = tasks && tasks.length > 0
     ? `\n\nTasks this week (${tasks.length} total):
@@ -102,7 +117,8 @@ ${decisions.map((d) => `- "${d.title}"${d.content ? `: ${d.content.substring(0, 
 - ${changeCounts.decisions} decision${changeCounts.decisions !== 1 ? 's' : ''}`
     : '';
 
-  const prompt = `You are analyzing a week of AI conversations from ${weekStart.toLocaleDateString()} to ${weekEnd.toLocaleDateString()}.
+  // Build full prompt
+  let prompt = `You are analyzing a week of AI conversations from ${weekStart.toLocaleDateString()} to ${weekEnd.toLocaleDateString()}.
 
 THINKING STANCE:
 ${THINKING_STANCE}
@@ -164,13 +180,18 @@ Return your response as JSON with this structure:
 
 Be decisive. Declare signal, don't narrate activity.`;
 
+  // Enforce prompt budget
+  if (prompt.length > DIGEST_LIMITS.promptBudgetChars) {
+    prompt = prompt.substring(0, DIGEST_LIMITS.promptBudgetChars - 100) + '\n\n[Prompt truncated to budget]';
+  }
+
   try {
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
       throw new Error('OPENAI_API_KEY not configured');
     }
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await openaiRequest('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -190,6 +211,7 @@ Be decisive. Declare signal, don't narrate activity.`;
         ],
         response_format: { type: 'json_object' },
         temperature: 0.7,
+        max_tokens: DIGEST_LIMITS.maxOutputTokens,
       }),
     });
 

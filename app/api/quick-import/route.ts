@@ -241,6 +241,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Transcript is required' }, { status: 400 });
     }
 
+    // Check conversation size
+    const { checkConversationSize } = await import('@/lib/limits');
+    const sizeCheck = checkConversationSize(transcript);
+    if (!sizeCheck.allowed) {
+      return NextResponse.json(
+        { error: sizeCheck.message || 'Conversation too large' },
+        { status: 400 }
+      );
+    }
+
     // Parse transcript (no swapRoles or treatAsSingleBlock options)
     const parsed = parseTranscript(transcript);
 

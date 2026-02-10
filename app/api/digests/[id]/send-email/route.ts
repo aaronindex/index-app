@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabaseServer';
 import { getCurrentUser } from '@/lib/getUser';
 import { sendDigestEmail } from '@/lib/email/digest';
+import { checkEmailSendLimit, checkDigestEmailCooldown, incrementLimit } from '@/lib/limits';
 
 export async function POST(
   request: NextRequest,
@@ -16,6 +17,24 @@ export async function POST(
 
     const { id } = await params;
     const supabase = await getSupabaseServerClient();
+
+    // Check email send limit
+    const limitCheck = await checkEmailSendLimit(user.id);
+    if (!limitCheck.allowed) {
+      return NextResponse.json(
+        { error: limitCheck.message || 'Email send limit reached' },
+        { status: 429 }
+      );
+    }
+
+    // Check cooldown
+    const cooldownCheck = await checkDigestEmailCooldown(user.id, id);
+    if (!cooldownCheck.allowed) {
+      return NextResponse.json(
+        { error: cooldownCheck.message || 'Please wait before sending again' },
+        { status: 429 }
+      );
+    }
 
     // Get digest
     const { data: digest, error: digestError } = await supabase
@@ -59,6 +78,9 @@ export async function POST(
       .from('weekly_digests')
       .update({ email_sent_at: new Date().toISOString() })
       .eq('id', id);
+
+    // Increment email send limit counter
+    await incrementLimit(user.id, 'email_send');
 
     return NextResponse.json({
       success: true,
