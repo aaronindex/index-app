@@ -120,7 +120,7 @@ Return only the title.`;
     }
 
     // Check word count
-    const words = title.split(/\s+/).filter((w) => w.length > 0);
+    const words = title.split(/\s+/).filter((w: string) => w.length > 0);
     if (words.length < MIN_WORDS || words.length > MAX_WORDS) {
       // Fallback to deterministic title
       return generateFallbackTitle();
