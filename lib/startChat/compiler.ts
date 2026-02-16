@@ -307,19 +307,19 @@ export async function compileProjectContinuityPacket(
 
   // 7. Explicit Continuation Instruction
   prompt += `EXPLICIT CONTINUATION INSTRUCTION\n`;
-  prompt += `Provide structured output that can be harvested into Tasks, Decisions, or Highlights.\n\n`;
+  prompt += `Surface actions, decisions, or insights when they naturally emerge so they can be harvested into Tasks, Decisions, or Highlights.\n\n`;
 
   // 8. User-selected Intent + Request
   prompt += `INTENT + REQUEST\n`;
   prompt += `${continuationInstruction}\n\n`;
 
   // 9. Return Contract
-  prompt += `RETURN CONTRACT\n`;
-  prompt += `Structure your response as:\n`;
-  prompt += `- Clear answer/recommendation\n`;
-  prompt += `- Actionable next steps (as bullet points)\n`;
-  prompt += `- Any decisions to make (as bullet points)\n`;
-  prompt += `- Key insights to capture (as bullet points)\n`;
+  prompt += `HARVESTABLE OUTPUT (WHEN APPROPRIATE)\n`;
+  prompt += `When useful, surface:\n`;
+  prompt += `- Clear recommendations\n`;
+  prompt += `- Concrete next steps\n`;
+  prompt += `- Decisions to consider\n`;
+  prompt += `- Insights worth capturing\n`;
 
   // Enforce budget
   if (prompt.length > PROMPT_BUDGET) {
@@ -403,7 +403,7 @@ export async function compileTaskStartChatPacket(
   prompt += `- Identify blockers or dependencies\n`;
   prompt += `- Generate concrete next steps\n`;
   prompt += `- Suggest any decisions that need to be made\n\n`;
-  prompt += `Structure your response as actionable items that can be converted into Tasks or Decisions.`;
+  prompt += `Surface actionable items when appropriate so they can be converted into Tasks or Decisions.`;
 
   if (prompt.length > PROMPT_BUDGET) {
     prompt = prompt.substring(0, PROMPT_BUDGET - 100) + '\n\n[Prompt truncated to budget]';
@@ -643,7 +643,7 @@ export async function compileDecisionStartChatPacket(
   prompt += `- Evaluate reversibility and impact on the project\n`;
   prompt += `- Suggest validation steps or experiments\n`;
   prompt += `- Identify any dependencies or blockers related to this decision\n\n`;
-  prompt += `Structure your response as actionable items that can be converted into Tasks or Decisions.`;
+  prompt += `Surface actionable items when appropriate so they can be converted into Tasks or Decisions.`;
 
   // Enforce budget
   if (prompt.length > PROMPT_BUDGET) {

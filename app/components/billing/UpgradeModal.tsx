@@ -74,7 +74,6 @@ export default function UpgradeModal({ isOpen, onClose, source }: UpgradeModalPr
         <ul className="space-y-2 mb-6 text-sm text-[rgb(var(--muted))]">
           <li>• Unlimited projects</li>
           <li>• Full imports (JSON)</li>
-          <li>• Uploads in Project Library</li>
         </ul>
 
         <div className="flex gap-3">

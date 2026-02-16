@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import { useEffect, useRef } from 'react';
 
-type Tab = 'overview' | 'chats' | 'highlights' | 'decisions' | 'tasks' | 'library';
+type Tab = 'read' | 'chats' | 'decisions' | 'tasks';
 
 interface ProjectTabsProps {
   projectId: string;
@@ -13,12 +13,10 @@ interface ProjectTabsProps {
 
 export default function ProjectTabs({ projectId, activeTab }: ProjectTabsProps) {
   const tabs: { id: Tab; label: string; href: string }[] = [
-    { id: 'overview', label: 'Overview', href: `/projects/${projectId}?tab=overview` },
+    { id: 'read', label: 'Read', href: `/projects/${projectId}?tab=read` },
     { id: 'decisions', label: 'Decisions', href: `/projects/${projectId}?tab=decisions` },
     { id: 'tasks', label: 'Tasks', href: `/projects/${projectId}?tab=tasks` },
     { id: 'chats', label: 'Chats', href: `/projects/${projectId}?tab=chats` },
-    { id: 'highlights', label: 'Highlights', href: `/projects/${projectId}?tab=highlights` },
-    { id: 'library', label: 'Library', href: `/projects/${projectId}?tab=library` },
   ];
 
   const activeTabRef = useRef<HTMLAnchorElement>(null);

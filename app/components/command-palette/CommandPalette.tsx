@@ -87,15 +87,11 @@ export default function CommandPalette({ isOpen: externalIsOpen, onClose: extern
       },
     },
     {
-      id: 'library',
-      label: 'Library',
-      description: currentProjectId ? 'View project library' : 'View projects',
+      id: 'projects',
+      label: 'Projects',
+      description: 'View all projects',
       action: () => {
-        if (currentProjectId) {
-          router.push(`/projects/${currentProjectId}?tab=library`);
-        } else {
-          router.push('/projects');
-        }
+        router.push('/projects');
         setIsOpen(false);
       },
     },

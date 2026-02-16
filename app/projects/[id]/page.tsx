@@ -5,12 +5,11 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import ProjectTabs from './components/ProjectTabs';
-import OverviewTab from './components/OverviewTab';
+import ReadTab from './components/ReadTab';
 import ChatsTab from './components/ChatsTab';
-import HighlightsTab from './components/HighlightsTab';
 import DecisionsTab from './components/DecisionsTab';
 import TasksTab from './components/TasksTab';
-import LibraryTab from './components/LibraryTab';
+import { redirect } from 'next/navigation';
 import ProjectStartChatButton from './components/ProjectStartChatButton';
 import ExportChecklistButton from './components/ExportChecklistButton';
 import ProjectOverflowMenu from './components/ProjectOverflowMenu';
@@ -73,11 +72,22 @@ export default async function ProjectDetailPage({
   searchParams: Promise<{ tab?: string }>;
 }) {
   const { id } = await params;
-  const { tab = 'overview' } = await searchParams;
+  const { tab = 'read' } = await searchParams;
   const user = await getCurrentUser();
   if (!user) {
     // Middleware should handle this, but just in case
     return null;
+  }
+
+  // Redirect old tabs to appropriate destinations
+  if (tab === 'overview') {
+    redirect(`/projects/${id}?tab=read`);
+  }
+  if (tab === 'highlights') {
+    redirect(`/projects/${id}?tab=chats`);
+  }
+  if (tab === 'library') {
+    redirect(`/projects/${id}?tab=read`);
   }
 
   const supabase = await getSupabaseServerClient();
@@ -102,10 +112,8 @@ export default async function ProjectDetailPage({
 
   // Fetch data based on active tab
   let chatsData: any[] = [];
-  let highlightsData: any[] = [];
   let decisionsData: any[] = [];
   let tasksData: any[] = [];
-  let assetsData: any[] = [];
 
   if (conversationIds.length > 0) {
     if (tab === 'chats') {
@@ -138,35 +146,6 @@ export default async function ProjectDetailPage({
           status: null,
           updated_at: conv.created_at,
           highlights_count: highlightCountMap.get(conv.id) || 0,
-        }));
-      }
-    }
-
-    if (tab === 'highlights') {
-      const { data: highlights } = await supabase
-        .from('highlights')
-        .select('id, content, label, status, conversation_id, created_at')
-        .in('conversation_id', conversationIds)
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (highlights && highlights.length > 0) {
-        const convIds = [...new Set(highlights.map((h) => h.conversation_id))];
-        const { data: conversations } = await supabase
-          .from('conversations')
-          .select('id, title')
-          .in('id', convIds);
-
-        const conversationMap = new Map(conversations?.map((c) => [c.id, c.title]) || []);
-
-        highlightsData = highlights.map((highlight) => ({
-          id: highlight.id,
-          content: highlight.content,
-          label: highlight.label,
-          status: highlight.status,
-          conversation_title: conversationMap.get(highlight.conversation_id) || null,
-          conversation_id: highlight.conversation_id,
-          created_at: highlight.created_at,
         }));
       }
     }
@@ -252,23 +231,11 @@ export default async function ProjectDetailPage({
         }));
       }
     }
-
-    if (tab === 'library') {
-      // Query assets for this project (include inactive for filtering)
-      const { data: assets } = await supabase
-        .from('project_assets')
-        .select('id, type, title, url, domain, note, storage_path, mime_type, file_size, thumbnail_url, created_at, is_inactive')
-        .eq('project_id', id)
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      assetsData = assets || [];
-    }
   }
 
-  const activeTab = (['overview', 'decisions', 'tasks', 'chats', 'highlights', 'library'].includes(tab)
+  const activeTab = (['read', 'decisions', 'tasks', 'chats'].includes(tab)
     ? tab
-    : 'overview') as 'overview' | 'decisions' | 'tasks' | 'chats' | 'highlights' | 'library';
+    : 'read') as 'read' | 'decisions' | 'tasks' | 'chats';
 
   return (
     <main className="min-h-screen bg-[rgb(var(--bg))]">
@@ -329,18 +296,14 @@ export default async function ProjectDetailPage({
           <ProjectTabs projectId={id} activeTab={activeTab} />
           
           <div className="mt-4">
-            {activeTab === 'overview' && (
-              <OverviewTab projectId={id} projectName={project.name} projectDescription={project.description} />
+            {activeTab === 'read' && (
+              <ReadTab projectId={id} projectName={project.name} projectDescription={project.description} />
             )}
             {activeTab === 'chats' && (
               <ChatsTab conversations={chatsData} projectId={id} />
             )}
-            {activeTab === 'highlights' && (
-              <HighlightsTab highlights={highlightsData} projectName={project.name} />
-            )}
             {activeTab === 'decisions' && <DecisionsTab decisions={decisionsData} projectId={id} />}
             {activeTab === 'tasks' && <TasksTab tasks={tasksData} projectId={id} />}
-            {activeTab === 'library' && <LibraryTab assets={assetsData} projectId={id} />}
           </div>
         </div>
       </div>

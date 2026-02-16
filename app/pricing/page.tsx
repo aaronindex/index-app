@@ -92,10 +92,6 @@ export default function PricingPage() {
               </li>
               <li className="flex items-start">
                 <span className="mr-2">•</span>
-                <span>Links in Project Library {FREE_ASSET_UPLOADS_ENABLED ? '(limited uploads)' : '(no uploads)'}</span>
-              </li>
-              <li className="flex items-start">
-                <span className="mr-2">•</span>
                 <span>Ask Index capped ({FREE_MAX_ASK_PER_24H} queries per 24h)</span>
               </li>
               <li className="flex items-start">
@@ -116,10 +112,6 @@ export default function PricingPage() {
               <li className="flex items-start">
                 <span className="mr-2">•</span>
                 <span>Full JSON import</span>
-              </li>
-              <li className="flex items-start">
-                <span className="mr-2">•</span>
-                <span>Uploads in Project Library</span>
               </li>
               <li className="flex items-start">
                 <span className="mr-2">•</span>
