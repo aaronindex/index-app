@@ -159,22 +159,17 @@ export default function ReadTab({ projectId, projectName, projectDescription }: 
 
   return (
     <div className="space-y-8 max-w-3xl">
-      {/* Project Frame */}
-      <div>
-        <h1 className="font-serif text-2xl font-semibold text-[rgb(var(--text))] mb-2">
-          {projectName}
-        </h1>
-        {projectDescription && (
-          <p className="text-sm text-[rgb(var(--muted))] mb-2">
-            {projectDescription}
-          </p>
-        )}
-        {currentDirection && (
-          <p className="text-sm text-[rgb(var(--muted))] italic">
-            Current direction: {currentDirection}
-          </p>
-        )}
-      </div>
+      {/* Current Direction */}
+      {currentDirection && (
+        <div className="mb-10">
+          <div className="text-xs uppercase tracking-wider text-[rgb(var(--text))] mb-3 font-medium">
+            CURRENT DIRECTION
+          </div>
+          <div className="font-serif text-xl text-[rgb(var(--text))] leading-relaxed">
+            {currentDirection}
+          </div>
+        </div>
+      )}
 
       {/* Still Unfolding (Active Tensions) */}
       {stillUnfolding.length > 0 && (

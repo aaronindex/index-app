@@ -28,7 +28,7 @@ export async function searchChunks(
   query: string,
   userId: string,
   limit: number = 10,
-  similarityThreshold: number = 0.7,
+  similarityThreshold: number = 0.5,
   projectId?: string
 ): Promise<SearchResult[]> {
   if (!query || query.trim().length === 0) {
@@ -228,6 +228,39 @@ export async function searchChunks(
   });
   
   return finalResults;
+}
+
+/**
+ * Search with fallback threshold
+ * If no results at primary threshold, retry with lower threshold
+ */
+export async function searchChunksWithFallback(
+  query: string,
+  userId: string,
+  limit: number = 10,
+  primaryThreshold: number = 0.5,
+  fallbackThreshold: number = 0.4,
+  projectId?: string
+): Promise<{ results: SearchResult[]; thresholdUsed: number; usedFallback: boolean }> {
+  const primaryResults = await searchChunks(query, userId, limit, primaryThreshold, projectId);
+  
+  if (primaryResults.length > 0) {
+    return {
+      results: primaryResults,
+      thresholdUsed: primaryThreshold,
+      usedFallback: false,
+    };
+  }
+  
+  // Fallback: retry with lower threshold
+  console.log(`[Search] No results at threshold ${primaryThreshold}, retrying with ${fallbackThreshold}`);
+  const fallbackResults = await searchChunks(query, userId, limit, fallbackThreshold, projectId);
+  
+  return {
+    results: fallbackResults,
+    thresholdUsed: fallbackThreshold,
+    usedFallback: true,
+  };
 }
 
 /**

@@ -33,11 +33,50 @@ interface SynthesizedAnswer {
   followUpQuestions: FollowUpQuestion[];
 }
 
+interface StateData {
+  stateSummary: string;
+  stateSummarySource: 'deterministic' | 'llm';
+  currentDirection?: string;
+  sections: {
+    newDecisions: Array<{
+      id: string;
+      title: string;
+      created_at: string;
+      project_id: string | null;
+      project_name: string | null;
+    }>;
+    newOrChangedTasks: Array<{
+      id: string;
+      title: string;
+      status: string;
+      created_at: string;
+      updated_at: string;
+      project_id: string | null;
+      project_name: string | null;
+    }>;
+    blockersOrStale: Array<{
+      id: string;
+      title: string;
+      status: string;
+      updated_at: string;
+      project_id: string | null;
+      project_name: string | null;
+      reason: 'blocked' | 'stale';
+    }>;
+  };
+  timeWindowDaysUsed: number;
+  changeDefinition: string;
+}
+
 export default function AskPage() {
   const router = useRouter();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [answer, setAnswer] = useState<SynthesizedAnswer | null>(null);
+  const [stateData, setStateData] = useState<StateData | null>(null);
+  const [intent, setIntent] = useState<'recall_semantic' | 'state' | null>(null);
+  const [needsDisambiguation, setNeedsDisambiguation] = useState(false);
+  const [candidateProjects, setCandidateProjects] = useState<Array<{ id: string; name: string }>>([]);
 
   // Update page title
   useEffect(() => {
@@ -59,6 +98,8 @@ export default function AskPage() {
           setQuery(urlQuery);
           setResults(data.results || []);
           setAnswer(data.answer || null);
+          setStateData(data.stateData || null);
+          setIntent(data.intent || 'recall_semantic');
           setRelatedContent(data.relatedContent || null);
           setAskIndexRunId(data.ask_index_run_id || null);
           setHasSearched(true);
@@ -108,7 +149,11 @@ export default function AskPage() {
     setHasSearched(true);
     setResults([]);
     setAnswer(null);
+    setStateData(null);
+    setIntent(null);
     setRelatedContent(null);
+    setNeedsDisambiguation(false);
+    setCandidateProjects([]);
 
     // Update query state if a different query was passed
     if (searchQuery && searchQuery !== query) {
@@ -151,61 +196,74 @@ export default function AskPage() {
 
       const data = await response.json();
       console.log('[Ask Page] Search results:', {
+        intent: data.intent,
         resultCount: data.results?.length || 0,
         hasAnswer: !!data.answer,
-        hasRelatedContent: !!data.relatedContent,
-        debug: data.debug,
+        hasStateData: !!data.stateData,
+        needsDisambiguation: data.needsDisambiguation,
       });
+      
+      // Handle disambiguation
+      if (data.needsDisambiguation && data.candidateProjects) {
+        setNeedsDisambiguation(true);
+        setCandidateProjects(data.candidateProjects);
+        setLoading(false);
+        return;
+      }
       
       // Calculate latency
       const latencyMs = Date.now() - searchStartTime;
       
       // Track ask query event
-      // Note: Ask page doesn't currently support project-scoped queries
-      // If projectId is added later, extract from request body
       const { trackEvent } = await import('@/lib/analytics');
-      const hasAnswer = !!data.answer;
+      const hasAnswer = !!data.answer || !!data.stateData;
       
       trackEvent('ask_index_query', {
         query_length: queryToUse.trim().length,
-        result_count: data.results?.length || 0,
+        result_count: data.metadata?.resultCountSemantic || data.metadata?.resultCountTasks || 0,
         latency_ms: latencyMs,
         has_answer: hasAnswer,
-        scope: 'global', // Ask page is always global scope
-        project_id_present: false,
+        scope: data.scope || 'global',
+        project_id_present: !!data.resolvedProjectId,
+        intent_detected: data.intent,
+        threshold_used: data.metadata?.thresholdUsed,
+        used_fallback_threshold: data.metadata?.usedFallbackThreshold,
+        state_time_window_days_used: data.metadata?.timeWindowDaysUsed,
       });
       
       // Track ask_index_answered event only when answer is present
       if (hasAnswer) {
         trackEvent('ask_index_answered', {
           query_length: queryToUse.trim().length,
-          result_count: data.results?.length || 0,
+          result_count: data.metadata?.resultCountSemantic || data.metadata?.resultCountTasks || 0,
           latency_ms: latencyMs,
-          scope: 'global',
-          project_id_present: false,
+          scope: data.scope || 'global',
+          project_id_present: !!data.resolvedProjectId,
+          intent_detected: data.intent,
         });
-        
-        // Debug logging
-        if (process.env.NEXT_PUBLIC_DEBUG_ANALYTICS === 'true') {
-          console.log('[Analytics] ask_index_answered fired');
-        }
       }
       
       const normalizedQuery = queryToUse.trim();
+      setIntent(data.intent || 'recall_semantic');
       setResults(data.results || []);
       setAnswer(data.answer || null);
+      setStateData(data.stateData || null);
       setRelatedContent(data.relatedContent || null);
       setAskIndexRunId(data.ask_index_run_id || null);
       setEvidenceExpanded(false); // Collapse evidence by default
       setShowAllTiles(false); // Show max 2 tiles by default
+      setNeedsDisambiguation(false);
+      setCandidateProjects([]);
 
       // Store in sessionStorage for back navigation
       const cacheKey = `ask_index_${normalizedQuery}`;
       sessionStorage.setItem(cacheKey, JSON.stringify({
         results: data.results || [],
         answer: data.answer || null,
+        stateData: data.stateData || null,
         relatedContent: data.relatedContent || null,
         ask_index_run_id: data.ask_index_run_id || null,
+        intent: data.intent,
       }));
 
       // Update URL with query param
@@ -261,6 +319,131 @@ export default function AskPage() {
         {error && (
           <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
             <p className="text-red-800 dark:text-red-400">{error}</p>
+          </div>
+        )}
+
+        {/* Disambiguation UI */}
+        {needsDisambiguation && candidateProjects.length > 0 && (
+          <div className="mb-8 p-6 border border-zinc-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-950">
+            <h3 className="text-lg font-semibold text-foreground mb-4">Which project?</h3>
+            <div className="space-y-2">
+              {candidateProjects.map((project) => (
+                <button
+                  key={project.id}
+                  onClick={() => performSearch(`${query} in ${project.name}`)}
+                  className="w-full text-left px-4 py-3 border border-zinc-200 dark:border-zinc-800 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors"
+                >
+                  {project.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* State Response */}
+        {stateData && intent === 'state' && (
+          <div className="mb-8 space-y-6">
+            <div className="border border-zinc-200 dark:border-zinc-800 rounded-lg p-6 bg-gradient-to-br from-zinc-50 to-white dark:from-zinc-950 dark:to-zinc-900">
+              <div className="flex items-center gap-2 mb-4">
+                <span className="text-2xl">✨</span>
+                <h2 className="text-xl font-semibold text-foreground">State Summary</h2>
+              </div>
+              
+              {/* Current Direction */}
+              {stateData.currentDirection && (
+                <div className="mb-6 pb-6 border-b border-zinc-200 dark:border-zinc-800">
+                  <div className="text-xs uppercase tracking-wider text-[rgb(var(--text))] mb-2 font-medium">
+                    CURRENT DIRECTION
+                  </div>
+                  <div className="font-serif text-lg text-[rgb(var(--text))] leading-relaxed">
+                    {stateData.currentDirection}
+                  </div>
+                </div>
+              )}
+              
+              {/* State Summary Text */}
+              <div className="prose prose-zinc dark:prose-invert max-w-none mb-6">
+                <p className="text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap leading-relaxed text-sm">
+                  {stateData.stateSummary}
+                </p>
+              </div>
+
+              {/* Sections */}
+              {stateData.sections.newDecisions.length > 0 && (
+                <div className="mt-6 pt-6 border-t border-zinc-200 dark:border-zinc-800">
+                  <h3 className="text-sm font-semibold text-foreground mb-3">Recent Decisions</h3>
+                  <ul className="space-y-2">
+                    {stateData.sections.newDecisions.map((decision) => (
+                      <li key={decision.id}>
+                        <Link
+                          href={`/projects/${decision.project_id || ''}/decisions?tab=decisions#${decision.id}`}
+                          className="block text-sm text-[rgb(var(--text))] hover:text-[rgb(var(--muted))] transition-colors"
+                        >
+                          {decision.project_name && (
+                            <span className="text-[rgb(var(--muted))] text-xs">{decision.project_name} → </span>
+                          )}
+                          {decision.title}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {stateData.sections.newOrChangedTasks.length > 0 && (
+                <div className="mt-6 pt-6 border-t border-zinc-200 dark:border-zinc-800">
+                  <h3 className="text-sm font-semibold text-foreground mb-3">New or Changed Tasks</h3>
+                  <ul className="space-y-2">
+                    {stateData.sections.newOrChangedTasks.map((task) => (
+                      <li key={task.id}>
+                        <Link
+                          href={`/projects/${task.project_id || ''}/tasks?tab=tasks#${task.id}`}
+                          className="block text-sm text-[rgb(var(--text))] hover:text-[rgb(var(--muted))] transition-colors"
+                        >
+                          {task.project_name && (
+                            <span className="text-[rgb(var(--muted))] text-xs">{task.project_name} → </span>
+                          )}
+                          {task.title}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {stateData.sections.blockersOrStale.length > 0 && (
+                <div className="mt-6 pt-6 border-t border-zinc-200 dark:border-zinc-800">
+                  <h3 className="text-sm font-semibold text-foreground mb-3">Blockers or Stale Tasks</h3>
+                  <ul className="space-y-2">
+                    {stateData.sections.blockersOrStale.map((item) => (
+                      <li key={item.id}>
+                        <Link
+                          href={`/projects/${item.project_id || ''}/tasks?tab=tasks#${item.id}`}
+                          className="block text-sm text-[rgb(var(--text))] hover:text-[rgb(var(--muted))] transition-colors"
+                        >
+                          <span className="flex items-center gap-2">
+                            {item.reason === 'blocked' && (
+                              <span className="px-1.5 py-0.5 text-xs font-medium rounded bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400">
+                                Blocker
+                              </span>
+                            )}
+                            {item.reason === 'stale' && (
+                              <span className="px-1.5 py-0.5 text-xs font-medium rounded bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-400">
+                                Stale
+                              </span>
+                            )}
+                            {item.project_name && (
+                              <span className="text-[rgb(var(--muted))] text-xs">{item.project_name} → </span>
+                            )}
+                            <span className="flex-1">{item.title}</span>
+                          </span>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -472,7 +655,7 @@ export default function AskPage() {
           ) : null;
         })()}
 
-        {!loading && hasSearched && results.length === 0 && !answer && !error && (
+        {!loading && hasSearched && results.length === 0 && !answer && !stateData && !error && (
           <div className="text-center py-12">
             <p className="text-zinc-600 dark:text-zinc-400">
               No results found. Try rephrasing your query.

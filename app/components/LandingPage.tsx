@@ -61,17 +61,15 @@ export default function LandingPage() {
             {/* Left column: Copy + CTA (45%) */}
             <div className="text-center lg:text-left lg:col-span-9">
               <h1 className="font-serif text-4xl sm:text-5xl lg:text-5xl xl:text-6xl font-semibold tracking-tight mb-6 text-white leading-[1.1]">
-                The memory your AI doesn't have.
+                INDEX isn't memory — it's direction.
               </h1>
               <p className="text-lg sm:text-xl lg:text-xl opacity-80 max-w-xl mx-auto lg:mx-0 mb-8 text-white leading-tight lg:whitespace-nowrap">
-                Personal Business Intelligence for your AI thinking.
+                Built for people who think with AI — and move forward.
               </p>
               
               {/* Bulletless list */}
               <div className="space-y-2.5 text-base sm:text-lg opacity-75 mb-10 text-white max-w-xl mx-auto lg:mx-0">
-                <p>Import conversations from ChatGPT, Claude, and Cursor.</p>
-                <p>Organize into projects, highlights, tasks, decisions</p>
-                <p>Move with what matters next — without continuing the loop</p>
+                <p>Distill decisions, open loops, and next steps from AI conversations.</p>
               </div>
 
               {/* Invite code input or direct CTA */}
@@ -198,7 +196,7 @@ export default function LandingPage() {
                   <div className="inline-block text-xs font-semibold tracking-wider uppercase opacity-60 mb-2 text-[#121211] dark:text-[#FAF8F6]">
                     Organize
                   </div>
-                  <p className="text-base opacity-75 text-[#121211] dark:text-[#FAF8F6]">Distill into highlights, tasks, decisions</p>
+                  <p className="text-base opacity-75 text-[#121211] dark:text-[#FAF8F6]">Distill decisions, open loops, and next steps</p>
                 </div>
                 <div>
                   <div className="inline-block text-xs font-semibold tracking-wider uppercase opacity-60 mb-2 text-[#121211] dark:text-[#FAF8F6]">
@@ -253,7 +251,7 @@ export default function LandingPage() {
       <section className="w-full py-20 sm:py-28 bg-[#121211]">
         <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight mb-8 text-white">
-            Start with one conversation. INDEX remembers the rest.
+            Start with one conversation. Move forward with what matters.
           </h2>
           {ALPHA_MODE ? (
             <>
