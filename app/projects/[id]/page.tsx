@@ -13,6 +13,7 @@ import { redirect } from 'next/navigation';
 import ProjectStartChatButton from './components/ProjectStartChatButton';
 import ExportChecklistButton from './components/ExportChecklistButton';
 import ProjectOverflowMenu from './components/ProjectOverflowMenu';
+import { loadProjectView } from '@/lib/ui-data/project.load';
 
 type Status = 'priority' | 'open' | 'complete' | 'dormant';
 
@@ -233,6 +234,13 @@ export default async function ProjectDetailPage({
     }
   }
 
+  // Load structural state data
+  const structuralData = await loadProjectView({
+    supabaseClient: supabase,
+    user_id: user.id,
+    project_id: id,
+  });
+
   const activeTab = (['read', 'decisions', 'tasks', 'chats'].includes(tab)
     ? tab
     : 'read') as 'read' | 'decisions' | 'tasks' | 'chats';
@@ -291,6 +299,63 @@ export default async function ProjectDetailPage({
             </p>
           )}
         </div>
+
+        {/* Structural Timeline Section (Read-only) */}
+        {(structuralData.timelineEvents.length > 0 || structuralData.arcs.length > 0) && (
+          <div className="mb-8 p-4 rounded-lg bg-[rgb(var(--surface))] border border-[rgb(var(--ring)/0.08)]">
+            <h3 className="text-sm font-semibold text-[rgb(var(--text))] mb-4">Timeline</h3>
+            
+            {/* Timeline Events */}
+            {structuralData.timelineEvents.length > 0 && (
+              <div className="mb-4">
+                <div className="text-xs text-[rgb(var(--muted))] mb-2">Decisions & Results</div>
+                <div className="space-y-1">
+                  {structuralData.timelineEvents.map((event, idx) => (
+                    <div key={idx} className="text-xs text-[rgb(var(--muted))]">
+                      <span className="font-medium">{event.kind}</span>
+                      <span className="ml-2">
+                        {new Date(event.occurred_at).toLocaleDateString()}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Linked Arcs */}
+            {structuralData.arcs.length > 0 && (
+              <div>
+                <div className="text-xs text-[rgb(var(--muted))] mb-2">
+                  Arcs ({structuralData.arcs.length})
+                </div>
+                <div className="space-y-2">
+                  {structuralData.arcs.map((arc) => (
+                    <div key={arc.id} className="text-xs">
+                      <div className="text-[rgb(var(--muted))]">
+                        <span className="font-mono">{arc.id.substring(0, 8)}...</span>
+                        <span className="ml-2">{arc.status}</span>
+                        <span className="ml-2">
+                          {new Date(arc.last_signal_at).toLocaleDateString()}
+                        </span>
+                      </div>
+                      {/* Phases for this arc */}
+                      {structuralData.phasesByArc[arc.id] && structuralData.phasesByArc[arc.id].length > 0 && (
+                        <div className="ml-4 mt-1 space-y-1">
+                          {structuralData.phasesByArc[arc.id].map((phase) => (
+                            <div key={phase.id} className="text-[rgb(var(--muted))]">
+                              <span className="font-mono">{phase.id.substring(0, 8)}...</span>
+                              <span className="ml-2">{phase.status}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="mt-8">
           <ProjectTabs projectId={id} activeTab={activeTab} />

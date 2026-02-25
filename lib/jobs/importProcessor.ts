@@ -704,6 +704,21 @@ async function processFinalizeStep(
       })
       .eq('id', payload.import_id);
 
+    // Dispatch structure recomputation (debounced)
+    // Ingestion creates new conversations which may generate decision signals
+    try {
+      const { dispatchStructureRecompute } = await import('@/lib/structure/dispatch');
+      await dispatchStructureRecompute({
+        supabaseClient: supabase,
+        user_id: payload.user_id,
+        scope: 'user',
+        reason: 'ingestion',
+      });
+    } catch (dispatchError) {
+      // Log but don't fail the import if dispatch fails
+      console.error('[ImportProcessor] Failed to dispatch structure recompute:', dispatchError);
+    }
+
     // Note: Job completion is handled by the caller with jobId
 
     progress.percent = 100;

@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabaseServer';
 import { getCurrentUser } from '@/lib/getUser';
 import { checkMeaningObjectLimit, incrementLimit } from '@/lib/limits';
+import { dispatchStructureRecompute } from '@/lib/structure/dispatch';
 
 export async function POST(request: NextRequest) {
   try {
@@ -110,6 +111,20 @@ export async function POST(request: NextRequest) {
 
         // Increment limit counter
         await incrementLimit(user.id, 'meaning_object');
+
+        // Dispatch structure recomputation (debounced)
+        // Decision creation impacts thinking time and project linkage
+        try {
+          await dispatchStructureRecompute({
+            supabaseClient: supabase,
+            user_id: user.id,
+            scope: 'user',
+            reason: 'decision_change',
+          });
+        } catch (dispatchError) {
+          // Log but don't fail the request if dispatch fails
+          console.error('[FollowupConvert] Failed to dispatch structure recompute:', dispatchError);
+        }
 
         return NextResponse.json({ success: true, decision });
       }

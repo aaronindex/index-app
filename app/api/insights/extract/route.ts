@@ -83,6 +83,7 @@ export async function POST(request: NextRequest) {
     const createdInsights: any[] = [];
 
     // Store decisions
+    let decisionCreated = false;
     for (const decision of insights.decisions) {
       const { data: decisionRecord, error: decisionError } = await supabase
         .from('decisions')
@@ -98,8 +99,25 @@ export async function POST(request: NextRequest) {
       if (decisionError) {
         console.error('Error creating decision:', decisionError);
       } else if (decisionRecord) {
+        decisionCreated = true;
         const { type: _, ...decisionData } = decision;
         createdInsights.push({ type: 'decision', id: decisionRecord.id, ...decisionData });
+      }
+    }
+
+    // Dispatch structure recomputation if decisions were created (debounced)
+    if (decisionCreated) {
+      try {
+        const { dispatchStructureRecompute } = await import('@/lib/structure/dispatch');
+        await dispatchStructureRecompute({
+          supabaseClient: supabase,
+          user_id: user.id,
+          scope: 'user',
+          reason: 'decision_change',
+        });
+      } catch (dispatchError) {
+        // Log but don't fail the request if dispatch fails
+        console.error('[InsightsExtract] Failed to dispatch structure recompute:', dispatchError);
       }
     }
 

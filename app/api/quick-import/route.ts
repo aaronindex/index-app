@@ -9,6 +9,7 @@ import { generateConversationTitle } from '@/lib/ai/title';
 import { chunkText } from '@/lib/chunking';
 import { embedTexts } from '@/lib/ai/embeddings';
 import { generateDedupeHash } from '@/lib/jobs/importProcessor';
+import { dispatchStructureRecompute } from '@/lib/structure/dispatch';
 import crypto from 'crypto';
 
 async function processQuickImportSync(
@@ -207,6 +208,20 @@ async function processQuickImportSync(
         is_inactive: false,
       })
       .eq('id', conversation.id);
+
+    // Dispatch structure recomputation (debounced)
+    // Ingestion creates new conversations which may generate decision signals
+    try {
+      await dispatchStructureRecompute({
+        supabaseClient: supabase,
+        user_id: userId,
+        scope: 'user',
+        reason: 'ingestion',
+      });
+    } catch (dispatchError) {
+      // Log but don't fail the import if dispatch fails
+      console.error('[QuickImport] Failed to dispatch structure recompute:', dispatchError);
+    }
 
     return { conversationId: conversation.id, error: null };
   } catch (error) {
