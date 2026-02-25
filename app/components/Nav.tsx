@@ -9,6 +9,15 @@ import ThemeToggle from './ThemeToggle';
 import CommandPalette from './command-palette/CommandPalette';
 import { useKeyboardShortcut } from '@/app/hooks/useKeyboardShortcut';
 
+// Determine app environment at build time
+const APP_ENV =
+  process.env.NEXT_PUBLIC_APP_ENV ||
+  process.env.APP_ENV ||
+  process.env.NODE_ENV ||
+  'development';
+
+const SHOW_DEV_BADGE = APP_ENV !== 'production';
+
 export default function Nav() {
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -103,12 +112,19 @@ export default function Nav() {
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <Link
-              href="/"
-              className="font-serif text-xl font-semibold text-[rgb(var(--text))] hover:opacity-70 transition-opacity"
-            >
-              INDEX
-            </Link>
+            <div className="flex items-center gap-3">
+              <Link
+                href="/"
+                className="font-serif text-xl font-semibold text-[rgb(var(--text))] hover:opacity-70 transition-opacity"
+              >
+                INDEX
+              </Link>
+              {SHOW_DEV_BADGE && (
+                <span className="inline-flex items-center rounded-full border border-[rgb(var(--ring)/0.25)] px-2 py-0.5 text-[10px] uppercase tracking-[0.16em] text-[rgb(var(--muted))]">
+                  Dev
+                </span>
+              )}
+            </div>
             <Link
               href="/auth/signin"
               className="text-sm text-[rgb(var(--text))] hover:opacity-70 transition-opacity font-medium"
@@ -150,6 +166,11 @@ export default function Nav() {
               </div>
             </div>
             <div className="flex items-center gap-3">
+              {SHOW_DEV_BADGE && (
+                <span className="hidden sm:inline-flex items-center rounded-full border border-[rgb(var(--ring)/0.25)] px-2 py-0.5 text-[10px] uppercase tracking-[0.16em] text-[rgb(var(--muted))]">
+                  Dev
+                </span>
+              )}
               <button
                 onClick={() => setShowCommandPalette(true)}
                 className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-[rgb(var(--muted))] border border-[rgb(var(--ring)/0.12)] rounded-md hover:bg-[rgb(var(--surface2))] transition-colors focus:outline-none focus:ring-2 focus:ring-[rgb(var(--ring)/0.2)]"

@@ -25,7 +25,31 @@ export default class ErrorBoundary extends React.Component<ErrorBoundaryProps, E
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    // Log to console for client-side debugging
     console.error('[Error Boundary]', error, errorInfo);
+    
+    // Log to server via API for Vercel logs visibility
+    const errorContext = {
+      message: error.message,
+      stack: error.stack,
+      componentStack: errorInfo.componentStack,
+      route: typeof window !== 'undefined' ? window.location.pathname : 'unknown',
+      appEnv: process.env.NEXT_PUBLIC_APP_ENV || process.env.NODE_ENV || 'unknown',
+      hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+      hasSupabaseAnonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      stripeEnabled: process.env.NEXT_PUBLIC_STRIPE_ENABLED || process.env.STRIPE_ENABLED || 'not-set',
+      timestamp: new Date().toISOString(),
+    };
+    
+    // Fire-and-forget error logging to server
+    fetch('/api/debug/error-log', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(errorContext),
+    }).catch(() => {
+      // Silently fail - don't create error loops
+    });
+    
     showError('Something went wrong. Please refresh the page.');
   }
 
