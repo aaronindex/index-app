@@ -1,13 +1,1 @@
-{
-  "crons": [
-    {
-      "path": "/api/jobs/process",
-      "schedule": "*/1 * * * *"
-    },
-    {
-      "path": "/api/cron/no-import-nudge",
-      "schedule": "0 10 * * *"
-    }
-  ]
-}
-
+{"crons":[{"path":"/api/jobs/process","schedule":"*/1 * * * *"},{"path":"/api/cron/no-import-nudge","schedule":"0 10 * * *"},{"path":"/api/cron/structure-jobs","schedule":"*/1 * * * *"}]}
