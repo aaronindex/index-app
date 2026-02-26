@@ -18,8 +18,6 @@ import { loadProjectView } from '@/lib/ui-data/project.load';
 // Force dynamic rendering to ensure fresh data
 export const dynamic = 'force-dynamic';
 
-type Status = 'priority' | 'open' | 'complete' | 'dormant';
-
 export async function generateMetadata({
   params,
 }: {
@@ -45,27 +43,6 @@ export async function generateMetadata({
     title: project ? `${project.name} | INDEX` : 'Project | INDEX',
     description: project ? `View project: ${project.name}` : 'Project details',
   };
-}
-
-function StatusPill({ status }: { status: string | null }) {
-  if (!status) return null;
-  
-  const statusColors: Record<Status, string> = {
-    priority: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
-    open: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
-    complete: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
-    dormant: 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-500',
-  };
-
-  const colorClass = statusColors[status as Status] || statusColors.dormant;
-
-  return (
-    <span
-      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colorClass}`}
-    >
-      {status.charAt(0).toUpperCase() + status.slice(1)}
-    </span>
-  );
 }
 
 export default async function ProjectDetailPage({
@@ -97,7 +74,7 @@ export default async function ProjectDetailPage({
   const supabase = await getSupabaseServerClient();
   const { data: project, error } = await supabase
     .from('projects')
-    .select('id, name, status, description, created_at, is_personal')
+    .select('id, name, description, created_at, is_personal')
     .eq('id', id)
     .eq('user_id', user.id)
     .single();
@@ -259,14 +236,9 @@ export default async function ProjectDetailPage({
             ← Back to Projects
           </Link>
           
-          {/* Status + Actions Row */}
-          <div className="mt-4 flex items-center justify-between gap-4">
-            {/* Status pill on left */}
-            <div className="flex-shrink-0">
-              <StatusPill status={project.status} />
-            </div>
-            
-            {/* Actions on right - desktop: inline, mobile: overflow menu only */}
+          {/* Actions Row */}
+          <div className="mt-4 flex items-center justify-end gap-4">
+            {/* Actions - desktop: inline, mobile: overflow menu only */}
             <div className="flex items-center gap-2 sm:gap-3">
               {/* Desktop: Show all actions inline */}
               <div className="hidden sm:flex items-center gap-3">

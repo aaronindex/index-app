@@ -16,29 +16,6 @@ export const metadata: Metadata = {
 // Force dynamic rendering to ensure fresh data
 export const dynamic = 'force-dynamic';
 
-type Status = 'priority' | 'open' | 'complete' | 'dormant';
-
-function StatusPill({ status }: { status: string | null }) {
-  if (!status) return null;
-  
-  const statusColors: Record<Status, string> = {
-    priority: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
-    open: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
-    complete: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
-    dormant: 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-500',
-  };
-
-  const colorClass = statusColors[status as Status] || statusColors.dormant;
-
-  return (
-    <span
-      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colorClass}`}
-    >
-      {status.charAt(0).toUpperCase() + status.slice(1)}
-    </span>
-  );
-}
-
 export default async function ProjectsPage({
   searchParams,
 }: {
@@ -54,7 +31,7 @@ export default async function ProjectsPage({
   
   let query = supabase
     .from('projects')
-    .select('id, name, status, is_personal')
+    .select('id, name, is_personal')
     .eq('user_id', user.id);
 
   // No filtering - show all projects
@@ -128,12 +105,9 @@ export default async function ProjectsPage({
                   className="block p-6"
                 >
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <h2 className="font-serif text-xl font-medium text-[rgb(var(--text))]">
-                        {project.name}
-                      </h2>
-                    </div>
-                    <StatusPill status={project.status} />
+                    <h2 className="font-serif text-xl font-medium text-[rgb(var(--text))]">
+                      {project.name}
+                    </h2>
                   </div>
                 </Link>
               </Card>
