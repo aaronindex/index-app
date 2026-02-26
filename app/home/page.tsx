@@ -5,6 +5,7 @@ import MagicHomeScreen from "@/app/components/MagicHomeScreen";
 import { loadHomeView } from "@/lib/ui-data/home.load";
 import { loadStructureJobHealth } from "@/lib/ui-data/jobHealth.load";
 import ThinkingTimeResolve from "@/app/components/ThinkingTimeResolve";
+import ProcessStructureJobsButton from "@/app/components/ProcessStructureJobsButton";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -39,7 +40,10 @@ export default async function HomePage() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Structural State Section */}
         <div className="mb-8 space-y-4">
-          <h2 className="text-lg font-semibold text-[rgb(var(--text))]">Structural State</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-[rgb(var(--text))]">Structural State</h2>
+            <ProcessStructureJobsButton />
+          </div>
           
           {/* Thinking Time Badge */}
           {jobHealth.thinkingTimeUnclear && (
