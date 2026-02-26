@@ -17,6 +17,54 @@ Org platform uses agentic ingestion.
 
 ---
 
+## Primary Ingestion Mode — Micro Capture
+
+INDEX supports two ingestion modes:
+
+1. Micro Capture (primary)
+2. Thread Import (secondary)
+
+Micro Capture represents a deliberate elevation gesture.
+
+A user may capture:
+- a paragraph
+- a decision moment
+- a constraint
+- a realization
+- a short exchange
+
+Micro Capture is the default ingestion path.
+
+It does not require:
+- role cleanup
+- full transcript structure
+- precise temporal assignment
+- pre-assigned project certainty
+
+Capture precedes organization.
+
+Inference operates on minimal content.
+Organization may occur after structural candidates are detected.
+
+---
+
+## Thread Import (Intentional Deep Capture)
+
+Thread Import exists for full arc preservation.
+
+It is:
+- heavier
+- less frequent
+- intentionally chosen
+
+Thread Import signals:
+“This entire thread of thinking carries structural weight.”
+
+Micro Capture demotes routine full imports,
+while promoting intentional deep capture.
+
+---
+
 ## Temporal Windows
 
 Imported thinking carries a temporal window.
@@ -65,3 +113,18 @@ Field Note Principle:
 
 If no Task or Decision is saved,
 no structural event occurred.
+
+---
+
+## Ingestion Principle
+
+INDEX does not require clean transcripts to begin structural inference.
+
+Structure may emerge from:
+- partial context
+- ambiguous roles
+- minimal temporal precision
+
+Reduction precedes normalization.
+
+Only structural outcomes persist.

@@ -40,6 +40,44 @@ Uncertainty is editorially silent unless structurally relevant.
 
 ---
 
+## Micro Capture Temporal Semantics
+
+Micro Capture defaults:
+
+- captured_at is system-generated.
+- thinking_time may be unset at capture.
+
+If thinking_time is not explicitly provided:
+
+- It may be treated as:
+  - equal to captured_at for ordering purposes only
+  - or as low-confidence temporal data
+
+Inference must not assume precise thinking time
+when micro-capture context is minimal.
+
+Temporal uncertainty is structurally tolerated.
+
+Temporal shape matters more than timestamp precision.
+
+---
+
+## Temporal Integrity Constraint
+
+Micro Capture must not distort temporal history.
+
+If a captured artifact clearly references past thinking,
+the system may:
+
+- request clarification
+- allow loose range assignment
+- infer approximate window
+
+Temporal inference must preserve structural reality,
+not ingestion convenience.
+
+---
+
 ## Temporal Principle
 
 INDEX models event time, not observation time.

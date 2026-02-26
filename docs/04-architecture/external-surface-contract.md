@@ -165,6 +165,58 @@ External exposure must never occur:
 
 ---
 
+## Ingestion Surfaces
+
+INDEX may receive structural input from multiple capture surfaces:
+
+- In-app Quick Capture
+- Browser extension (explicit send)
+- Email forwarding
+- Slack slash command
+
+All surfaces produce a Capture Event.
+
+Capture Events:
+
+- are deliberate
+- are user-triggered
+- are one-way
+- do not stream ambient content
+
+Capture Events enter the inference pipeline at:
+
+ingestion_event
+
+No external surface may:
+
+- modify structural tables directly
+- bypass inference
+- trigger editorial generation
+
+All ingestion surfaces converge into the same structural boundary.
+
+---
+
+## Capture Capsule (Internal Contract)
+
+All capture surfaces must produce:
+
+{
+  content,
+  source,
+  captured_at,
+  thinking_time?,
+  project_id?,
+  inference_profile
+}
+
+Capture Capsule is internal only.
+Raw content is never exportable.
+
+Only structural outcomes cross the external boundary.
+
+---
+
 ## Temporal Integrity
 
 All exported data reflects thinking_time,
