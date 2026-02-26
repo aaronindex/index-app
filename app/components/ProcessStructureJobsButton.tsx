@@ -5,14 +5,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-// Determine app environment (client-side)
-const APP_ENV =
-  process.env.NEXT_PUBLIC_APP_ENV ||
-  process.env.APP_ENV ||
-  process.env.NODE_ENV ||
-  'development';
-
-const SHOW_DEV_BUTTON = APP_ENV !== 'production';
+// Only show in development (NODE_ENV is inlined at build; production builds never show this)
+const SHOW_DEV_BUTTON = process.env.NODE_ENV === 'development';
 
 export default function ProcessStructureJobsButton() {
   const router = useRouter();
