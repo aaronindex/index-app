@@ -7,6 +7,26 @@ import { runStructureJob } from '@/lib/structure/jobs/job.processor';
 import { createClient } from '@supabase/supabase-js';
 
 /**
+ * Get Supabase service role client (bypasses RLS)
+ * Uses existing pattern from other API routes
+ */
+function getSupabaseServiceClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  
+  if (!url || !serviceRoleKey) {
+    throw new Error('Supabase service role credentials not configured');
+  }
+  
+  return createClient(url, serviceRoleKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  });
+}
+
+/**
  * POST /api/structure-jobs/process
  * 
  * Processes queued structure_jobs.
@@ -14,13 +34,13 @@ import { createClient } from '@supabase/supabase-js';
  * Authentication:
  * - Requires header `x-index-admin-secret` matching `INDEX_ADMIN_SECRET` env var
  * 
- * Behavior:
- * - Finds up to `limit` queued jobs (default 5), oldest first
- * - For each job: calls runStructureJob() with service-role client
- * - Returns summary of processed jobs
+ * Body (optional):
+ * - limit?: number (default 5, max 25)
  * 
- * Query params:
- * - limit: number of jobs to process (default 5, max 20)
+ * Behavior:
+ * - Finds up to `limit` queued jobs (oldest first)
+ * - For each job: calls runStructureJob() with service-role client
+ * - Returns summary with job IDs arrays
  */
 export async function POST(request: NextRequest) {
   try {
@@ -43,31 +63,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Parse limit from query params
-    const { searchParams } = new URL(request.url);
-    const limitParam = searchParams.get('limit');
-    const limit = Math.min(
-      Math.max(1, parseInt(limitParam || '5', 10)),
-      20 // Max 20 jobs per request
-    );
-
-    // Get service-role Supabase client (bypasses RLS)
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-    if (!url || !serviceRoleKey) {
-      return NextResponse.json(
-        { error: 'Supabase service role credentials not configured' },
-        { status: 500 }
-      );
+    // Parse limit from body (optional)
+    let limit = 5;
+    try {
+      const body = await request.json().catch(() => ({}));
+      if (body.limit && typeof body.limit === 'number') {
+        limit = Math.min(Math.max(1, body.limit), 25); // Max 25
+      }
+    } catch {
+      // Body parsing failed or empty, use default
     }
 
-    const supabaseAdmin = createClient(url, serviceRoleKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    });
+    // Get service-role Supabase client
+    const supabaseAdmin = getSupabaseServiceClient();
 
     // Find queued jobs (oldest first)
     const { data: jobs, error: jobsError } = await supabaseAdmin
@@ -88,48 +96,37 @@ export async function POST(request: NextRequest) {
     if (!jobs || jobs.length === 0) {
       return NextResponse.json({
         processed: 0,
-        succeeded: 0,
-        failed: 0,
-        ids: [],
-        message: 'No queued jobs to process',
+        job_ids: [],
+        succeeded: [],
+        failed: [],
       });
     }
 
     // Process each job
-    const results = {
-      processed: 0,
-      succeeded: 0,
-      failed: 0,
-      ids: [] as string[],
-      errors: [] as Array<{ job_id: string; error: string }>,
-    };
+    const job_ids: string[] = [];
+    const succeeded: string[] = [];
+    const failed: string[] = [];
 
     for (const job of jobs) {
-      results.ids.push(job.id);
-      results.processed++;
+      job_ids.push(job.id);
 
       try {
         await runStructureJob(supabaseAdmin, job.id);
-        results.succeeded++;
+        succeeded.push(job.id);
         console.log(`[StructureJobsProcess] Job ${job.id} succeeded`);
       } catch (error) {
-        results.failed++;
+        failed.push(job.id);
         const errorMessage = error instanceof Error ? error.message : String(error);
-        results.errors.push({
-          job_id: job.id,
-          error: errorMessage,
-        });
         console.error(`[StructureJobsProcess] Job ${job.id} failed:`, errorMessage);
         // Continue processing other jobs even if one fails
       }
     }
 
     return NextResponse.json({
-      processed: results.processed,
-      succeeded: results.succeeded,
-      failed: results.failed,
-      ids: results.ids,
-      errors: results.errors.length > 0 ? results.errors : undefined,
+      processed: job_ids.length,
+      job_ids,
+      succeeded,
+      failed,
     });
   } catch (error) {
     console.error('[StructureJobsProcess] Unexpected error:', error);
