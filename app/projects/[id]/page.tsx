@@ -15,6 +15,9 @@ import ExportChecklistButton from './components/ExportChecklistButton';
 import ProjectOverflowMenu from './components/ProjectOverflowMenu';
 import { loadProjectView } from '@/lib/ui-data/project.load';
 
+// Force dynamic rendering to ensure fresh data
+export const dynamic = 'force-dynamic';
+
 type Status = 'priority' | 'open' | 'complete' | 'dormant';
 
 export async function generateMetadata({

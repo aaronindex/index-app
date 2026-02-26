@@ -92,12 +92,16 @@ export default function CreateProjectButton() {
     setName('');
     setDescription('');
     setIsOpen(false);
-    showSuccess('Project created successfully!');
-    router.refresh();
+    setLoading(false);
     
-    // Navigate to the new project
+    // Navigate to the new project first (this will load fresh data)
     if (data) {
+      showSuccess('Project created successfully!');
       router.push(`/projects/${data.id}`);
+    } else {
+      // Fallback: refresh and stay on projects page
+      showSuccess('Project created successfully!');
+      router.refresh();
     }
   };
 
