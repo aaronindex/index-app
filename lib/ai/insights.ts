@@ -133,7 +133,23 @@ Be selective - only extract high-quality, actionable insights. Include message_i
       throw new Error('No content in OpenAI response');
     }
 
-    const parsed = JSON.parse(content);
+    let parsed;
+    try {
+      parsed = JSON.parse(content);
+    } catch (parseError) {
+      console.error('[InsightExtraction] Failed to parse JSON response:', parseError);
+      console.error('[InsightExtraction] Response content:', content.substring(0, 500));
+      throw new Error(`Failed to parse extraction response: ${parseError instanceof Error ? parseError.message : 'Unknown parse error'}`);
+    }
+
+    // Log extraction results for debugging
+    console.log('[InsightExtraction] Extracted:', {
+      decisions: Array.isArray(parsed.decisions) ? parsed.decisions.length : 0,
+      commitments: Array.isArray(parsed.commitments) ? parsed.commitments.length : 0,
+      blockers: Array.isArray(parsed.blockers) ? parsed.blockers.length : 0,
+      openLoops: Array.isArray(parsed.openLoops) ? parsed.openLoops.length : 0,
+      suggestedHighlights: Array.isArray(parsed.suggestedHighlights) ? parsed.suggestedHighlights.length : 0,
+    });
 
     // Validate and normalize the response
     return {
@@ -189,8 +205,14 @@ Be selective - only extract high-quality, actionable insights. Include message_i
         : [],
     };
   } catch (error) {
-    console.error('Insight extraction error:', error);
+    console.error('[InsightExtraction] Error:', error);
+    // Log detailed error information for debugging
+    if (error instanceof Error) {
+      console.error('[InsightExtraction] Error message:', error.message);
+      console.error('[InsightExtraction] Error stack:', error.stack);
+    }
     // Return empty result on error rather than throwing
+    // This allows the UI to show "0 items" rather than crashing
     return {
       decisions: [],
       commitments: [],

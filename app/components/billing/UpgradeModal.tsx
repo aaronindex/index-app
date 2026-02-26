@@ -8,7 +8,7 @@ import { track } from '@/lib/analytics/track';
 interface UpgradeModalProps {
   isOpen: boolean;
   onClose: () => void;
-  source: 'paywall_project_limit' | 'paywall_ask_limit' | 'paywall_asset_upload' | 'settings' | 'header' | 'pricing_page';
+  source: 'paywall_project_limit' | 'paywall_ask_limit' | 'paywall_asset_upload' | 'paywall_import_limit' | 'settings' | 'header' | 'pricing_page';
 }
 
 export default function UpgradeModal({ isOpen, onClose, source }: UpgradeModalProps) {

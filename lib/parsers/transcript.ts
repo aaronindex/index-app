@@ -23,6 +23,9 @@ const USER_MARKERS = [
   /^\s*USER:\s*/,
   /^\s*ME:\s*/,
   /^\s*HUMAN:\s*/,
+  /^\s*You Said:\s*/i,
+  /^\s*You said:\s*/i,
+  /^\s*YOU SAID:\s*/,
 ];
 
 // Assistant markers (case-insensitive)
@@ -39,6 +42,12 @@ const ASSISTANT_MARKERS = [
   /^\s*AI:\s*/,
   /^\s*CHATGPT:\s*/,
   /^\s*CLAUDE:\s*/,
+  /^\s*ChatGPT Said:\s*/i,
+  /^\s*ChatGPT said:\s*/i,
+  /^\s*CHATGPT SAID:\s*/,
+  /^\s*Claude Said:\s*/i,
+  /^\s*Claude said:\s*/i,
+  /^\s*CLAUDE SAID:\s*/,
 ];
 
 function findMarker(line: string): 'user' | 'assistant' | null {

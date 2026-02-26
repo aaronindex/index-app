@@ -7,6 +7,7 @@ import ModalShell from '@/app/components/ui/ModalShell';
 import Button from '@/app/components/ui/Button';
 import { parseTranscript } from '@/lib/parsers/transcript';
 import { getSupabaseBrowserClient } from '@/lib/supabaseClient';
+import UpgradeModal from '@/app/components/billing/UpgradeModal';
 
 interface QuickImportModalProps {
   isOpen: boolean;
@@ -29,6 +30,7 @@ export default function QuickImportModal({ isOpen, onClose }: QuickImportModalPr
   const [jobId, setJobId] = useState<string | null>(null);
   const [jobStatus, setJobStatus] = useState<any>(null);
   const [importStartTime, setImportStartTime] = useState<number | null>(null);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   // Fetch projects on mount
   useEffect(() => {
@@ -195,6 +197,11 @@ export default function QuickImportModal({ isOpen, onClose }: QuickImportModalPr
           trackEvent('limit_hit', {
             limit_type: 'import',
           });
+          // Show upgrade modal for free users hitting import limit
+          setShowUpgradeModal(true);
+          setError(data.error || 'Import limit reached. Upgrade to Pro for unlimited imports.');
+          setLoading(false);
+          return;
         }
         
         if (response.status === 409 && data.error === 'duplicate') {
@@ -449,6 +456,14 @@ export default function QuickImportModal({ isOpen, onClose }: QuickImportModalPr
             </Button>
           </div>
         </div>
+      )}
+
+      {showUpgradeModal && (
+        <UpgradeModal
+          isOpen={showUpgradeModal}
+          onClose={() => setShowUpgradeModal(false)}
+          source="paywall_import_limit"
+        />
       )}
     </ModalShell>
   );
