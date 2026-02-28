@@ -95,10 +95,8 @@ export async function loadLatestSnapshot(
   devAssertSnapshotTimestamps(
     {
       id: data.id,
-      // @ts-expect-error generated_at may not be selected in older schemas
-      generated_at: (data as any).generated_at ?? null,
-      // @ts-expect-error created_at may not be selected in older schemas
-      created_at: (data as any).created_at ?? null,
+      generated_at: (data as { generated_at?: string | null }).generated_at ?? null,
+      created_at: (data as { created_at?: string | null }).created_at ?? null,
     },
     'loadLatestSnapshot'
   );
