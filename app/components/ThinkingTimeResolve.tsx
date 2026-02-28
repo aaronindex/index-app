@@ -7,9 +7,11 @@ import { useRouter } from 'next/navigation';
 
 interface ThinkingTimeResolveProps {
   conversationId: string | null;
+  /** Label above the buttons; default "Set thinking time:" */
+  label?: string;
 }
 
-export default function ThinkingTimeResolve({ conversationId }: ThinkingTimeResolveProps) {
+export default function ThinkingTimeResolve({ conversationId, label = 'Set thinking time:' }: ThinkingTimeResolveProps) {
   const router = useRouter();
   const [resolving, setResolving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -37,7 +39,8 @@ export default function ThinkingTimeResolve({ conversationId }: ThinkingTimeReso
         throw new Error(errorData.error || 'Failed to resolve thinking time');
       }
 
-      // Refresh the page to show updated state
+      setResolving(false);
+      // Refresh the page to show updated state; resolve endpoint already dispatched structure recompute
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to resolve thinking time');
@@ -48,7 +51,7 @@ export default function ThinkingTimeResolve({ conversationId }: ThinkingTimeReso
   return (
     <div className="space-y-2">
       <div className="text-xs text-yellow-700 dark:text-yellow-500 mb-2">
-        Set thinking time:
+        {label}
       </div>
       <div className="flex flex-wrap gap-2">
         <button

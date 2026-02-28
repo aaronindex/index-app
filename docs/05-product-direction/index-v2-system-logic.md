@@ -40,6 +40,20 @@ Structural friction surfaced only after threshold.
 
 ---
 
+## Structural Mirror
+
+INDEX presents structure as:
+
+- Direction (ongoing structural themes)
+- Shifts (meaningful structural change)
+
+Direction represents accumulated structural gravity.
+Shift represents threshold-crossing change.
+
+Arcs, phases, and pulses remain internal constructs.
+
+---
+
 ## Editorial Surface
 
 INDEX presents a quiet structural briefing.

@@ -7,6 +7,13 @@ import { generateDebounceKey } from './dispatch.debounce';
 import { enqueueStructureJob } from '../jobs';
 import type { StructureJobPayload } from '../jobs';
 
+function isDevEnv(): boolean {
+  return (
+    typeof process !== 'undefined' &&
+    (process.env.NODE_ENV === 'development' || process.env.APP_ENV === 'development')
+  );
+}
+
 /**
  * Dispatch structure recomputation job
  * 
@@ -37,13 +44,35 @@ export async function dispatchStructureRecompute(
 
   try {
     // Enqueue job (will check debounce internally)
-    await enqueueStructureJob(supabaseClient, jobPayload);
+    const result = await enqueueStructureJob(supabaseClient as SupabaseClient, jobPayload);
+    if (isDevEnv()) {
+      // eslint-disable-next-line no-console
+      console.log('[StructureDispatch][Enqueued]', {
+        user_id,
+        scope,
+        reason,
+        debounce_key: finalDebounceKey,
+        job_id: result.job_id,
+        debounce_window_seconds: 60,
+      });
+    }
   } catch (error) {
     // Check if error is due to debounce skip
     const errorMessage = error instanceof Error ? error.message : String(error);
     
     if (errorMessage.includes('Job already queued/running') || 
         errorMessage.includes('debounce')) {
+      if (isDevEnv()) {
+        // eslint-disable-next-line no-console
+        console.warn('[StructureDispatch][DebounceSkip]', {
+          user_id,
+          scope,
+          reason,
+          debounce_key: finalDebounceKey,
+          debounce_window_seconds: 60,
+          reason_code: 'debounce_skip',
+        });
+      }
       // Debounce skip - return silently (not an error)
       return;
     }

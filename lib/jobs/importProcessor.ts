@@ -18,6 +18,7 @@ interface JobPayload {
   selected_conversation_ids: string[];
   project_id: string | null;
   new_project: { name: string; description?: string } | null;
+  thinking_time_choice?: 'today' | 'yesterday' | 'last_week' | 'last_month';
   parsed_conversations?: any[]; // Cached after parse step
   conversation_map?: Record<string, string>; // parsed_id -> db_id
   message_map?: Record<string, string>; // parsed_message_id -> db_id
@@ -282,17 +283,33 @@ async function processInsertConversationsStep(
       if (existing) {
         conversation = existing;
       } else {
-        // Handle startedAt/endedAt - they might be Date objects or ISO strings (from JSON serialization)
-        const startedAt = parsedConv.startedAt instanceof Date 
-          ? parsedConv.startedAt 
-          : parsedConv.startedAt 
-            ? new Date(parsedConv.startedAt) 
-            : new Date();
-        const endedAt = parsedConv.endedAt instanceof Date 
-          ? parsedConv.endedAt 
-          : parsedConv.endedAt 
-            ? new Date(parsedConv.endedAt) 
-            : null;
+        // Thinking window: user choice (Today/Yesterday/Last week/Last month) or fallback to parsed/now
+        const validChoices = ['today', 'yesterday', 'last_week', 'last_month'] as const;
+        const choice = payload.thinking_time_choice && validChoices.includes(payload.thinking_time_choice)
+          ? payload.thinking_time_choice
+          : null;
+
+        let started_at: string;
+        let ended_at: string;
+        if (choice) {
+          const { coarseWindowToThinkingRange } = await import('@/lib/time/coarseWindow');
+          const window = coarseWindowToThinkingRange({ choice, nowIso: new Date().toISOString() });
+          started_at = window.start_at;
+          ended_at = window.end_at;
+        } else {
+          const startedAt = parsedConv.startedAt instanceof Date
+            ? parsedConv.startedAt
+            : parsedConv.startedAt
+              ? new Date(parsedConv.startedAt)
+              : new Date();
+          const endedAt = parsedConv.endedAt instanceof Date
+            ? parsedConv.endedAt
+            : parsedConv.endedAt
+              ? new Date(parsedConv.endedAt)
+              : null;
+          started_at = startedAt.toISOString();
+          ended_at = endedAt?.toISOString() ?? startedAt.toISOString();
+        }
 
         const { data: newConv, error: convError } = await supabase
           .from('conversations')
@@ -301,8 +318,8 @@ async function processInsertConversationsStep(
             import_id: payload.import_id,
             title: parsedConv.title,
             source: 'chatgpt',
-            started_at: startedAt.toISOString(),
-            ended_at: endedAt?.toISOString() || null,
+            started_at,
+            ended_at,
           })
           .select()
           .single();
@@ -777,7 +794,8 @@ async function processQuickImportJobStep(
           payload.project_id = finalProjectId;
         }
 
-        // Create conversation (mark as inactive until import completes)
+        // Create conversation (mark as inactive until import completes).
+        // Micro-capture: default thinking window to now (UTC) so structure jobs don't fail with missing thinking time.
         const now = new Date();
         const { data: conversation, error: convError } = await supabase
           .from('conversations')

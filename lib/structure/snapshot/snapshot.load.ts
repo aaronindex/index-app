@@ -13,6 +13,37 @@ export type LatestSnapshot = {
   state_payload: StructuralStatePayload | null;
 } | null;
 
+function isDevEnv(): boolean {
+  return (
+    typeof process !== 'undefined' &&
+    (process.env.NODE_ENV === 'development' || process.env.APP_ENV === 'development')
+  );
+}
+
+/**
+ * Dev-only assertion to ensure snapshot timestamps are present and monotonic inputs exist.
+ * Does not mutate data or throw in production.
+ */
+function devAssertSnapshotTimestamps(row: {
+  id: string;
+  generated_at?: string | null;
+  created_at?: string | null;
+}, context: string): void {
+  if (!isDevEnv()) return;
+
+  if (!row.generated_at) {
+    // Snapshot rows created by the processor should always set generated_at.
+    // Older/legacy rows may be missing this; we surface a warning with a reason code.
+    // eslint-disable-next-line no-console
+    console.warn('[SnapshotMonotonicity][MissingGeneratedAt]', {
+      context,
+      snapshot_id: row.id,
+      reason: 'generated_at_null',
+      has_created_at: !!row.created_at,
+    });
+  }
+}
+
 /**
  * Map structure scope to snapshot scope
  * Structure jobs use "user" scope, which maps to "global" in snapshot_state
@@ -43,10 +74,13 @@ export async function loadLatestSnapshot(
 
   const { data, error } = await supabaseAdminClient
     .from('snapshot_state')
-    .select('id, state_hash, state_payload')
+    // Select timestamps so we can assert monotonicity and provide a safe fallback.
+    .select('id, state_hash, state_payload, generated_at, created_at')
     .eq('user_id', userId)
     .eq('scope', snapshotScope)
-    .order('generated_at', { ascending: false })
+    // Prefer generated_at for ordering, but fall back to created_at deterministically.
+    .order('generated_at', { ascending: false, nullsLast: true })
+    .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle();
 
@@ -57,6 +91,17 @@ export async function loadLatestSnapshot(
   if (!data) {
     return null;
   }
+
+  devAssertSnapshotTimestamps(
+    {
+      id: data.id,
+      // @ts-expect-error generated_at may not be selected in older schemas
+      generated_at: (data as any).generated_at ?? null,
+      // @ts-expect-error created_at may not be selected in older schemas
+      created_at: (data as any).created_at ?? null,
+    },
+    'loadLatestSnapshot'
+  );
 
   return {
     id: data.id,

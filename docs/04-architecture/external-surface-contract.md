@@ -44,6 +44,23 @@ External interfaces must never depend on editorial language.
 
 ---
 
+## Source Handling
+
+INDEX distinguishes between:
+
+- Durable sources (retained internally)
+- Reduced & Discarded sources (interpreted then removed)
+
+In both cases:
+
+- Raw source content is never exportable.
+- Only structural state may cross the external boundary.
+
+External systems consume structural state,
+not source artifacts.
+
+---
+
 ## Surface Types
 
 ### 1. Structural State Capsule
@@ -78,6 +95,15 @@ AND BEFORE snapshot generation.
 
 Capsule is deterministic.
 Capsule must not trigger inference.
+
+External surfaces expose structural state in simplified form.
+
+Externally visible concepts include:
+
+- Directions (ongoing structural themes)
+- Shifts (structural change events)
+
+Arcs, phases, and pulse logic remain internal inference mechanisms.
 
 ---
 

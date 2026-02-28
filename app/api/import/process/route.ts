@@ -24,7 +24,10 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { importId, fileData, selectedConversationIds, projectId, newProject } = body;
+    const { importId, fileData, selectedConversationIds, projectId, newProject, thinkingTimeChoice } = body;
+
+    const validThinkingChoices = ['today', 'yesterday', 'last_week', 'last_month'];
+    const thinkingTime = validThinkingChoices.includes(thinkingTimeChoice) ? thinkingTimeChoice : 'today';
 
     if (!importId || !fileData) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -140,15 +143,17 @@ export async function POST(request: NextRequest) {
         })
         .eq('id', importId);
 
+      // Thinking window from user choice (default Today)
+      const { coarseWindowToThinkingRange } = await import('@/lib/time/coarseWindow');
+      const nowIso = new Date().toISOString();
+      const thinkingWindow = coarseWindowToThinkingRange({ choice: thinkingTime, nowIso });
+
       // Process each conversation
       for (let i = 0; i < conversationsToImport.length; i++) {
         const conv = conversationsToImport[i];
         const progressPercent = 10 + Math.floor((i / conversationsToImport.length) * 80);
 
-        // Create conversation
-        const startedAt = conv.startedAt instanceof Date ? conv.startedAt : new Date(conv.startedAt || Date.now());
-        const endedAt = conv.endedAt instanceof Date ? conv.endedAt : (conv.endedAt ? new Date(conv.endedAt) : null);
-        
+        // Create conversation with thinking window from user choice
         const { data: conversation, error: convError } = await supabase
           .from('conversations')
           .insert({
@@ -156,8 +161,8 @@ export async function POST(request: NextRequest) {
             import_id: importId,
             title: conv.title,
             source: 'chatgpt',
-            started_at: startedAt.toISOString(),
-            ended_at: endedAt?.toISOString() || null,
+            started_at: thinkingWindow.start_at,
+            ended_at: thinkingWindow.end_at,
           })
           .select()
           .single();
@@ -327,6 +332,7 @@ export async function POST(request: NextRequest) {
       selected_conversation_ids: selectedConversationIds,
       project_id: projectId || null,
       new_project: newProject || null,
+      thinking_time_choice: thinkingTime,
     };
 
     const { data: job, error: jobError } = await supabase

@@ -3,128 +3,168 @@
 INDEX receives thinking.
 It does not generate thinking.
 
-Users import:
-- chats
-- discussions
-- structured reflections
+INDEX is not a storage system.
+It is not a knowledge archive.
+It is not a journaling surface.
 
-Only thinking with perceived weight tends to be imported.
-Weight is self-selected by behavior.
-
-INDEX does not ingest ambient data in personal mode.
-
-Org platform uses agentic ingestion.
+INDEX exists to receive moments that change structure.
 
 ---
 
-## Primary Ingestion Mode — Micro Capture
+## What Belongs in INDEX
 
-INDEX supports two ingestion modes:
+Capture moments that change how you operate or what you are building.
 
-1. Micro Capture (primary)
-2. Thread Import (secondary)
+Examples:
 
-Micro Capture represents a deliberate elevation gesture.
+- decisions
+- commitments
+- constraints
+- realizations
+- tensions
+- directional shifts
 
-A user may capture:
-- a paragraph
-- a decision moment
-- a constraint
-- a realization
-- a short exchange
+If nothing changes structurally,
+it does not belong in INDEX.
 
-Micro Capture is the default ingestion path.
+Interesting information is not enough.
+Reference material is not enough.
+Preferences without consequence are not enough.
 
-It does not require:
-- role cleanup
-- full transcript structure
-- precise temporal assignment
-- pre-assigned project certainty
+INDEX receives structural weight, not information.
+
+---
+
+## Capture
+
+Capture is the only ingestion gesture.
+
+Users may capture:
+
+- shared AI thinking
+- discussions
+- reflections
+- external stimulus
+- short excerpts
+- full threads
 
 Capture precedes organization.
+Inference does not require clean transcripts.
+Inference does not require perfect formatting.
 
-Inference operates on minimal content.
-Organization may occur after structural candidates are detected.
-
----
-
-## Thread Import (Intentional Deep Capture)
-
-Thread Import exists for full arc preservation.
-
-It is:
-- heavier
-- less frequent
-- intentionally chosen
-
-Thread Import signals:
-“This entire thread of thinking carries structural weight.”
-
-Micro Capture demotes routine full imports,
-while promoting intentional deep capture.
+Reduction precedes normalization.
 
 ---
 
-## Temporal Windows
+## Containers
 
-Imported thinking carries a temporal window.
+All structure lives inside containers.
+
+Container types:
+
+- Self (system-level identity container)
+- Projects (flat, user-created)
+
+UI may refer to Self as “Me.”
+
+Nothing exists outside containers.
+No structural objects float above them.
+
+Capture must be placed into a container before structural persistence.
+
+---
+
+## Source Behavior
+
+Every capture has a source.
+
+Source may be handled in one of two ways:
+
+### Durable (Default)
+
+The source remains internally as part of structural history.
+
+Durable sources:
+
+- may accumulate structural weight
+- may influence Direction
+- may contribute to Shifts
+- may connect across containers
+
+Durable capture becomes part of the ongoing structural record.
+
+---
+
+### Reduce & Discard Source
+
+The source is used as stimulus only.
+
+It is interpreted once,
+structural outputs are generated,
+and the source is discarded.
+
+Only structural outcomes persist.
+
+Discarded sources:
+
+- do not accumulate pattern weight
+- do not form ongoing structural gravity
+- do not contribute durable context
+
+If no structural outcome (Decision or Task) is saved,
+no structural event occurred.
+
+---
+
+## Temporal Integrity
 
 INDEX distinguishes between:
 
 - thinking time (when the thinking occurred)
 - ingestion time (when the artifact entered INDEX)
 
-Inference operates on thinking time.
+Structural inference operates on thinking time.
 
-Thinking time may be:
+Temporal precision is not required.
+Temporal shape matters more than timestamp accuracy.
 
-- derived from source timestamps
-- loosely set by the user (today / this week / last month)
-- estimated when unclear
+If a source is durable,
+its thinking time contributes to structural pattern formation.
 
-Temporal windows allow structure to emerge from real timelines,
-not ingestion bursts.
+If a source is reduced & discarded,
+its thinking time applies only to resulting structural outputs.
+
+Ingestion time is bookkeeping only.
+
+INDEX models event time, not observation time.
 
 ---
 
-## Ephemeral Field Notes
+## Direction and Shifts
 
-INDEX may receive short reflections called Field Notes.
+INDEX presents structure as a calm mirror.
 
-Field Notes are transient ingestion events.
-They are not stored artifacts.
+Externally visible structural state includes:
 
-A Field Note exists only to allow structural interpretation
-within a project context.
+- Direction (ongoing structural themes)
+- Shifts (meaningful structural change events)
 
-Field Notes may produce:
-- Decisions
-- Tasks
+Arcs, phases, pulse logic, and other inference mechanisms remain internal.
 
-The Field Note itself is discarded after interpretation.
-
-Field Notes inherit project temporal context
-and do not introduce new thinking-time signals.
-
-External content is never stored.
-Only structural change persists.
-
-Field Note Principle:
-
-If no Task or Decision is saved,
-no structural event occurred.
+INDEX does not expose editorial artifacts.
+INDEX exposes structural state.
 
 ---
 
 ## Ingestion Principle
 
-INDEX does not require clean transcripts to begin structural inference.
+INDEX does not ingest ambient data in personal mode.
 
-Structure may emerge from:
-- partial context
-- ambiguous roles
-- minimal temporal precision
+Capture must be deliberate.
 
-Reduction precedes normalization.
+Only structural change persists.
+Source content never crosses the external boundary.
 
-Only structural outcomes persist.
+INDEX is a structural ledger.
+Structure informs action.
+INDEX does not perform action.

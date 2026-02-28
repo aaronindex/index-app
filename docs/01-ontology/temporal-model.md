@@ -82,3 +82,17 @@ not ingestion convenience.
 
 INDEX models event time, not observation time.
 Structure reflects when thinking occurred, not when it was imported.
+
+---
+
+## Source Persistence and Time
+
+Thinking time applies to structural events only.
+
+If a source is durable,
+its thinking time contributes to pattern formation.
+
+If a source is reduced & discarded,
+its thinking time applies only to resulting structural outputs.
+
+Discarded sources do not create ongoing temporal weight.

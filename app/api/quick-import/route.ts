@@ -58,7 +58,8 @@ async function processQuickImportSync(
       return { conversationId: '', error: `Failed to create import record: ${importError?.message || 'Unknown error'}` };
     }
 
-    // Create conversation (mark as inactive until import completes)
+    // Create conversation (mark as inactive until import completes).
+    // Micro-capture: default thinking window to now (UTC) so structure jobs don't fail with missing thinking time.
     const now = new Date();
     const { data: conversation, error: convError } = await supabase
       .from('conversations')

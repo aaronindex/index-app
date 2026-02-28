@@ -2,18 +2,19 @@
 import { getSupabaseServerClient } from '@/lib/supabaseServer';
 import { getCurrentUser } from '@/lib/getUser';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import type { Metadata } from 'next';
 import ProjectTabs from './components/ProjectTabs';
 import ReadTab from './components/ReadTab';
 import ChatsTab from './components/ChatsTab';
 import DecisionsTab from './components/DecisionsTab';
 import TasksTab from './components/TasksTab';
-import { redirect } from 'next/navigation';
 import ProjectStartChatButton from './components/ProjectStartChatButton';
 import ExportChecklistButton from './components/ExportChecklistButton';
 import ProjectOverflowMenu from './components/ProjectOverflowMenu';
 import { loadProjectView } from '@/lib/ui-data/project.load';
+import { projectDirection, projectShifts } from '@/lib/structure/projection';
+import { assertNoForbiddenVocabulary } from '@/lib/ui/guardrails/vocabulary';
 
 // Force dynamic rendering to ensure fresh data
 export const dynamic = 'force-dynamic';
@@ -214,12 +215,30 @@ export default async function ProjectDetailPage({
     }
   }
 
-  // Load structural state data
+  // Load structural state data (Direction + Shifts + Timeline)
   const structuralData = await loadProjectView({
     supabaseClient: supabase,
     user_id: user.id,
     project_id: id,
   });
+
+  const payload = structuralData.latestSnapshotPayload ?? null;
+  const direction = payload ? projectDirection(payload) : null;
+  const shifts = payload
+    ? projectShifts(structuralData.prevSnapshotPayload, payload)
+    : { hasShift: false, shiftTypes: [] };
+
+  // Dev-only vocabulary guardrail on labels we control
+  assertNoForbiddenVocabulary(
+    [
+      'Timeline',
+      'Direction',
+      'Shifts',
+      'Structural Timeline',
+      'Decisions & Results',
+    ],
+    'ProjectDetailPage'
+  );
 
   const activeTab = (['read', 'decisions', 'tasks', 'chats'].includes(tab)
     ? tab
@@ -275,60 +294,73 @@ export default async function ProjectDetailPage({
           )}
         </div>
 
-        {/* Structural Timeline Section (Read-only) */}
-        {(structuralData.timelineEvents.length > 0 || structuralData.arcs.length > 0) && (
-          <div className="mb-8 p-4 rounded-lg bg-[rgb(var(--surface))] border border-[rgb(var(--ring)/0.08)]">
-            <h3 className="text-sm font-semibold text-[rgb(var(--text))] mb-4">Timeline</h3>
-            
-            {/* Timeline Events */}
-            {structuralData.timelineEvents.length > 0 && (
-              <div className="mb-4">
-                <div className="text-xs text-[rgb(var(--muted))] mb-2">Decisions & Results</div>
-                <div className="space-y-1">
-                  {structuralData.timelineEvents.map((event, idx) => (
-                    <div key={idx} className="text-xs text-[rgb(var(--muted))]">
-                      <span className="font-medium">{event.kind}</span>
-                      <span className="ml-2">
-                        {new Date(event.occurred_at).toLocaleDateString()}
-                      </span>
-                    </div>
-                  ))}
+        {/* Direction + Shifts for this project */}
+        {(direction || shifts.hasShift) && (
+          <div className="mb-8 space-y-4">
+            {direction && (
+              <div className="p-4 rounded-lg bg-[rgb(var(--surface))] border border-[rgb(var(--ring)/0.08)]">
+                <div className="text-sm font-medium text-[rgb(var(--text))] mb-2">
+                  Direction
+                </div>
+                <div className="text-xs text-[rgb(var(--muted))] space-y-1">
+                  <p>Containers: {direction.activeContainers}</p>
+                  <p>Direction units: {direction.activeDirectionUnits}</p>
+                  <p>Pace: {direction.densityLevel}</p>
+                  {direction.lastStructuralChangeAt && (
+                    <p>
+                      Last structural change:{' '}
+                      {new Date(
+                        direction.lastStructuralChangeAt
+                      ).toLocaleDateString()}
+                    </p>
+                  )}
                 </div>
               </div>
             )}
 
-            {/* Linked Arcs */}
-            {structuralData.arcs.length > 0 && (
-              <div>
-                <div className="text-xs text-[rgb(var(--muted))] mb-2">
-                  Arcs ({structuralData.arcs.length})
-                </div>
-                <div className="space-y-2">
-                  {structuralData.arcs.map((arc) => (
-                    <div key={arc.id} className="text-xs">
-                      <div className="text-[rgb(var(--muted))]">
-                        <span className="font-mono">{arc.id.substring(0, 8)}...</span>
-                        <span className="ml-2">{arc.status}</span>
-                        <span className="ml-2">
-                          {new Date(arc.last_signal_at).toLocaleDateString()}
-                        </span>
-                      </div>
-                      {/* Phases for this arc */}
-                      {structuralData.phasesByArc[arc.id] && structuralData.phasesByArc[arc.id].length > 0 && (
-                        <div className="ml-4 mt-1 space-y-1">
-                          {structuralData.phasesByArc[arc.id].map((phase) => (
-                            <div key={phase.id} className="text-[rgb(var(--muted))]">
-                              <span className="font-mono">{phase.id.substring(0, 8)}...</span>
-                              <span className="ml-2">{phase.status}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
+            <div className="p-4 rounded-lg bg-[rgb(var(--surface))] border border-[rgb(var(--ring)/0.08)]">
+              <div className="text-sm font-medium text-[rgb(var(--text))] mb-2">
+                Shifts
               </div>
-            )}
+              {shifts.hasShift ? (
+                <div className="text-xs text-[rgb(var(--muted))]">
+                  {shifts.shiftTypes.join(', ')}
+                </div>
+              ) : (
+                <div className="text-xs text-[rgb(var(--muted))]">
+                  No recent shifts
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Structural Timeline Section (Read-only, concrete events) */}
+        {structuralData.timelineEvents.length > 0 && (
+          <div className="mb-8 p-4 rounded-lg bg-[rgb(var(--surface))] border border-[rgb(var(--ring)/0.08)]">
+            <h3 className="text-sm font-semibold text-[rgb(var(--text))] mb-4">
+              Timeline
+            </h3>
+
+            <div className="mb-4">
+              <div className="text-xs text-[rgb(var(--muted))] mb-2">
+                Decisions &amp; Results
+              </div>
+              <div className="space-y-1">
+                {structuralData.timelineEvents.map((event, idx) => (
+                  <div key={idx} className="text-xs text-[rgb(var(--muted))]">
+                    <span className="font-medium">
+                      {event.kind === 'decision'
+                        ? 'Decision recorded'
+                        : 'Result recorded'}
+                    </span>
+                    <span className="ml-2">
+                      {new Date(event.occurred_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         )}
 

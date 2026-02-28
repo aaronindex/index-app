@@ -3,4 +3,3 @@
 
 export { loadHomeView, type HomeViewData } from './home.load';
 export { loadProjectView, type ProjectViewData } from './project.load';
-export { loadStructureJobHealth, type JobHealthData } from './jobHealth.load';

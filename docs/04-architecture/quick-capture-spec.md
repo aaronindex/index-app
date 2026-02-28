@@ -1,93 +1,70 @@
-# Quick Capture Specification — INDEX v2
+# Capture Specification — INDEX v2
 
 ## Purpose
 
-Define the primary ingestion mode for INDEX v2.
+Define the unified ingestion gesture for INDEX.
 
-Quick Capture enables frictionless structural elevation
+Capture enables structural elevation
 without turning INDEX into a thinking surface.
 
 ---
 
-## Position in System
+## Capture Flow
 
-Quick Capture feeds:
-
-capture_event  
-→ ingestion_event  
-→ arc scoring  
-→ phase inference  
-→ tension scoring  
-→ state_hash compute  
-
-No alternate inference path exists.
-
-Quick Capture does not bypass structure.
+1. User captures content.
+2. User selects container:
+   - Me (Self)
+   - Project
+3. Optional: Reduce & Discard Source
+4. Structural inference runs.
+5. Structural state updates.
 
 ---
 
-## Design Principles
+## Source Modes
 
-- Deliberate user gesture required.
-- No ambient logging.
-- No chat interface.
-- No back-and-forth loop.
-- Reduction precedes organization.
-- Raw content never exported.
+### Durable (Default)
 
----
+- Source remains internally.
+- May accumulate structural weight.
+- May influence Directions.
+- May contribute to Shifts.
 
-## Capture Flow (In-App)
+### Reduce & Discard Source
 
-1. User pastes content.
-2. System runs lightweight reduction pass.
-3. Structural candidates are surfaced.
-4. User assigns project (if not already).
-5. Structural changes persist.
-
-Project assignment may occur after candidate detection.
+- Source interpreted once.
+- Source removed after interpretation.
+- Only resulting structural outputs persist.
+- Does not accumulate pattern weight.
 
 ---
 
-## Inference Profile: micro_capture
+## Structural Output
 
-micro_capture differs from thread_import:
+Externally visible structural state includes:
 
-- Lower confidence threshold for candidate detection.
-- More tolerant of ambiguous speaker roles.
-- Temporal inference may operate at low precision.
-- Arc attachment may defer until sufficient signal exists.
+- Directions
+- Shifts
 
-Inference profile selection must not alter state_hash semantics.
+Internal mechanisms:
 
----
+- Arc detection
+- Phase inference
+- Pulse emission
+- Tension scoring
+- state_hash computation
 
-## Capture Capsule Contract
-
-Internal-only shape:
-
-{
-  content: string,
-  source: 'clipboard' | 'browser' | 'email' | 'slack',
-  captured_at: timestamp,
-  thinking_time?: timestamp | temporal_range,
-  project_id?: uuid,
-  inference_profile: 'micro_capture'
-}
-
-Raw content is not externally accessible.
-
-Only structural outcomes persist.
+These remain internal and non-exported.
 
 ---
 
 ## Guardrails
 
-Quick Capture must never:
+Capture must never:
 
-- become a journaling surface
-- store draft thinking
-- expose editorial language externally
-- create conversational state
+- Become a journaling interface
+- Store ambient data
+- Expose editorial language externally
+- Create conversational state
 
 INDEX remains a structural ledger.

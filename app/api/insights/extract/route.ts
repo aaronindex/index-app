@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabaseServer';
 import { getCurrentUser } from '@/lib/getUser';
-import { extractInsights, ExtractedInsight } from '@/lib/ai/insights';
+import { extractInsights, ExtractedInsight, type InsightExtractionResult, type ReduceDebug } from '@/lib/ai/insights';
 
 export async function POST(request: NextRequest) {
   try {
@@ -76,8 +76,16 @@ export async function POST(request: NextRequest) {
       })),
     };
 
-    // Extract insights
-    const insights = await extractInsights(conversationContent);
+    const isDev = process.env.NODE_ENV === 'development';
+    const inputChars = messages.reduce((sum, m) => sum + (m.content?.length ?? 0), 0);
+    const roleDetectionFailed = messages.length > 0 && messages.every((m) => !(m.content?.trim?.() ?? '').length);
+
+    // Extract insights (optionally return debug in dev for 0-item diagnosis)
+    const outcome = await extractInsights(conversationContent, { includeDebug: isDev });
+    const insights: InsightExtractionResult =
+      outcome && typeof outcome === 'object' && 'result' in outcome ? outcome.result : (outcome as InsightExtractionResult);
+    const extractDebug: ReduceDebug | undefined =
+      outcome && typeof outcome === 'object' && 'debug' in outcome ? (outcome as { debug: ReduceDebug }).debug : undefined;
 
     // Store extracted insights
     const createdInsights: any[] = [];
@@ -220,6 +228,45 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const savedItemsCount = createdInsights.length;
+    const parsedItemsCount =
+      insights.decisions.length +
+      insights.commitments.length +
+      insights.blockers.length +
+      insights.openLoops.length +
+      insights.suggestedHighlights.length;
+
+    // Dev: when reduce produced 0 saved items, log why (no usable text / model returned nothing / filters removed all)
+    if (isDev && savedItemsCount === 0) {
+      const filterReasons: string[] = [];
+      if (insights.decisions.length > 0 && !createdInsights.some((c) => c.type === 'decision'))
+        filterReasons.push('decision_insert_failed');
+      if (insights.commitments.length > 0 && !createdInsights.some((c) => c.type === 'commitment'))
+        filterReasons.push('commitment_insert_failed');
+      if (insights.blockers.length > 0 && !createdInsights.some((c) => c.type === 'blocker'))
+        filterReasons.push('blocker_insert_failed');
+      if (insights.openLoops.length > 0 && !createdInsights.some((c) => c.type === 'open_loop'))
+        filterReasons.push('open_loop_insert_failed');
+      if (insights.suggestedHighlights.length > 0 && !createdInsights.some((c) => c.type === 'highlight'))
+        filterReasons.push('highlight_insert_failed');
+      if (!projectId && (insights.commitments.length + insights.blockers.length + insights.openLoops.length > 0))
+        filterReasons.push('missing_project_id');
+
+      const reduceLog = {
+        conversation_id: conversationId,
+        profile: 'thread_import',
+        input_chars: inputChars,
+        extracted_text_chars: extractDebug?.extractedTextChars ?? 0,
+        model_output_chars: extractDebug?.modelOutputChars ?? 0,
+        parsed_items_count: parsedItemsCount,
+        saved_items_count: savedItemsCount,
+        filter_reasons: filterReasons.length ? filterReasons : undefined,
+        cause: extractDebug?.cause,
+        role_detection_failed: roleDetectionFailed || extractDebug?.roleDetectionFailed,
+      };
+      console.log('[reduce_debug]', JSON.stringify(reduceLog));
+    }
+
     return NextResponse.json({
       success: true,
       insights: {
@@ -229,7 +276,7 @@ export async function POST(request: NextRequest) {
         openLoops: insights.openLoops.length,
         suggestedHighlights: insights.suggestedHighlights.length,
       },
-      created: createdInsights.length,
+      created: savedItemsCount,
       details: createdInsights,
     });
   } catch (error) {

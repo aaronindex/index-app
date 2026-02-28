@@ -11,7 +11,19 @@ import DeleteHighlightButton from '@/app/projects/[id]/components/DeleteHighligh
 import MobileHighlightsPanel from './components/MobileHighlightsPanel';
 import ReduceOnboardingModal from './components/ReduceOnboardingModal';
 import ConversationOverflowMenu from './components/ConversationOverflowMenu';
+import ThinkingTimeResolve from '@/app/components/ThinkingTimeResolve';
 import { isRoleAmbiguous, isRoleConfidenceLow } from '@/lib/conversations/roleAmbiguity';
+
+function formatThinkingWindow(startedAt: string | null, endedAt: string | null): string {
+  if (!startedAt && !endedAt) return 'Not set';
+  const start = startedAt ? new Date(startedAt) : null;
+  const end = endedAt ? new Date(endedAt) : null;
+  const fmt = (d: Date) => d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  if (start && end) return `${fmt(start)} – ${fmt(end)}`;
+  if (start) return fmt(start);
+  if (end) return fmt(end);
+  return 'Not set';
+}
 
 type Status = 'priority' | 'open' | 'complete' | 'dormant';
 
@@ -157,6 +169,15 @@ export default async function ConversationPage({
               </div>
             </div>
 
+            {/* Thinking time - mobile only (desktop has it in sidebar) */}
+            <div className="lg:hidden border border-zinc-200 dark:border-zinc-800 rounded-lg p-4 bg-white dark:bg-zinc-950">
+              <h2 className="font-medium text-foreground mb-2">Thinking time</h2>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-3">
+                {formatThinkingWindow(conversation.started_at, conversation.ended_at)}
+              </p>
+              <ThinkingTimeResolve conversationId={id} label="Edit thinking time:" />
+            </div>
+
             {/* Mobile Highlights Panel - full width, below title */}
             <MobileHighlightsPanel
               highlights={highlights || []}
@@ -176,6 +197,15 @@ export default async function ConversationPage({
 
           {/* Sidebar - Desktop only */}
           <div className="hidden lg:block lg:col-span-1 space-y-4">
+            {/* Thinking time - desktop sidebar */}
+            <div className="border border-zinc-200 dark:border-zinc-800 rounded-lg p-4 bg-white dark:bg-zinc-950">
+              <h2 className="font-medium text-foreground mb-2">Thinking time</h2>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-3">
+                {formatThinkingWindow(conversation.started_at, conversation.ended_at)}
+              </p>
+              <ThinkingTimeResolve conversationId={id} label="Edit thinking time:" />
+            </div>
+
             {/* Highlights Section */}
             <div className="border border-zinc-200 dark:border-zinc-800 rounded-lg p-4 bg-white dark:bg-zinc-950">
               <h2 className="font-medium text-foreground mb-4">Highlights</h2>

@@ -4,6 +4,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { StructuralStatePayload } from '../hash';
 import { normalizeStructuralState } from '../hash';
+import { devAssertDeterministicStructuralPayload } from '../hash/stateHash.assertions';
 
 /**
  * Map structure scope to snapshot scope
@@ -14,6 +15,35 @@ function mapScopeToSnapshotScope(scope: string): 'project' | 'global' {
     return 'global';
   }
   return scope as 'project' | 'global';
+}
+
+function isDevEnv(): boolean {
+  return (
+    typeof process !== 'undefined' &&
+    (process.env.NODE_ENV === 'development' || process.env.APP_ENV === 'development')
+  );
+}
+
+/**
+ * Dev-only assertion to ensure generated_at is present on snapshot rows written by the processor.
+ * Does not mutate data or throw in production.
+ */
+function devAssertSnapshotWriteTimestamps(row: {
+  id: string;
+  generated_at?: string | null;
+  created_at?: string | null;
+}, context: string): void {
+  if (!isDevEnv()) return;
+
+  if (!row.generated_at) {
+    // eslint-disable-next-line no-console
+    console.warn('[SnapshotMonotonicity][MissingGeneratedAtAfterWrite]', {
+      context,
+      snapshot_id: row.id,
+      reason: 'generated_at_null_after_insert',
+      has_created_at: !!row.created_at,
+    });
+  }
 }
 
 /**
@@ -50,6 +80,9 @@ export async function writeSnapshotState(
   // Normalize payload before storage to ensure stability
   const normalizedPayload = normalizeStructuralState(payload);
 
+  // Dev-only deterministic ordering checks (non-mutating, logs only).
+  devAssertDeterministicStructuralPayload(normalizedPayload, 'writeSnapshotState');
+
   const { data, error } = await supabaseAdminClient
     .from('snapshot_state')
     .insert({
@@ -60,12 +93,24 @@ export async function writeSnapshotState(
       generated_at: new Date().toISOString(),
       // snapshot_text and field_note_text remain null (editorial-only, not set by inference)
     })
-    .select('id')
+    // Select timestamps so we can assert monotonicity invariants in development.
+    .select('id, generated_at, created_at')
     .single();
 
   if (error || !data) {
     throw new Error(`[SnapshotWrite] Error writing snapshot: ${error?.message || 'Unknown error'}`);
   }
+
+  devAssertSnapshotWriteTimestamps(
+    {
+      id: data.id,
+      // @ts-expect-error generated_at exists on snapshot_state rows
+      generated_at: (data as any).generated_at ?? null,
+      // @ts-expect-error created_at exists on snapshot_state rows
+      created_at: (data as any).created_at ?? null,
+    },
+    'writeSnapshotState'
+  );
 
   return { snapshot_id: data.id };
 }

@@ -1,27 +1,19 @@
-# Field Note Interpretation Prompt
+# Ephemeral Source Interpretation Prompt
 
 This prompt must never introduce new ontology primitives.
 It operates strictly within existing structural outputs.
 
 ## Purpose
 
-Define the AI behavior used when a user submits a Field Note
-inside a project context.
+Define AI behavior when a capture is marked:
 
-Field Notes are ephemeral ingestion events.
-They are not stored artifacts.
+Reduce & Discard Source.
 
-The AI compares the Field Note against project structure
-and proposes structural implications only.
+Ephemeral sources are:
 
-Outputs may include:
-- Decisions
-- Tasks
-
-Field Notes must never produce Results.
-Results represent lived feedback after Decisions.
-
-The Field Note itself is discarded.
+- interpreted within container context
+- not retained as durable artifacts
+- used only to generate structural outcomes
 
 ---
 

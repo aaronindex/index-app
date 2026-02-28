@@ -18,6 +18,7 @@ const USER_MARKERS = [
   /^\s*\*\*Me:\*\*\s*/i,
   /^\s*\*\*Human:\*\*\s*/i,
   /^\s*User:\s*/i,
+  /^\s*You:\s*/i,
   /^\s*Me:\s*/i,
   /^\s*Human:\s*/i,
   /^\s*USER:\s*/,
@@ -36,6 +37,7 @@ const ASSISTANT_MARKERS = [
   /^\s*\*\*Claude:\*\*\s*/i,
   /^\s*Assistant:\s*/i,
   /^\s*AI:\s*/i,
+  /^\s*Chat\s?GPT:\s*/i,  // "Chat GPT:" or "ChatGPT:"
   /^\s*ChatGPT:\s*/i,
   /^\s*Claude:\s*/i,
   /^\s*ASSISTANT:\s*/,
@@ -62,6 +64,16 @@ function findMarker(line: string): 'user' | 'assistant' | null {
     }
   }
   return null;
+}
+
+/** True if any line in text matches a known user/assistant role marker (same markers as parseTranscript). */
+export function hasRoleMarkers(text: string): boolean {
+  if (!text.trim()) return false;
+  const lines = text.split(/\r?\n/);
+  for (const line of lines) {
+    if (findMarker(line)) return true;
+  }
+  return false;
 }
 
 function stripMarker(line: string, role: 'user' | 'assistant'): string {
@@ -96,11 +108,15 @@ export function parseTranscript(
   const messages: ParsedMessage[] = [];
   let currentRole: 'user' | 'assistant' | null = null;
   let currentContent: string[] = [];
+  const debugTurnHeaders: string[] = [];
 
   for (const line of lines) {
     const marker = findMarker(line);
     
     if (marker) {
+      if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'development') {
+        debugTurnHeaders.push(line.trim().substring(0, 80));
+      }
       // Save previous message if exists
       if (currentRole && currentContent.length > 0) {
         const content = currentContent.join('\n').trim();
@@ -146,6 +162,16 @@ export function parseTranscript(
   // Count roles
   const userCount = messages.filter((m) => m.role === 'user').length;
   const assistantCount = messages.filter((m) => m.role === 'assistant').length;
+
+  if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'development' && (lines.length > 0 || messages.length > 0)) {
+    const debug = {
+      total_lines: lines.length,
+      detected_turns: messages.length,
+      role_counts: { user: userCount, assistant: assistantCount },
+      first_3_turn_headers: debugTurnHeaders.slice(0, 3),
+    };
+    console.log('[parseTranscript]', JSON.stringify(debug));
+  }
 
   return {
     messages,

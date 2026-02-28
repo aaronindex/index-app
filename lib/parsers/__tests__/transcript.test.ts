@@ -92,6 +92,21 @@ User: How are you?`;
     expect(result.messages[0].content).toBe('Hello');
     expect(result.messages[1].content).toBe('Hi');
   });
+
+  test('9. You: and Chat GPT: markers', () => {
+    const text = `You: Hello
+Chat GPT: Hi there
+You: How are you?`;
+    const result = parseTranscript(text);
+    expect(result.messages).toHaveLength(3);
+    expect(result.messages[0].role).toBe('user');
+    expect(result.messages[0].content).toBe('Hello');
+    expect(result.messages[1].role).toBe('assistant');
+    expect(result.messages[1].content).toBe('Hi there');
+    expect(result.messages[2].role).toBe('user');
+    expect(result.userCount).toBe(2);
+    expect(result.assistantCount).toBe(1);
+  });
 });
 
 describe('generateAutoTitle', () => {

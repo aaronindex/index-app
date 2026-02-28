@@ -11,6 +11,13 @@ import { inferArcsAndBuildState } from '../inference/arcs';
 import { loadLatestSnapshot, writeSnapshotState, createMinimalPulses } from '../snapshot';
 import { JobNotFoundError, MissingThinkingTimeError } from './job.errors';
 
+function isDevEnv(): boolean {
+  return (
+    typeof process !== 'undefined' &&
+    (process.env.NODE_ENV === 'development' || process.env.APP_ENV === 'development')
+  );
+}
+
 /**
  * Get Supabase service role client for admin operations
  */
@@ -164,6 +171,50 @@ export async function runStructureJob(
       structuralPayload,
       stateHash
     );
+
+    // Dev-only idempotency check: detect duplicate snapshots with identical state_hash
+    if (isDevEnv()) {
+      try {
+        const { data: sameHashSnapshots } = await supabaseAdminClient
+          .from('snapshot_state')
+          .select('id, scope, state_hash, generated_at, created_at')
+          .eq('user_id', payload.user_id)
+          .eq('state_hash', stateHash)
+          .order('generated_at', { ascending: false, nullsLast: true })
+          .order('created_at', { ascending: false })
+          .limit(3);
+
+        if (sameHashSnapshots && sameHashSnapshots.length >= 2) {
+          const latest = sameHashSnapshots[0];
+          const previous = sameHashSnapshots[1];
+
+          if (latest.scope === previous.scope && latest.state_hash === previous.state_hash) {
+            const duplicateCount = sameHashSnapshots.filter(
+              (row) => row.scope === latest.scope && row.state_hash === latest.state_hash
+            ).length;
+
+            // eslint-disable-next-line no-console
+            console.warn('[StructureJobIdempotency][DuplicateSnapshots]', {
+              job_id: jobId,
+              user_id: payload.user_id,
+              scope: latest.scope,
+              state_hash_prefix: stateHash.substring(0, 16),
+              duplicate_count: duplicateCount,
+              reason: 'duplicate_snapshot_same_hash_back_to_back',
+            });
+          }
+        }
+      } catch (idempotencyError) {
+        // eslint-disable-next-line no-console
+        console.warn('[StructureJobIdempotency][CheckFailed]', {
+          job_id: jobId,
+          user_id: payload.user_id,
+          reason: 'idempotency_check_error',
+          error_message:
+            idempotencyError instanceof Error ? idempotencyError.message : String(idempotencyError),
+        });
+      }
+    }
 
     // Mark succeeded
     const finishedAt = new Date().toISOString();

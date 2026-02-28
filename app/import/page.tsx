@@ -5,7 +5,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSupabaseBrowserClient } from '@/lib/supabaseClient';
 import { parseChatGPTExport } from '@/lib/parsers/chatgpt';
-import { parseTranscript } from '@/lib/parsers/transcript';
+import { parseTranscript, hasRoleMarkers } from '@/lib/parsers/transcript';
 import Card from '@/app/components/ui/Card';
 import { trackEvent } from '@/lib/analytics';
 
@@ -36,6 +36,7 @@ export default function ImportPage() {
   const [projectAction, setProjectAction] = useState<'none' | 'existing' | 'new'>('none');
   const [newProjectName, setNewProjectName] = useState('');
   const [newProjectDescription, setNewProjectDescription] = useState('');
+  const [thinkingTimeChoice, setThinkingTimeChoice] = useState<'today' | 'yesterday' | 'last_week' | 'last_month'>('today');
   const [jobStatus, setJobStatus] = useState<any>(null);
   const [pollCount, setPollCount] = useState(0);
 
@@ -50,6 +51,7 @@ export default function ImportPage() {
   const [quickLoading, setQuickLoading] = useState(false);
   const [quickError, setQuickError] = useState<string | null>(null);
   const [quickSuccess, setQuickSuccess] = useState<{ conversationId: string; title: string; messageCount: number } | null>(null);
+  const [quickThinkingTimeChoice, setQuickThinkingTimeChoice] = useState<'today' | 'yesterday' | 'last_week' | 'last_month'>('today');
   const lastTranscriptLengthRef = useRef<number>(0);
 
   // Fetch projects on mount
@@ -86,45 +88,6 @@ export default function ImportPage() {
       }
     }
   }, [projects]);
-
-  // Helper function to detect if content has recognizable role markers
-  const hasRoleMarkers = (text: string): boolean => {
-    if (!text.trim()) return false;
-    const lines = text.split(/\r?\n/);
-    const USER_MARKERS = [
-      /^\s*\*\*User:\*\*\s*/i,
-      /^\s*\*\*Me:\*\*\s*/i,
-      /^\s*\*\*Human:\*\*\s*/i,
-      /^\s*User:\s*/i,
-      /^\s*Me:\s*/i,
-      /^\s*Human:\s*/i,
-      /^\s*USER:\s*/,
-      /^\s*ME:\s*/,
-      /^\s*HUMAN:\s*/,
-    ];
-    const ASSISTANT_MARKERS = [
-      /^\s*\*\*Assistant:\*\*\s*/i,
-      /^\s*\*\*AI:\*\*\s*/i,
-      /^\s*\*\*ChatGPT:\*\*\s*/i,
-      /^\s*\*\*Claude:\*\*\s*/i,
-      /^\s*Assistant:\s*/i,
-      /^\s*AI:\s*/i,
-      /^\s*ChatGPT:\s*/i,
-      /^\s*Claude:\s*/i,
-      /^\s*ASSISTANT:\s*/,
-      /^\s*AI:\s*/,
-      /^\s*CHATGPT:\s*/,
-      /^\s*CLAUDE:\s*/,
-    ];
-    for (const line of lines) {
-      for (const marker of [...USER_MARKERS, ...ASSISTANT_MARKERS]) {
-        if (marker.test(line)) {
-          return true;
-        }
-      }
-    }
-    return false;
-  };
 
   // Parse quick import transcript on change
   useEffect(() => {
@@ -221,7 +184,21 @@ export default function ImportPage() {
         return;
       }
 
-      if (data.processed) {
+      if (data.processed && data.conversationId) {
+        // Set thinking time from user's choice (idempotent; default Today still sets window)
+        try {
+          await fetch('/api/thinking-time/resolve', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              conversation_id: data.conversationId,
+              choice: quickThinkingTimeChoice,
+            }),
+          });
+        } catch (resolveErr) {
+          console.warn('[QuickImport] Thinking time resolve failed:', resolveErr);
+        }
+
         const latencyMs = Date.now() - startTime;
         trackEvent('import_completed', {
           import_type: 'quick_paste',
@@ -230,7 +207,7 @@ export default function ImportPage() {
           conversation_count: 1,
           message_count: data.messageCount || 0,
         });
-        
+
         setQuickSuccess({
           conversationId: data.conversationId,
           title: data.title,
@@ -406,6 +383,7 @@ export default function ImportPage() {
           selectedConversationIds: selected.map((c) => c.id),
           projectId: finalProjectId,
           newProject: newProjectData,
+          thinkingTimeChoice,
         }),
       });
 
@@ -672,6 +650,23 @@ export default function ImportPage() {
 
                     <div>
                       <label className="block text-sm font-medium text-[rgb(var(--text))] mb-2">
+                        When did this thinking happen?
+                      </label>
+                      <select
+                        value={quickThinkingTimeChoice}
+                        onChange={(e) => setQuickThinkingTimeChoice(e.target.value as typeof quickThinkingTimeChoice)}
+                        className="w-full p-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-[rgb(var(--surface))] text-[rgb(var(--text))] text-sm focus:outline-none focus:ring-2 focus:ring-[rgb(var(--ring)/0.2)]"
+                        disabled={quickLoading}
+                      >
+                        <option value="today">Today</option>
+                        <option value="yesterday">Yesterday</option>
+                        <option value="last_week">Last week</option>
+                        <option value="last_month">Last month</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-[rgb(var(--text))] mb-2">
                         Assign to Project (optional)
                       </label>
                       <div className="space-y-3">
@@ -852,9 +847,25 @@ export default function ImportPage() {
             </div>
 
             <div>
-              <h2 className="text-xl font-medium text-[rgb(var(--text))] mb-4">Step 3 — Assign to Project</h2>
-              
-              <div className="space-y-4">
+              <h2 className="text-xl font-medium text-[rgb(var(--text))] mb-4">Step 3 — When & Project</h2>
+
+              <div className="space-y-4 mb-6">
+                <div>
+                  <label className="block text-sm font-medium text-[rgb(var(--text))] mb-2">
+                    When did this thinking happen?
+                  </label>
+                  <select
+                    value={thinkingTimeChoice}
+                    onChange={(e) => setThinkingTimeChoice(e.target.value as typeof thinkingTimeChoice)}
+                    className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-900 text-[rgb(var(--text))] focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:focus:ring-zinc-400"
+                  >
+                    <option value="today">Today</option>
+                    <option value="yesterday">Yesterday</option>
+                    <option value="last_week">Last week</option>
+                    <option value="last_month">Last month</option>
+                  </select>
+                </div>
+                <div className="text-sm font-medium text-[rgb(var(--text))]">Assign to Project (optional)</div>
                 <div className="space-y-2">
                   <label className="flex items-center gap-2">
                     <input
