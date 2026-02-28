@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
       .eq('user_id', user.id)
       .eq('scope', scope)
       // Prefer generated_at for ordering, but fall back to created_at deterministically.
-      .order('generated_at', { ascending: false, nullsLast: true })
+      .order('generated_at', { ascending: false })
       .order('created_at', { ascending: false })
       .limit(1);
 

@@ -180,7 +180,7 @@ export async function runStructureJob(
           .select('id, scope, state_hash, generated_at, created_at')
           .eq('user_id', payload.user_id)
           .eq('state_hash', stateHash)
-          .order('generated_at', { ascending: false, nullsLast: true })
+          .order('generated_at', { ascending: false })
           .order('created_at', { ascending: false })
           .limit(3);
 

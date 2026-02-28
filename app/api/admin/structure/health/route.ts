@@ -122,7 +122,7 @@ export async function GET(_request: NextRequest) {
       .from('snapshot_state')
       .select('state_hash, generated_at, created_at')
       .eq('scope', 'global')
-      .order('generated_at', { ascending: false, nullsLast: true })
+      .order('generated_at', { ascending: false })
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -155,7 +155,7 @@ export async function GET(_request: NextRequest) {
       .select('project_id, state_hash, generated_at, created_at')
       .eq('scope', 'project')
       .not('project_id', 'is', null)
-      .order('generated_at', { ascending: false, nullsLast: true })
+      .order('generated_at', { ascending: false })
       .order('created_at', { ascending: false })
       .limit(10);
 
