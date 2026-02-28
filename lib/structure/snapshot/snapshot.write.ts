@@ -104,10 +104,8 @@ export async function writeSnapshotState(
   devAssertSnapshotWriteTimestamps(
     {
       id: data.id,
-      // @ts-expect-error generated_at exists on snapshot_state rows
-      generated_at: (data as any).generated_at ?? null,
-      // @ts-expect-error created_at exists on snapshot_state rows
-      created_at: (data as any).created_at ?? null,
+      generated_at: (data as { generated_at?: string | null }).generated_at ?? null,
+      created_at: (data as { created_at?: string | null }).created_at ?? null,
     },
     'writeSnapshotState'
   );
