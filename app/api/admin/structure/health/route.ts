@@ -78,11 +78,12 @@ export async function GET(_request: NextRequest) {
 
     let oldestQueuedAgeSeconds: number | null = null;
     if (queuedJobs && queuedJobs.length > 0) {
-      const oldestQueued = queuedJobs.reduce((oldest, job) => {
+      let oldestQueued = queuedJobs[0];
+      for (const job of queuedJobs) {
         const t = new Date(job.queued_at).getTime();
-        const currentOldest = new Date(oldest.queued_at).getTime();
-        return t < currentOldest ? job : oldest;
-      }, queuedJobs[0]);
+        const currentOldest = new Date(oldestQueued.queued_at).getTime();
+        if (t < currentOldest) oldestQueued = job;
+      }
       oldestQueuedAgeSeconds = Math.max(
         0,
         Math.floor((now.getTime() - new Date(oldestQueued.queued_at).getTime()) / 1000)
@@ -159,7 +160,7 @@ export async function GET(_request: NextRequest) {
       .limit(10);
 
     const projectsSample =
-      projectSnapshotsSample?.map((row) => ({
+      projectSnapshotsSample?.map((row: { project_id: string | null; state_hash: string | null; generated_at?: string; created_at?: string }) => ({
         project_id: row.project_id,
         last_generated_at:
           (row as any).generated_at ??
