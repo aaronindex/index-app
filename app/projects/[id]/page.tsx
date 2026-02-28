@@ -12,9 +12,6 @@ import TasksTab from './components/TasksTab';
 import ProjectStartChatButton from './components/ProjectStartChatButton';
 import ExportChecklistButton from './components/ExportChecklistButton';
 import ProjectOverflowMenu from './components/ProjectOverflowMenu';
-import { loadProjectView } from '@/lib/ui-data/project.load';
-import { projectDirection, projectShifts } from '@/lib/structure/projection';
-import { assertNoForbiddenVocabulary } from '@/lib/ui/guardrails/vocabulary';
 
 // Force dynamic rendering to ensure fresh data
 export const dynamic = 'force-dynamic';
@@ -215,31 +212,6 @@ export default async function ProjectDetailPage({
     }
   }
 
-  // Load structural state data (Direction + Shifts + Timeline)
-  const structuralData = await loadProjectView({
-    supabaseClient: supabase,
-    user_id: user.id,
-    project_id: id,
-  });
-
-  const payload = structuralData.latestSnapshotPayload ?? null;
-  const direction = payload ? projectDirection(payload) : null;
-  const shifts = payload
-    ? projectShifts(structuralData.prevSnapshotPayload, payload)
-    : { hasShift: false, shiftTypes: [] };
-
-  // Dev-only vocabulary guardrail on labels we control
-  assertNoForbiddenVocabulary(
-    [
-      'Timeline',
-      'Direction',
-      'Shifts',
-      'Structural Timeline',
-      'Decisions & Results',
-    ],
-    'ProjectDetailPage'
-  );
-
   const activeTab = (['read', 'decisions', 'tasks', 'chats'].includes(tab)
     ? tab
     : 'read') as 'read' | 'decisions' | 'tasks' | 'chats';
@@ -293,76 +265,6 @@ export default async function ProjectDetailPage({
             </p>
           )}
         </div>
-
-        {/* Direction + Shifts for this project */}
-        {(direction || shifts.hasShift) && (
-          <div className="mb-8 space-y-4">
-            {direction && (
-              <div className="p-4 rounded-lg bg-[rgb(var(--surface))] border border-[rgb(var(--ring)/0.08)]">
-                <div className="text-sm font-medium text-[rgb(var(--text))] mb-2">
-                  Direction
-                </div>
-                <div className="text-xs text-[rgb(var(--muted))] space-y-1">
-                  <p>Containers: {direction.activeContainers}</p>
-                  <p>Direction units: {direction.activeDirectionUnits}</p>
-                  <p>Pace: {direction.densityLevel}</p>
-                  {direction.lastStructuralChangeAt && (
-                    <p>
-                      Last structural change:{' '}
-                      {new Date(
-                        direction.lastStructuralChangeAt
-                      ).toLocaleDateString()}
-                    </p>
-                  )}
-                </div>
-              </div>
-            )}
-
-            <div className="p-4 rounded-lg bg-[rgb(var(--surface))] border border-[rgb(var(--ring)/0.08)]">
-              <div className="text-sm font-medium text-[rgb(var(--text))] mb-2">
-                Shifts
-              </div>
-              {shifts.hasShift ? (
-                <div className="text-xs text-[rgb(var(--muted))]">
-                  {shifts.shiftTypes.join(', ')}
-                </div>
-              ) : (
-                <div className="text-xs text-[rgb(var(--muted))]">
-                  No recent shifts
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Structural Timeline Section (Read-only, concrete events) */}
-        {structuralData.timelineEvents.length > 0 && (
-          <div className="mb-8 p-4 rounded-lg bg-[rgb(var(--surface))] border border-[rgb(var(--ring)/0.08)]">
-            <h3 className="text-sm font-semibold text-[rgb(var(--text))] mb-4">
-              Timeline
-            </h3>
-
-            <div className="mb-4">
-              <div className="text-xs text-[rgb(var(--muted))] mb-2">
-                Decisions &amp; Results
-              </div>
-              <div className="space-y-1">
-                {structuralData.timelineEvents.map((event, idx) => (
-                  <div key={idx} className="text-xs text-[rgb(var(--muted))]">
-                    <span className="font-medium">
-                      {event.kind === 'decision'
-                        ? 'Decision recorded'
-                        : 'Result recorded'}
-                    </span>
-                    <span className="ml-2">
-                      {new Date(event.occurred_at).toLocaleDateString()}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
 
         <div className="mt-8">
           <ProjectTabs projectId={id} activeTab={activeTab} />

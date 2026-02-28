@@ -126,6 +126,48 @@ PHASE 6 — HARDENING & GUARDRAILS
 [ ] Optional CI-level forbidden vocabulary scan
 
 ==================================================
+PHASE 6.5 — UI Alignment (pre-testing)
+==================================================
+
+### Home (stop leaking internals)
+- [ ] Home: Remove "Structural State" UI (Direction/Shifts debug cards) and any internal/diagnostic framing from /home
+- [ ] Home: Remove “Me” link from header row (keep /me route implemented but do not surface it yet)
+- [ ] Home: Keep only MagicHomeScreen (“Across your INDEX”) + Weekly Digest (if present)
+
+### Project page (remove structural debug framing)
+- [ ] Project: Remove structural debug cards (“Containers”, “Direction units”, “Pace”, “Last structural change”) from top of project detail page
+- [ ] Project: Remove structural “Shifts” debug card from top of project detail page
+- [ ] Project: Remove structural Timeline section (Decision recorded / Result recorded) from top of project detail page
+- [ ] Project: Ensure no UI surface exposes internal vocabulary/diagnostics (containers, units, pace, last structural change)
+
+### Import (remove bulk import)
+- [ ] Import: Remove “Import ChatGPT Export (Advanced)” / bulk import UI entirely (keep only Quick Import)
+
+### Copy / tone (calm + non-narrativized)
+- [ ] ReadTab: Replace “You decided to:” phrasing in Recent Shifts with calm factual phrasing (prefer: no prefix)
+
+## Later (after quick capture)
+- [ ] Add task status toggle (open/closed) + hide closed by default to prevent stacking
+- [ ] Revisit labels: blockers vs open loops (avoid taxonomy mud)
+- [ ] Introduce project-level recompute framing (reduce evolves from source-level → project-level)
+
+## Next (after current testing pass)
+
+- [ ] Quick Capture — Browser Extension (highlight → save → assign/unassigned → done)
+- [ ] PWA Mobile Capture — Share sheet → save to INDEX (unassigned allowed)
+- [ ] Onboarding — short spotlight tour (Projects → Direction/Shifts → Extension → Import)
+- [ ] Resume polish — prompt quality + UI clarity + calm tone
+- [ ] Landing pages — logged out + logged in orientation messaging
+
+- [ ] Import: validate "Existing project" requires selection (avoid posting projectId: "")
+- [ ] Import: remove unused hasRoleMarkers guardrail effect
+- [ ] ReadTab: Remove "Current Direction" section until we have a legitimate direction sentence (no heuristic direction)
+- [ ] Import: validate project selection for "Existing Project" and name for "New Project"
+- [ ] Import: remove unused hasRoleMarkers guardrail effect
+
+- [ ] Soften "blocker" and "open loop" badges... currently visually loud
+
+==================================================
 PHASE 7 — ALPHA VALIDATION
 ==================================================
 
@@ -136,6 +178,7 @@ PHASE 7 — ALPHA VALIDATION
 [ ] Validate Direction readability
 [ ] Validate Shifts only occur on true structural change
 [ ] No new inference added before alpha validation
+
 
 ==================================================
 DEFINITION OF "v2 FIRST-PASS COMPLETE"

@@ -47,7 +47,6 @@ export default function ReadTab({ projectId, projectName, projectDescription }: 
   const [recentDecisions, setRecentDecisions] = useState<RecentDecision[]>([]);
   const [nextTasks, setNextTasks] = useState<NextTask[]>([]);
   const [recentChats, setRecentChats] = useState<RecentChat[]>([]);
-  const [currentDirection, setCurrentDirection] = useState<string | null>(null);
   const [hasConversations, setHasConversations] = useState<boolean | null>(null);
 
   // Check if project has conversations
@@ -82,17 +81,9 @@ export default function ReadTab({ projectId, projectName, projectDescription }: 
 
         // Fetch recent decisions (limit 5)
         const decisionsResponse = await fetch(`/api/projects/${projectId}/read-data?type=decisions&limit=5`);
-        let hasDecisions = false;
         if (decisionsResponse.ok) {
           const decisionsData = await decisionsResponse.json();
           setRecentDecisions(decisionsData.items || []);
-          
-          // Derive current direction from most recent decision
-          if (decisionsData.items && decisionsData.items.length > 0) {
-            const mostRecent = decisionsData.items[0];
-            setCurrentDirection(mostRecent.title);
-            hasDecisions = true;
-          }
         }
 
         // Fetch next tasks (limit 5)
@@ -100,11 +91,6 @@ export default function ReadTab({ projectId, projectName, projectDescription }: 
         if (tasksResponse.ok) {
           const tasksData = await tasksResponse.json();
           setNextTasks(tasksData.items || []);
-          
-          // If no decisions, derive current direction from tasks
-          if (!hasDecisions && tasksData.items && tasksData.items.length > 0) {
-            setCurrentDirection('advancing active work');
-          }
         }
 
         // Fetch recent chats (limit 5)
@@ -159,18 +145,6 @@ export default function ReadTab({ projectId, projectName, projectDescription }: 
 
   return (
     <div className="space-y-8 max-w-3xl">
-      {/* Current Direction */}
-      {currentDirection && (
-        <div className="mb-10">
-          <div className="text-xs uppercase tracking-wider text-[rgb(var(--text))] mb-3 font-medium">
-            CURRENT DIRECTION
-          </div>
-          <div className="font-serif text-xl text-[rgb(var(--text))] leading-relaxed">
-            {currentDirection}
-          </div>
-        </div>
-      )}
-
       {/* Still Unfolding (Active Tensions) */}
       {stillUnfolding.length > 0 && (
         <div>
@@ -220,8 +194,7 @@ export default function ReadTab({ projectId, projectName, projectDescription }: 
                   href={`/projects/${projectId}/decisions?tab=decisions#${decision.id}`}
                   className="block text-sm text-[rgb(var(--text))] hover:text-[rgb(var(--muted))] transition-colors"
                 >
-                  <span className="text-[rgb(var(--muted))]">You decided to: </span>
-                  <span>{decision.title}</span>
+                  {decision.title}
                 </Link>
               </li>
             ))}
