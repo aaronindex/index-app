@@ -72,7 +72,7 @@ export default async function ProjectDetailPage({
   const supabase = await getSupabaseServerClient();
   const { data: project, error } = await supabase
     .from('projects')
-    .select('id, name, description, created_at, is_personal')
+    .select('id, name, description, created_at, is_personal, last_reduce_at')
     .eq('id', id)
     .eq('user_id', user.id)
     .single();
@@ -88,6 +88,25 @@ export default async function ProjectDetailPage({
     .eq('project_id', id);
 
   const conversationIds = projectConversations?.map((pc) => pc.conversation_id) || [];
+
+  // Captures since last reduce: count conversations (source=capture) in this project created after last_reduce_at.
+  // If last_reduce_at is null, show 0 (calm: nothing until first reduce).
+  let capturesSinceLastReduce = 0;
+  const lastReduceAt = (project as { last_reduce_at?: string | null }).last_reduce_at ?? null;
+  if (lastReduceAt && conversationIds.length > 0) {
+    const { count } = await supabase
+      .from('conversations')
+      .select('*', { count: 'exact', head: true })
+      .in('id', conversationIds)
+      .eq('user_id', user.id)
+      .eq('source', 'capture')
+      .gt('created_at', lastReduceAt);
+    capturesSinceLastReduce = count ?? 0;
+  }
+
+  if (process.env.NODE_ENV === 'development' && capturesSinceLastReduce > 0) {
+    console.log('[AccumulationIndicator]', { project_id: id, count: capturesSinceLastReduce });
+  }
 
   // Fetch data based on active tab
   let chatsData: any[] = [];
@@ -215,6 +234,7 @@ export default async function ProjectDetailPage({
   const activeTab = (['read', 'decisions', 'tasks', 'chats'].includes(tab)
     ? tab
     : 'read') as 'read' | 'decisions' | 'tasks' | 'chats';
+  const captureLabel = capturesSinceLastReduce === 1 ? 'capture' : 'captures';
 
   return (
     <main className="min-h-screen bg-[rgb(var(--bg))]">
@@ -262,6 +282,19 @@ export default async function ProjectDetailPage({
           {project.description && (
             <p className="mt-4 text-[rgb(var(--muted))]">
               {project.description}
+            </p>
+          )}
+
+          {/* Accumulation: new captures since last reduce (calm; only when last reduce exists and count > 0) */}
+          {lastReduceAt != null && capturesSinceLastReduce > 0 && (
+            <p className="mt-3 text-sm text-[rgb(var(--muted))]">
+              {capturesSinceLastReduce} new {captureLabel} since last reduce{' '}
+              <Link
+                href={`/projects/${id}?tab=chats`}
+                className="text-[rgb(var(--text))] hover:underline"
+              >
+                Reduce
+              </Link>
             </p>
           )}
         </div>

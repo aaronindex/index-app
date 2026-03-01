@@ -173,6 +173,22 @@ export async function createCapture(opts: {
       rawContent: content,
       outcomes,
     });
+    const persisted =
+      (diagnostics?.output?.persisted?.decisions ?? 0) +
+      (diagnostics?.output?.persisted?.tasks ?? 0) +
+      (diagnostics?.output?.persisted?.highlights ?? 0);
+    const hasErrors = (diagnostics?.errors?.length ?? 0) > 0;
+    if (projectIdForOutcomes && diagnostics && !hasErrors && persisted > 0) {
+      const nowIso = new Date().toISOString();
+      await supabase
+        .from('projects')
+        .update({ last_reduce_at: nowIso })
+        .eq('id', projectIdForOutcomes)
+        .eq('user_id', userId);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[AccumulationReset]', { project_id: projectIdForOutcomes, last_reduce_at: nowIso });
+      }
+    }
   }
 
   // Dispatch structure recompute (reason: ingestion)

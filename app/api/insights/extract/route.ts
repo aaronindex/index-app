@@ -89,6 +89,8 @@ export async function POST(request: NextRequest) {
 
     // Store extracted insights
     const createdInsights: any[] = [];
+    let hadPersistenceError = false;
+    let persistedCount = 0;
 
     // Store decisions
     let decisionCreated = false;
@@ -105,9 +107,11 @@ export async function POST(request: NextRequest) {
         .single();
 
       if (decisionError) {
+        hadPersistenceError = true;
         console.error('Error creating decision:', decisionError);
       } else if (decisionRecord) {
         decisionCreated = true;
+        persistedCount += 1;
         const { type: _, ...decisionData } = decision;
         createdInsights.push({ type: 'decision', id: decisionRecord.id, ...decisionData });
       }
@@ -147,8 +151,10 @@ export async function POST(request: NextRequest) {
         .single();
 
       if (taskError) {
+        hadPersistenceError = true;
         console.error('Error creating commitment task:', taskError);
       } else if (taskRecord) {
+        persistedCount += 1;
         const { type: _, ...commitmentData } = commitment;
         createdInsights.push({ type: 'commitment', id: taskRecord.id, ...commitmentData });
       }
@@ -171,8 +177,10 @@ export async function POST(request: NextRequest) {
         .single();
 
       if (taskError) {
+        hadPersistenceError = true;
         console.error('Error creating blocker task:', taskError);
       } else if (taskRecord) {
+        persistedCount += 1;
         const { type: _, ...blockerData } = blocker;
         createdInsights.push({ type: 'blocker', id: taskRecord.id, ...blockerData });
       }
@@ -195,8 +203,10 @@ export async function POST(request: NextRequest) {
         .single();
 
       if (taskError) {
+        hadPersistenceError = true;
         console.error('Error creating open loop task:', taskError);
       } else if (taskRecord) {
+        persistedCount += 1;
         const { type: _, ...openLoopData } = openLoop;
         createdInsights.push({ type: 'open_loop', id: taskRecord.id, ...openLoopData });
       }
@@ -221,7 +231,10 @@ export async function POST(request: NextRequest) {
           .select()
           .single();
 
-        if (!highlightError && highlightRecord) {
+        if (highlightError) {
+          hadPersistenceError = true;
+        } else if (highlightRecord) {
+          persistedCount += 1;
           const { type: _, ...highlightData } = highlight;
           createdInsights.push({ type: 'highlight', id: highlightRecord.id, ...highlightData });
         }
@@ -265,6 +278,19 @@ export async function POST(request: NextRequest) {
         role_detection_failed: roleDetectionFailed || extractDebug?.roleDetectionFailed,
       };
       console.log('[reduce_debug]', JSON.stringify(reduceLog));
+    }
+
+    // Reset accumulation only after successful Reduce: project context, no persistence errors, at least one insight persisted
+    if (projectId && !hadPersistenceError && persistedCount > 0) {
+      const nowIso = new Date().toISOString();
+      await supabase
+        .from('projects')
+        .update({ last_reduce_at: nowIso })
+        .eq('id', projectId)
+        .eq('user_id', user.id);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[AccumulationReset]', { project_id: projectId, last_reduce_at: nowIso });
+      }
     }
 
     return NextResponse.json({
