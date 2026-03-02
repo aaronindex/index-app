@@ -24,6 +24,90 @@ function isDevEnv(): boolean {
   );
 }
 
+async function generateSnapshotText(params: {
+  supabaseAdminClient: SupabaseClient;
+  userId: string;
+  payload: StructuralStatePayload;
+}): Promise<string | null> {
+  const { supabaseAdminClient, userId, payload } = params;
+
+  const lines: string[] = [];
+
+  const activeArcIds = Array.isArray(payload.active_arc_ids)
+    ? payload.active_arc_ids
+    : [];
+
+  let arcSummaries: string[] = [];
+  if (activeArcIds.length > 0) {
+    try {
+      const { data: arcs } = await supabaseAdminClient
+        .from('arc')
+        .select('id, summary')
+        .eq('user_id', userId)
+        .in('id', activeArcIds);
+
+      arcSummaries =
+        arcs
+          ?.map((arc: { id: string; summary: string | null }) => arc.summary || null)
+          .filter((s): s is string => !!s && s.trim().length > 0) ?? [];
+    } catch {
+      // If arc lookup fails, fall back to counts only.
+      arcSummaries = [];
+    }
+  }
+
+  const arcCount = activeArcIds.length;
+  if (arcCount === 0) {
+    lines.push('No distinct arcs yet. Structure is still forming.');
+  } else {
+    const countLabel =
+      arcCount === 1 ? 'One arc active' : `${arcCount} arcs active`;
+    if (arcSummaries.length > 0) {
+      const joined =
+        arcSummaries.length > 2
+          ? `${arcSummaries.slice(0, 2).join(', ')}${
+              arcSummaries.length > 2 ? ', …' : ''
+            }`
+          : arcSummaries.join(', ');
+      lines.push(`${countLabel}: ${joined}.`);
+    } else {
+      lines.push(`${countLabel}.`);
+    }
+  }
+
+  const decisionBucket =
+    typeof payload.decision_density_bucket === 'number'
+      ? payload.decision_density_bucket
+      : null;
+  const resultBucket =
+    typeof payload.result_density_bucket === 'number'
+      ? payload.result_density_bucket
+      : null;
+
+  if (decisionBucket !== null || resultBucket !== null) {
+    const parts: string[] = [];
+    if (decisionBucket !== null) {
+      parts.push(`Decision density index ${decisionBucket}`);
+    }
+    if (resultBucket !== null) {
+      parts.push(`Result density index ${resultBucket}`);
+    }
+    if (parts.length > 0) {
+      lines.push(parts.join('; ') + '.');
+    }
+  }
+
+  const pulseTypes = Array.isArray(payload.pulse_types)
+    ? payload.pulse_types
+    : [];
+  if (pulseTypes.length > 0) {
+    lines.push('Recent structural activity detected.');
+  }
+
+  const text = lines.join('\n').trim();
+  return text.length > 0 ? text : null;
+}
+
 /**
  * Dev-only assertion to ensure generated_at is present on snapshot rows written by the processor.
  * Does not mutate data or throw in production.
@@ -83,6 +167,17 @@ export async function writeSnapshotState(
   // Dev-only deterministic ordering checks (non-mutating, logs only).
   devAssertDeterministicStructuralPayload(normalizedPayload, 'writeSnapshotState');
 
+  let snapshotText: string | null = null;
+  try {
+    snapshotText = await generateSnapshotText({
+      supabaseAdminClient,
+      userId,
+      payload: normalizedPayload,
+    });
+  } catch {
+    snapshotText = null;
+  }
+
   const { data, error } = await supabaseAdminClient
     .from('snapshot_state')
     .insert({
@@ -91,7 +186,8 @@ export async function writeSnapshotState(
       state_hash: stateHash,
       state_payload: normalizedPayload as any, // Store as JSONB
       generated_at: new Date().toISOString(),
-      // snapshot_text and field_note_text remain null (editorial-only, not set by inference)
+      snapshot_text: snapshotText,
+      // field_note_text remains null (editorial-only, not set by inference)
     })
     // Select timestamps so we can assert monotonicity invariants in development.
     .select('id, generated_at, created_at')

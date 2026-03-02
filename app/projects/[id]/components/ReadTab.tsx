@@ -176,7 +176,6 @@ export default function ReadTab({
   };
 
   const snapshotUpdatedLabel = formatSnapshotUpdated(snapshotGeneratedAt);
-  const hasSources = typeof sourceCount === 'number' && sourceCount > 0;
   const decisionsCount = openDecisions.length;
   const tasksCount = totalOpenTasks;
   const arcsCount = activeArcs.length;
@@ -184,18 +183,16 @@ export default function ReadTab({
   return (
     <div className="space-y-8 max-w-3xl">
       {/* Collapse block: visible transformation summary */}
-      <div className="border border-[rgb(var(--ring)/0.08)] rounded-lg px-6 py-6 mt-2 mb-10">
+      <div className="border border-[rgb(var(--ring)/0.08)] rounded-lg px-5 py-4 mt-1 mb-8">
         <div className="flex flex-col items-center text-center gap-2">
           <div className="font-serif text-xl font-semibold text-[rgb(var(--text))]">
-            Distilled
+            {typeof sourceCount === 'number' && sourceCount > 0
+              ? `Distilled ${sourceCount} ${sourceCount === 1 ? 'Source' : 'Sources'}`
+              : 'Distilled'}
           </div>
-          {hasSources && (
-            <div className="text-sm text-[rgb(var(--text))]">
-              <span className="font-medium">{sourceCount}</span>{' '}
-              {sourceCount === 1 ? 'Source' : 'Sources'}
-            </div>
+          {typeof sourceCount === 'number' && sourceCount > 0 && (
+            <div className="text-lg leading-none">↓</div>
           )}
-          {hasSources && <div className="text-lg leading-none">↓</div>}
           <div className="text-sm text-[rgb(var(--text))] font-medium">
             <span className="font-semibold">{decisionsCount}</span>{' '}
             {decisionsCount === 1 ? 'Decision' : 'Decisions'}
@@ -214,11 +211,11 @@ export default function ReadTab({
       </div>
 
       {/* Active Arcs */}
-      {activeArcs.length > 0 && (
-        <div>
-          <h2 className="font-serif text-lg font-semibold text-[rgb(var(--text))] mb-3">
-            Active Arcs
-          </h2>
+      <div>
+        <h2 className="font-serif text-lg font-semibold text-[rgb(var(--text))] mb-3">
+          Active Arcs
+        </h2>
+        {activeArcs.length > 0 ? (
           <ul className="list-disc list-inside space-y-1 text-sm text-[rgb(var(--text))]">
             {activeArcs.map((arc) => {
               const label = arc.title || arc.id;
@@ -232,8 +229,10 @@ export default function ReadTab({
               );
             })}
           </ul>
-        </div>
-      )}
+        ) : (
+          <p className="text-sm text-[rgb(var(--muted))]">Not yet distinct.</p>
+        )}
+      </div>
 
       {/* Snapshot */}
       <div className="border border-[rgb(var(--ring)/0.08)] rounded-lg p-4">
