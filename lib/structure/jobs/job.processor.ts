@@ -130,6 +130,22 @@ export async function runStructureJob(
       payload.scope
     );
 
+    // Dev-only: log hash comparison for snapshot debugging
+    if (isDevEnv()) {
+      const computedPrefix = stateHash.substring(0, 24);
+      const latestPrefix = latestSnapshot?.state_hash?.substring(0, 24) ?? '(none)';
+      // eslint-disable-next-line no-console
+      console.log('[StructureJob][HashGating]', {
+        job_id: jobId,
+        user_id: payload.user_id,
+        scope: payload.scope,
+        signals_count: signals.length,
+        computed_state_hash_prefix: computedPrefix,
+        latest_snapshot_state_hash_prefix: latestPrefix,
+        will_skip_write: !!(latestSnapshot && latestSnapshot.state_hash === stateHash),
+      });
+    }
+
     // Step 6: Hash gating - exit early if hash unchanged
     if (latestSnapshot && latestSnapshot.state_hash === stateHash) {
       // Hash unchanged - no structural change, exit early
@@ -207,7 +223,6 @@ export async function runStructureJob(
             .eq('scope', 'project')
             .eq('project_id', projectId)
             .order('generated_at', { ascending: false })
-            .order('created_at', { ascending: false })
             .limit(1)
             .maybeSingle();
 
@@ -240,11 +255,10 @@ export async function runStructureJob(
       try {
         const { data: sameHashSnapshots } = await supabaseAdminClient
           .from('snapshot_state')
-          .select('id, scope, state_hash, generated_at, created_at')
+          .select('id, scope, state_hash, generated_at')
           .eq('user_id', payload.user_id)
           .eq('state_hash', stateHash)
           .order('generated_at', { ascending: false })
-          .order('created_at', { ascending: false })
           .limit(3);
 
         if (sameHashSnapshots && sameHashSnapshots.length >= 2) {
@@ -300,6 +314,18 @@ export async function runStructureJob(
     const errorString = errorMessage.length > 1000
       ? errorMessage.substring(0, 1000) + '...'
       : errorMessage;
+
+    if (isDevEnv()) {
+      const stack = error instanceof Error ? error.stack : undefined;
+      // eslint-disable-next-line no-console
+      console.error('[StructureJob][Failed]', {
+        job_id: jobId,
+        user_id: payload?.user_id,
+        scope: payload?.scope,
+        error_message: errorMessage,
+        ...(stack && { stack: stack.split('\n').slice(0, 8).join('\n') }),
+      });
+    }
 
     await supabaseAdminClient
       .from('structure_jobs')

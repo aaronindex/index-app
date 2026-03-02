@@ -27,7 +27,6 @@ function isDevEnv(): boolean {
 function devAssertSnapshotTimestamps(row: {
   id: string;
   generated_at?: string | null;
-  created_at?: string | null;
 }, context: string): void {
   if (!isDevEnv()) return;
 
@@ -39,7 +38,6 @@ function devAssertSnapshotTimestamps(row: {
       context,
       snapshot_id: row.id,
       reason: 'generated_at_null',
-      has_created_at: !!row.created_at,
     });
   }
 }
@@ -74,13 +72,10 @@ export async function loadLatestSnapshot(
 
   const { data, error } = await supabaseAdminClient
     .from('snapshot_state')
-    // Select timestamps so we can assert monotonicity and provide a safe fallback.
-    .select('id, state_hash, state_payload, generated_at, created_at')
+    .select('id, state_hash, state_payload, generated_at')
     .eq('user_id', userId)
     .eq('scope', snapshotScope)
-    // Prefer generated_at for ordering, but fall back to created_at deterministically.
     .order('generated_at', { ascending: false })
-    .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle();
 
@@ -96,7 +91,6 @@ export async function loadLatestSnapshot(
     {
       id: data.id,
       generated_at: (data as { generated_at?: string | null }).generated_at ?? null,
-      created_at: (data as { created_at?: string | null }).created_at ?? null,
     },
     'loadLatestSnapshot'
   );

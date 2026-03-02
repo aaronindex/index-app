@@ -115,7 +115,6 @@ async function generateSnapshotText(params: {
 function devAssertSnapshotWriteTimestamps(row: {
   id: string;
   generated_at?: string | null;
-  created_at?: string | null;
 }, context: string): void {
   if (!isDevEnv()) return;
 
@@ -125,7 +124,6 @@ function devAssertSnapshotWriteTimestamps(row: {
       context,
       snapshot_id: row.id,
       reason: 'generated_at_null_after_insert',
-      has_created_at: !!row.created_at,
     });
   }
 }
@@ -191,11 +189,21 @@ export async function writeSnapshotState(
       snapshot_text: snapshotText,
       // field_note_text remains null (editorial-only, not set by inference)
     })
-    // Select timestamps so we can assert monotonicity invariants in development.
-    .select('id, generated_at, created_at')
+    .select('id, generated_at')
     .single();
 
   if (error || !data) {
+    if (isDevEnv()) {
+      // eslint-disable-next-line no-console
+      console.error('[SnapshotWrite][InsertFailed]', {
+        user_id: userId,
+        scope: snapshotScope,
+        state_hash_prefix: stateHash?.substring(0, 24),
+        error_message: error?.message,
+        error_code: error?.code,
+        error_details: error?.details,
+      });
+    }
     throw new Error(`[SnapshotWrite] Error writing snapshot: ${error?.message || 'Unknown error'}`);
   }
 
@@ -203,7 +211,6 @@ export async function writeSnapshotState(
     {
       id: data.id,
       generated_at: (data as { generated_at?: string | null }).generated_at ?? null,
-      created_at: (data as { created_at?: string | null }).created_at ?? null,
     },
     'writeSnapshotState'
   );
