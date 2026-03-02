@@ -14,6 +14,13 @@ export type ProjectViewData = {
   } | null;
   latestSnapshotPayload: StructuralStatePayload | null;
   prevSnapshotPayload: StructuralStatePayload | null;
+  snapshotText: string | null;
+  snapshotGeneratedAt: string | null;
+  activeArcs: Array<{
+    id: string;
+    title: string | null;
+    status: string | null;
+  }>;
   timelineEvents: Array<{
     kind: 'decision' | 'result';
     occurred_at: string;
@@ -42,26 +49,68 @@ export async function loadProjectView(params: {
     .eq('user_id', user_id)
     .maybeSingle();
 
-  // Load project-scoped snapshots (if any)
+  // Load project-scoped snapshots (if any) including editorial text + generated_at
   const { data: snapshots } = await supabaseClient
     .from('snapshot_state')
-    .select('state_payload, generated_at, created_at')
+    .select('state_payload, snapshot_text, generated_at, created_at, project_id')
     .eq('user_id', user_id)
     .eq('scope', 'project')
+    .eq('project_id', project_id)
     // Prefer generated_at for ordering, but fall back to created_at deterministically.
     .order('generated_at', { ascending: false })
     .order('created_at', { ascending: false })
     .limit(2);
 
+  const latestSnapshotRow = snapshots && snapshots[0] ? snapshots[0] : null;
   const latestSnapshotPayload: StructuralStatePayload | null =
-    snapshots && snapshots[0]?.state_payload
-      ? (snapshots[0].state_payload as StructuralStatePayload)
+    latestSnapshotRow && latestSnapshotRow.state_payload
+      ? (latestSnapshotRow.state_payload as StructuralStatePayload)
       : null;
 
   const prevSnapshotPayload: StructuralStatePayload | null =
     snapshots && snapshots[1]?.state_payload
       ? (snapshots[1].state_payload as StructuralStatePayload)
       : null;
+
+  const snapshotText: string | null =
+    latestSnapshotRow && 'snapshot_text' in latestSnapshotRow
+      ? ((latestSnapshotRow as { snapshot_text: string | null }).snapshot_text ?? null)
+      : null;
+
+  const snapshotGeneratedAt: string | null =
+    latestSnapshotRow && 'generated_at' in latestSnapshotRow
+      ? ((latestSnapshotRow as { generated_at?: string | null }).generated_at ?? null)
+      : null;
+
+  // Resolve active arcs for this project from snapshot payload + arc tables (read-only)
+  let activeArcs: Array<{ id: string; title: string | null; status: string | null }> = [];
+  const activeArcIds = latestSnapshotPayload?.active_arc_ids ?? [];
+  if (activeArcIds.length > 0) {
+    const { data: arcLinks } = await supabaseClient
+      .from('arc_project_link')
+      .select('arc_id')
+      .eq('project_id', project_id)
+      .in('arc_id', activeArcIds);
+
+    const linkedArcIds =
+      arcLinks?.map((row: { arc_id: string }) => row.arc_id).filter((id) => activeArcIds.includes(id)) ?? [];
+
+    if (linkedArcIds.length > 0) {
+      const { data: arcs } = await supabaseClient
+        .from('arc')
+        .select('id, summary, status')
+        .eq('user_id', user_id)
+        .in('id', linkedArcIds);
+
+      const arcStatuses = latestSnapshotPayload?.arc_statuses ?? {};
+      activeArcs =
+        arcs?.map((arc: { id: string; summary: string | null; status: string | null }) => ({
+          id: arc.id,
+          title: arc.summary,
+          status: arcStatuses[arc.id] ?? arc.status ?? null,
+        })) ?? [];
+    }
+  }
 
   // Load timeline events from structural signals (decision/result only)
   const allSignals = await collectStructuralSignals(supabaseClient, user_id);
@@ -92,6 +141,9 @@ export async function loadProjectView(params: {
       : null,
     latestSnapshotPayload,
     prevSnapshotPayload,
+    snapshotText,
+    snapshotGeneratedAt,
+    activeArcs,
     timelineEvents,
   };
 }

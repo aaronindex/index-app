@@ -12,6 +12,7 @@ import TasksTab from './components/TasksTab';
 import ProjectStartChatButton from './components/ProjectStartChatButton';
 import ExportChecklistButton from './components/ExportChecklistButton';
 import ProjectOverflowMenu from './components/ProjectOverflowMenu';
+import { loadProjectView } from '@/lib/ui-data';
 
 // Force dynamic rendering to ensure fresh data
 export const dynamic = 'force-dynamic';
@@ -237,6 +238,16 @@ export default async function ProjectDetailPage({
     : 'read') as 'read' | 'decisions' | 'tasks' | 'chats';
   const captureLabel = capturesSinceLastReduce === 1 ? 'capture' : 'captures';
 
+  // Structural data for Read tab (snapshot + arcs + timeline, read-only)
+  const projectViewData =
+    activeTab === 'read'
+      ? await loadProjectView({
+          supabaseClient: supabase,
+          user_id: user.id,
+          project_id: id,
+        })
+      : null;
+
   return (
     <main className="min-h-screen bg-[rgb(var(--bg))]">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -305,7 +316,14 @@ export default async function ProjectDetailPage({
           
           <div className="mt-4">
             {activeTab === 'read' && (
-              <ReadTab projectId={id} projectName={project.name} projectDescription={project.description} />
+              <ReadTab
+                projectId={id}
+                projectName={project.name}
+                projectDescription={project.description}
+                snapshotText={projectViewData?.snapshotText ?? null}
+                snapshotGeneratedAt={projectViewData?.snapshotGeneratedAt ?? null}
+                activeArcs={projectViewData?.activeArcs ?? []}
+              />
             )}
             {activeTab === 'chats' && (
               <ChatsTab conversations={chatsData} projectId={id} />
