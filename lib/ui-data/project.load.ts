@@ -164,6 +164,7 @@ export async function loadProjectView(params: {
     prevSnapshotPayload,
     snapshotText,
     snapshotGeneratedAt,
+    projectSnapshots,
     activeArcs,
     timelineEvents,
   };
