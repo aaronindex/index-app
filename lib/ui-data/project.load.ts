@@ -103,11 +103,6 @@ export async function loadProjectView(params: {
       ? ((latestSnapshotRow as { snapshot_text: string | null }).snapshot_text ?? null)
       : null;
 
-  const snapshotGeneratedAt: string | null =
-    latestSnapshotRow && 'generated_at' in latestSnapshotRow
-      ? ((latestSnapshotRow as { generated_at?: string | null }).generated_at ?? null)
-      : null;
-
   // Resolve active arcs for this project from snapshot payload + arc tables (read-only)
   let activeArcs: Array<{ id: string; title: string | null; status: string | null }> = [];
   const activeArcIds = latestSnapshotPayload?.active_arc_ids ?? [];
