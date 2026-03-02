@@ -12,6 +12,14 @@ interface ReadTabProps {
   snapshotText: string | null;
   snapshotGeneratedAt: string | null;
   activeArcs: Array<{ id: string; title: string | null; status: string | null }>;
+   projectSnapshots: Array<{
+    id: string;
+    generated_at: string | null;
+    created_at: string | null;
+    snapshot_text: string | null;
+    state_payload: any | null;
+  }>;
+  sourceCount?: number | null;
 }
 
 interface StillUnfoldingItem {
@@ -44,6 +52,8 @@ export default function ReadTab({
   snapshotText,
   snapshotGeneratedAt,
   activeArcs,
+  projectSnapshots,
+  sourceCount,
 }: ReadTabProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -151,11 +161,6 @@ export default function ReadTab({
   const openTasksFromStill = stillUnfolding.filter((item) => item.type === 'task');
   const totalOpenTasks = openTasksFromStill.length + filteredNextTasks.length;
 
-  // Simple motion timeline based on decision/task timestamps (UI-only, no new logic)
-  const timelineItems = [...recentDecisions.map((d) => ({ kind: 'decision' as const, occurred_at: d.created_at })), ...nextTasks.map((t) => ({ kind: 'task' as const, occurred_at: t.created_at }))].sort(
-    (a, b) => new Date(a.occurred_at).getTime() - new Date(b.occurred_at).getTime()
-  );
-
   const formatSnapshotUpdated = (value: string | null): string | null => {
     if (!value) return null;
     const updatedAt = new Date(value);
@@ -171,6 +176,10 @@ export default function ReadTab({
   };
 
   const snapshotUpdatedLabel = formatSnapshotUpdated(snapshotGeneratedAt);
+  const hasSources = typeof sourceCount === 'number' && sourceCount > 0;
+  const decisionsCount = openDecisions.length;
+  const tasksCount = totalOpenTasks;
+  const arcsCount = activeArcs.length;
 
   return (
     <div className="space-y-8 max-w-3xl">
@@ -180,16 +189,24 @@ export default function ReadTab({
           <div className="font-serif text-xl font-semibold text-[rgb(var(--text))]">
             Distilled
           </div>
-          {/* Sources line omitted for now (source count not available in this view) */}
-          <div className="text-sm text-[rgb(var(--text))]">
-            <span className="font-medium">{openDecisions.length}</span> Decisions
+          {hasSources && (
+            <div className="text-sm text-[rgb(var(--text))]">
+              <span className="font-medium">{sourceCount}</span>{' '}
+              {sourceCount === 1 ? 'Source' : 'Sources'}
+            </div>
+          )}
+          {hasSources && <div className="text-lg leading-none">↓</div>}
+          <div className="text-sm text-[rgb(var(--text))] font-medium">
+            <span className="font-semibold">{decisionsCount}</span>{' '}
+            {decisionsCount === 1 ? 'Decision' : 'Decisions'}
             {' · '}
-            <span className="font-medium">{totalOpenTasks}</span> Tasks
-            {activeArcs.length > 0 && (
+            <span className="font-semibold">{tasksCount}</span>{' '}
+            {tasksCount === 1 ? 'Task' : 'Tasks'}
+            {arcsCount > 0 && (
               <>
                 {' · '}
-                <span className="font-medium">{activeArcs.length}</span> Arc
-                {activeArcs.length === 1 ? '' : 's'}
+                <span className="font-semibold">{arcsCount}</span>{' '}
+                {arcsCount === 1 ? 'Arc' : 'Arcs'}
               </>
             )}
           </div>
@@ -203,29 +220,32 @@ export default function ReadTab({
             Active Arcs
           </h2>
           <ul className="list-disc list-inside space-y-1 text-sm text-[rgb(var(--text))]">
-            {activeArcs.map((arc) => (
-              <li key={arc.id}>
-                {arc.title || 'Untitled arc'}
-                {arc.status && (
-                  <span className="text-xs text-[rgb(var(--muted))]"> — {arc.status}</span>
-                )}
-              </li>
-            ))}
+            {activeArcs.map((arc) => {
+              const label = arc.title || arc.id;
+              return (
+                <li key={arc.id}>
+                  {label}
+                  {arc.status && (
+                    <span className="text-xs text-[rgb(var(--muted))]"> — {arc.status}</span>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         </div>
       )}
 
       {/* Snapshot */}
-      {snapshotText && (
-        <div className="border border-[rgb(var(--ring)/0.08)] rounded-lg p-4">
-          {snapshotUpdatedLabel && (
-            <p className="text-xs text-[rgb(var(--muted))] mb-2">{snapshotUpdatedLabel}</p>
-          )}
-          <div className="text-sm text-[rgb(var(--text))] whitespace-pre-wrap">
-            {snapshotText}
-          </div>
+      <div className="border border-[rgb(var(--ring)/0.08)] rounded-lg p-4">
+        {snapshotUpdatedLabel && (
+          <p className="text-xs text-[rgb(var(--muted))] mb-2">{snapshotUpdatedLabel}</p>
+        )}
+        <div className="text-sm text-[rgb(var(--text))] whitespace-pre-wrap">
+          {snapshotText && snapshotText.trim()
+            ? snapshotText
+            : 'Snapshot text not yet generated.'}
         </div>
-      )}
+      </div>
 
       {/* Open Decisions (from active tensions) */}
       {openDecisions.length > 0 && (
@@ -303,42 +323,8 @@ export default function ReadTab({
         </div>
       )}
 
-      {/* Motion Timeline (minimal, spacing-driven) */}
-      {timelineItems.length > 0 && (
-        <div>
-          <h2 className="font-serif text-lg font-semibold text-[rgb(var(--text))] mb-3">
-            Motion Timeline
-          </h2>
-          <div className="border border-[rgb(var(--ring)/0.08)] rounded-lg p-4">
-            <div className="flex flex-col">
-              {timelineItems.map((event, index) => {
-                const currentDate = new Date(event.occurred_at);
-                const prevDate =
-                  index > 0 ? new Date(timelineItems[index - 1].occurred_at) : null;
-                let extraGapClass = '';
-                if (prevDate) {
-                  const diffDays =
-                    (currentDate.getTime() - prevDate.getTime()) /
-                    (1000 * 60 * 60 * 24);
-                  if (diffDays > 21) {
-                    extraGapClass = 'mt-6';
-                  } else if (diffDays > 7) {
-                    extraGapClass = 'mt-4';
-                  } else if (diffDays > 2) {
-                    extraGapClass = 'mt-2';
-                  }
-                }
-                return (
-                  <div key={`${event.kind}-${index}`} className={`flex items-center text-xs text-[rgb(var(--muted))] ${extraGapClass}`}>
-                    <span className="mr-2 h-1.5 w-1.5 rounded-full bg-[rgb(var(--text))]" />
-                    <span>{currentDate.toLocaleDateString()}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Motion Timeline (snapshot-based, horizontal) */}
+      <HorizontalSnapshotTimeline snapshots={projectSnapshots} />
 
       {/* Empty state if no data */}
       {openDecisions.length === 0 && totalOpenTasks === 0 && hasConversations === true && (
@@ -354,6 +340,133 @@ export default function ReadTab({
           </p>
         </div>
       )}
+    </div>
+  );
+}
+
+type SnapshotTimelineItem = {
+  id: string;
+  position: number;
+  dateLabel: string;
+  summary: string;
+};
+
+function buildSnapshotTimelineItems(
+  snapshots: Array<{
+    id: string;
+    generated_at: string | null;
+    created_at: string | null;
+    snapshot_text: string | null;
+    state_payload: any | null;
+  }>
+): SnapshotTimelineItem[] {
+  const withTime = snapshots
+    .map((s) => {
+      const tsString = s.generated_at ?? s.created_at;
+      if (!tsString) return null;
+      const ts = new Date(tsString);
+      if (Number.isNaN(ts.getTime())) return null;
+      return { ...s, ts };
+    })
+    .filter((s): s is typeof snapshots[number] & { ts: Date } => !!s);
+
+  if (withTime.length === 0) return [];
+
+  withTime.sort((a, b) => a.ts.getTime() - b.ts.getTime());
+
+  const first = withTime[0]!;
+  const last = withTime[withTime.length - 1]!;
+  const t0 = first.ts.getTime();
+  const tN = last.ts.getTime();
+  const span = tN - t0 || 1;
+
+  return withTime.map((s) => {
+    const pos = span === 0 ? 0.5 : (s.ts.getTime() - t0) / span;
+    const dateLabel = s.ts.toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+
+    let summary = 'Snapshot';
+    const text = (s.snapshot_text || '').trim();
+    if (text) {
+      const firstLine = text.split('\n')[0] ?? text;
+      summary =
+        firstLine.length > 120 ? `${firstLine.slice(0, 117)}...` : firstLine;
+    } else if (s.state_payload) {
+      const payload = s.state_payload as {
+        active_arc_ids?: string[];
+        decision_density_bucket?: number;
+        result_density_bucket?: number;
+      };
+      const arcCount = Array.isArray(payload.active_arc_ids)
+        ? payload.active_arc_ids.length
+        : 0;
+      const decisionBucket =
+        typeof payload.decision_density_bucket === 'number'
+          ? payload.decision_density_bucket
+          : null;
+      const resultBucket =
+        typeof payload.result_density_bucket === 'number'
+          ? payload.result_density_bucket
+          : null;
+
+      const parts: string[] = [];
+      if (arcCount > 0) parts.push(`${arcCount} active arcs`);
+      if (decisionBucket !== null)
+        parts.push(`Decision density ${decisionBucket}`);
+      if (resultBucket !== null)
+        parts.push(`Result density ${resultBucket}`);
+      if (parts.length > 0) {
+        summary = parts.join(' · ');
+      }
+    }
+
+    return {
+      id: s.id,
+      position: pos,
+      dateLabel,
+      summary,
+    };
+  });
+}
+
+function HorizontalSnapshotTimeline(props: {
+  snapshots: ReadTabProps['projectSnapshots'];
+}) {
+  const items = buildSnapshotTimelineItems(props.snapshots);
+  if (items.length === 0) return null;
+
+  return (
+    <div>
+      <h2 className="font-serif text-lg font-semibold text-[rgb(var(--text))] mb-3">
+        Motion Timeline
+      </h2>
+      <div className="relative h-12">
+        <div className="absolute top-1/2 left-0 right-0 h-px bg-[rgb(var(--ring)/0.12)]" />
+        {items.map((item) => (
+          <div
+            key={item.id}
+            className="absolute top-1/2 -translate-y-1/2"
+            style={{ left: `${item.position * 100}%` }}
+          >
+            <div className="group relative">
+              <div className="h-2 w-2 rounded-full bg-[rgb(var(--text))]" />
+              <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="max-w-xs rounded-md border border-[rgb(var(--ring)/0.12)] bg-[rgb(var(--surface))] px-2 py-1 shadow-sm">
+                  <div className="text-[10px] font-medium text-[rgb(var(--text))]">
+                    {item.dateLabel}
+                  </div>
+                  <div className="mt-1 text-[10px] text-[rgb(var(--muted))] whitespace-pre-line">
+                    {item.summary}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

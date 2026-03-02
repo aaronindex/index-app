@@ -90,6 +90,7 @@ export default async function ProjectDetailPage({
     .eq('project_id', id);
 
   const conversationIds = projectConversations?.map((pc) => pc.conversation_id) || [];
+  const sourceCount = conversationIds.length;
 
   // Captures since last reduce: count conversations (source=capture) in this project created after last_reduce_at.
   // If last_reduce_at is null, show 0 (calm: nothing until first reduce).
@@ -323,6 +324,8 @@ export default async function ProjectDetailPage({
                 snapshotText={projectViewData?.snapshotText ?? null}
                 snapshotGeneratedAt={projectViewData?.snapshotGeneratedAt ?? null}
                 activeArcs={projectViewData?.activeArcs ?? []}
+                projectSnapshots={projectViewData?.projectSnapshots ?? []}
+                sourceCount={sourceCount}
               />
             )}
             {activeTab === 'chats' && (

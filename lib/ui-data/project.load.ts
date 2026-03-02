@@ -16,6 +16,13 @@ export type ProjectViewData = {
   prevSnapshotPayload: StructuralStatePayload | null;
   snapshotText: string | null;
   snapshotGeneratedAt: string | null;
+  projectSnapshots: Array<{
+    id: string;
+    generated_at: string | null;
+    created_at: string | null;
+    snapshot_text: string | null;
+    state_payload: StructuralStatePayload | null;
+  }>;
   activeArcs: Array<{
     id: string;
     title: string | null;
@@ -49,27 +56,46 @@ export async function loadProjectView(params: {
     .eq('user_id', user_id)
     .maybeSingle();
 
-  // Load project-scoped snapshots (if any) including editorial text + generated_at
+  // Load project-scoped snapshot history (capped) including editorial text + timestamps
   const { data: snapshots } = await supabaseClient
     .from('snapshot_state')
-    .select('state_payload, snapshot_text, generated_at, created_at, project_id')
+    .select('id, state_payload, snapshot_text, generated_at, created_at, project_id')
     .eq('user_id', user_id)
     .eq('scope', 'project')
     .eq('project_id', project_id)
-    // Prefer generated_at for ordering, but fall back to created_at deterministically.
-    .order('generated_at', { ascending: false })
-    .order('created_at', { ascending: false })
-    .limit(2);
+    // Oldest → newest for stable left-to-right timeline spacing.
+    .order('generated_at', { ascending: true })
+    .order('created_at', { ascending: true })
+    .limit(60);
 
-  const latestSnapshotRow = snapshots && snapshots[0] ? snapshots[0] : null;
+  // Snapshot history for UI (horizontal timeline)
+  const projectSnapshots =
+    snapshots?.map((row: any) => ({
+      id: row.id as string,
+      generated_at: (row.generated_at as string | null) ?? null,
+      created_at: (row.created_at as string | null) ?? null,
+      snapshot_text: (row.snapshot_text as string | null) ?? null,
+      state_payload: (row.state_payload as StructuralStatePayload | null) ?? null,
+    })) ?? [];
+
+  // Latest / previous payloads for existing consumers (derive from history)
+  const latestSnapshotRow =
+    snapshots && snapshots.length > 0 ? snapshots[snapshots.length - 1] : null;
   const latestSnapshotPayload: StructuralStatePayload | null =
     latestSnapshotRow && latestSnapshotRow.state_payload
       ? (latestSnapshotRow.state_payload as StructuralStatePayload)
       : null;
 
   const prevSnapshotPayload: StructuralStatePayload | null =
-    snapshots && snapshots[1]?.state_payload
-      ? (snapshots[1].state_payload as StructuralStatePayload)
+    snapshots && snapshots.length > 1 && snapshots[snapshots.length - 2]?.state_payload
+      ? (snapshots[snapshots.length - 2].state_payload as StructuralStatePayload)
+      : null;
+
+  const snapshotGeneratedAt: string | null =
+    latestSnapshotRow && ('generated_at' in latestSnapshotRow || 'created_at' in latestSnapshotRow)
+      ? ((latestSnapshotRow as { generated_at?: string | null; created_at?: string | null }).generated_at ??
+          (latestSnapshotRow as { generated_at?: string | null; created_at?: string | null }).created_at ??
+          null)
       : null;
 
   const snapshotText: string | null =
