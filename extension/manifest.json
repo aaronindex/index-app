@@ -1,0 +1,14 @@
+{
+  "name": "INDEX Quick Capture (Alpha)",
+  "version": "0.1.0",
+  "manifest_version": 3,
+  "description": "Send selected text to INDEX capture page.",
+  "permissions": ["activeTab", "scripting"],
+  "action": {
+    "default_title": "Send selection to INDEX"
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  }
+}

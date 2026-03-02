@@ -88,20 +88,42 @@ export async function extractInsights(
   const inputChars = conversation.messages.reduce((sum, m) => sum + (m.content?.length ?? 0), 0);
   const extractedTextChars = conversationText.length;
 
-  const prompt = `Analyze the following conversation and extract structured insights. Look for:
+  const prompt = `Analyze the following conversation and extract a SMALL set of structured insights.
 
-1. **Decisions**: Explicit decisions or commitments made (e.g., "Let's do X", "We'll use Y", "I've decided to...")
-2. **Commitments**: Promises or commitments made (e.g., "I'll do X by Y", "I promise to...", "I'm committed to...")
-3. **Blockers**: Obstacles, blockers, or problems mentioned (e.g., "I can't do X because...", "The issue is...", "We're blocked by...")
-4. **Open Loops**: Unresolved questions, incomplete thoughts, or things that need follow-up (e.g., "We should figure out...", "I need to think about...", "What about...?")
-5. **Suggested Highlights**: Key insights, important points, or memorable quotes worth highlighting. For each, provide a short "title" (or "label") that describes the insight in a few words (e.g. "Key takeaway on X", "Quote about Y") and "content" with the full text.
+INDEX is not a task manager. Prioritize distillation into durable "ledger" items that create a feeling of lightness. Be conservative.
+
+Extract only when the conversation contains clear, high-signal material. If there are no strong items for a category, return an empty array.
+
+CATEGORIES (in priority order):
+
+1) **Decisions** (highest priority)
+- Only explicit decisions / settled choices / commitments to a direction (e.g., "We will do X", "I'm choosing Y", "We're not doing Z").
+- Prefer fewer, clearer decisions over many small ones.
+
+2) **Commitments** (rare)
+- ONLY include explicit commitments with a clear owner ("I/we") and an action that is actually agreed to happen.
+- If there is no clear commitment (or it's just brainstorming), do not include.
+- Avoid turning ideas into tasks.
+
+3) **Blockers** (rare)
+- ONLY include blockers that materially prevent a decision or commitment from progressing.
+- Do not list generic concerns.
+
+4) **Open Loops** (very rare)
+- ONLY include unresolved items that are decision-critical (the answer would change a decision or unblock a commitment).
+- Do NOT include casual questions, musings, or general "we should think about…" items.
+
+5) **Suggested Highlights**
+- Extract only the most memorable / structurally meaningful nuggets (max 3).
+- Prefer lines that clarify direction, constraints, or key realizations.
+- Avoid "interesting" quotes that don't change understanding.
 
 Conversation Title: ${conversation.title || 'Untitled'}
 
 Conversation:
 ${conversationText}
 
-Return a JSON object with this structure:
+Return a JSON object with exactly this structure:
 {
   "decisions": [
     {
@@ -121,7 +143,10 @@ Return a JSON object with this structure:
   ]
 }
 
-Be selective - only extract high-quality, actionable insights. Include message_index (0-based) to reference where in the conversation each insight came from.`;
+Selection rules:
+- Aim for sparsity: in typical cases return 0–2 decisions, 0–1 commitments, 0–1 blockers, 0–1 openLoops, and 0–3 highlights.
+- Never invent items that are not clearly supported by the text.
+- Include message_index (0-based) for each item.`;
 
   try {
     const apiKey = process.env.OPENAI_API_KEY;

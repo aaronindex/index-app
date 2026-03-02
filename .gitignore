@@ -20,6 +20,9 @@
 # production
 /build
 
+# extension build artifacts
+extension/*.zip
+
 # misc
 .DS_Store
 *.pem

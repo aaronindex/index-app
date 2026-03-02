@@ -51,7 +51,8 @@ export default async function ProjectDetailPage({
   searchParams: Promise<{ tab?: string }>;
 }) {
   const { id } = await params;
-  const { tab = 'read' } = await searchParams;
+  const { tab: tabParam = 'read' } = await searchParams;
+  const tab = tabParam === 'sources' ? 'chats' : tabParam;
   const user = await getCurrentUser();
   if (!user) {
     // Middleware should handle this, but just in case

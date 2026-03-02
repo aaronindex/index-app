@@ -213,6 +213,8 @@ Capsule export
 - No vocabulary leaks
 - No visible internal mechanics
 
+**Outreach note:** Accumulation line semantics: shows captures created after projects.last_reduce_at; resets only when Reduce persists ≥1 item with no persistence errors.
+
 ---
 
 # OUT OF SCOPE (FOR NOW)

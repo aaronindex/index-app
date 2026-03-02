@@ -16,7 +16,7 @@ export default function ProjectTabs({ projectId, activeTab }: ProjectTabsProps) 
     { id: 'read', label: 'Read', href: `/projects/${projectId}?tab=read` },
     { id: 'decisions', label: 'Decisions', href: `/projects/${projectId}?tab=decisions` },
     { id: 'tasks', label: 'Tasks', href: `/projects/${projectId}?tab=tasks` },
-    { id: 'chats', label: 'Chats', href: `/projects/${projectId}?tab=chats` },
+    { id: 'chats', label: 'Sources', href: `/projects/${projectId}?tab=chats` },
   ];
 
   const activeTabRef = useRef<HTMLAnchorElement>(null);
