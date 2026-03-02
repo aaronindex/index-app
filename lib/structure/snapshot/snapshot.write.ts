@@ -157,7 +157,8 @@ export async function writeSnapshotState(
   userId: string,
   scope: string,
   stateHash: string,
-  payload: StructuralStatePayload
+  payload: StructuralStatePayload,
+  projectId?: string | null
 ): Promise<{ snapshot_id: string }> {
   const snapshotScope = mapScopeToSnapshotScope(scope);
 
@@ -183,6 +184,7 @@ export async function writeSnapshotState(
     .insert({
       user_id: userId,
       scope: snapshotScope,
+      project_id: snapshotScope === 'project' ? (projectId ?? null) : null,
       state_hash: stateHash,
       state_payload: normalizedPayload as any, // Store as JSONB
       generated_at: new Date().toISOString(),

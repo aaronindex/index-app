@@ -153,13 +153,14 @@ export async function runStructureJob(
     // Use prevPayload from latest snapshot (if available)
     const prevPayload: StructuralStatePayload | null = latestSnapshot?.state_payload || null;
 
-    // Write new snapshot with normalized payload
+    // Write new global snapshot with normalized payload (scope='user' -> scope='global')
     const { snapshot_id } = await writeSnapshotState(
       supabaseAdminClient,
       payload.user_id,
       payload.scope,
       stateHash,
-      structuralPayload
+      structuralPayload,
+      null
     );
 
     // Create minimal pulses based on structural changes
@@ -171,6 +172,68 @@ export async function runStructureJob(
       structuralPayload,
       stateHash
     );
+
+    // Project-scoped snapshots: derive per-project payloads from signals and write snapshots when changed
+    const projectIds = Array.from(
+      new Set(
+        sortedSignals
+          .map((s) => s.project_id)
+          .filter((id): id is string => !!id)
+      )
+    );
+
+    if (projectIds.length > 0) {
+      for (const projectId of projectIds) {
+        const projectSignals = sortedSignals.filter(
+          (s) => s.project_id === projectId
+        );
+        if (projectSignals.length === 0) continue;
+
+        const projectPayload = await inferArcsAndBuildState(
+          supabaseAdminClient,
+          payload.user_id,
+          payload.scope as "user",
+          projectSignals,
+          nowIso
+        );
+
+        const projectStateHash = computeStateHash(projectPayload);
+
+        const { data: latestProjectSnapshot, error: latestProjError } =
+          await supabaseAdminClient
+            .from('snapshot_state')
+            .select('id, state_hash')
+            .eq('user_id', payload.user_id)
+            .eq('scope', 'project')
+            .eq('project_id', projectId)
+            .order('generated_at', { ascending: false })
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+        if (latestProjError && latestProjError.code !== 'PGRST116') {
+          throw new Error(
+            `[StructureJob] Error loading latest project snapshot for project ${projectId}: ${latestProjError.message}`
+          );
+        }
+
+        if (
+          latestProjectSnapshot &&
+          latestProjectSnapshot.state_hash === projectStateHash
+        ) {
+          continue;
+        }
+
+        await writeSnapshotState(
+          supabaseAdminClient,
+          payload.user_id,
+          'project',
+          projectStateHash,
+          projectPayload,
+          projectId
+        );
+      }
+    }
 
     // Dev-only idempotency check: detect duplicate snapshots with identical state_hash
     if (isDevEnv()) {
