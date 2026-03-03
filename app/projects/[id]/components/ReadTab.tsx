@@ -353,14 +353,13 @@ function buildSnapshotTimelineItems(
   snapshots: Array<{
     id: string;
     generated_at: string | null;
-    created_at: string | null;
     snapshot_text: string | null;
     state_payload: any | null;
   }>
 ): SnapshotTimelineItem[] {
   const withTime = snapshots
     .map((s) => {
-      const tsString = s.generated_at ?? s.created_at;
+      const tsString = s.generated_at;
       if (!tsString) return null;
       const ts = new Date(tsString);
       if (Number.isNaN(ts.getTime())) return null;
