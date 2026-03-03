@@ -12,10 +12,9 @@ interface ReadTabProps {
   snapshotText: string | null;
   snapshotGeneratedAt: string | null;
   activeArcs: Array<{ id: string; title: string | null; status: string | null }>;
-   projectSnapshots: Array<{
+  projectSnapshots: Array<{
     id: string;
     generated_at: string | null;
-    created_at: string | null;
     snapshot_text: string | null;
     state_payload: any | null;
   }>;
