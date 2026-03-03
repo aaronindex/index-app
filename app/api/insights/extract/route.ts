@@ -99,6 +99,7 @@ export async function POST(request: NextRequest) {
         .from('decisions')
         .insert({
           user_id: user.id,
+          project_id: projectId,
           conversation_id: conversationId,
           title: decision.title,
           content: decision.content + (decision.context ? `\n\nContext: ${decision.context}` : ''),
