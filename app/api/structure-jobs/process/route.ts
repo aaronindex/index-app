@@ -5,6 +5,20 @@ import { NextRequest, NextResponse } from 'next/server';
 import { processStructureJobQueue } from '@/lib/structure/jobs/process-queue';
 
 /**
+ * GET /api/structure-jobs/process
+ * Returns 405 with instructions (use POST with x-index-admin-secret).
+ */
+export async function GET() {
+  return NextResponse.json(
+    {
+      error: 'Method not allowed',
+      message: 'Use POST with header x-index-admin-secret to process structure jobs.',
+    },
+    { status: 405 }
+  );
+}
+
+/**
  * POST /api/structure-jobs/process
  *
  * Processes queued structure_jobs.

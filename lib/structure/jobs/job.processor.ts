@@ -199,6 +199,16 @@ export async function runStructureJob(
     );
 
     if (projectIds.length > 0) {
+      if (isDevEnv()) {
+        // eslint-disable-next-line no-console
+        console.log('[StructureJob][ProjectScopes]', {
+          job_id: jobId,
+          user_id: payload.user_id,
+          scope: payload.scope,
+          project_ids: projectIds,
+        });
+      }
+
       for (const projectId of projectIds) {
         const projectSignals = sortedSignals.filter(
           (s) => s.project_id === projectId
@@ -232,14 +242,27 @@ export async function runStructureJob(
           );
         }
 
+        const latestPrefix = latestProjectSnapshot?.state_hash?.substring(0, 24) ?? '(none)';
+        const nextPrefix = projectStateHash.substring(0, 24);
+
         if (
           latestProjectSnapshot &&
           latestProjectSnapshot.state_hash === projectStateHash
         ) {
+          if (isDevEnv()) {
+            // eslint-disable-next-line no-console
+            console.log('[StructureJob][ProjectSnapshotHashUnchanged]', {
+              job_id: jobId,
+              user_id: payload.user_id,
+              project_id: projectId,
+              latest_state_hash_prefix: latestPrefix,
+              next_state_hash_prefix: nextPrefix,
+            });
+          }
           continue;
         }
 
-        await writeSnapshotState(
+        const { snapshot_id: projectSnapshotId } = await writeSnapshotState(
           supabaseAdminClient,
           payload.user_id,
           'project',
@@ -247,6 +270,18 @@ export async function runStructureJob(
           projectPayload,
           projectId
         );
+
+        if (isDevEnv()) {
+          // eslint-disable-next-line no-console
+          console.log('[StructureJob][ProjectSnapshotWritten]', {
+            job_id: jobId,
+            user_id: payload.user_id,
+            project_id: projectId,
+            snapshot_id: projectSnapshotId,
+            state_hash_prefix: nextPrefix,
+            signals_count: projectSignals.length,
+          });
+        }
       }
     }
 

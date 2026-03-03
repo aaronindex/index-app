@@ -19,7 +19,6 @@ export type ProjectViewData = {
   projectSnapshots: Array<{
     id: string;
     generated_at: string | null;
-    created_at: string | null;
     snapshot_text: string | null;
     state_payload: StructuralStatePayload | null;
   }>;
@@ -59,13 +58,12 @@ export async function loadProjectView(params: {
   // Load project-scoped snapshot history (capped) including editorial text + timestamps
   const { data: snapshots } = await supabaseClient
     .from('snapshot_state')
-    .select('id, state_payload, snapshot_text, generated_at, created_at, project_id')
+    .select('id, state_payload, snapshot_text, generated_at, project_id')
     .eq('user_id', user_id)
     .eq('scope', 'project')
     .eq('project_id', project_id)
     // Oldest → newest for stable left-to-right timeline spacing.
     .order('generated_at', { ascending: true })
-    .order('created_at', { ascending: true })
     .limit(60);
 
   // Snapshot history for UI (horizontal timeline)
@@ -73,7 +71,6 @@ export async function loadProjectView(params: {
     snapshots?.map((row: any) => ({
       id: row.id as string,
       generated_at: (row.generated_at as string | null) ?? null,
-      created_at: (row.created_at as string | null) ?? null,
       snapshot_text: (row.snapshot_text as string | null) ?? null,
       state_payload: (row.state_payload as StructuralStatePayload | null) ?? null,
     })) ?? [];
@@ -92,10 +89,8 @@ export async function loadProjectView(params: {
       : null;
 
   const snapshotGeneratedAt: string | null =
-    latestSnapshotRow && ('generated_at' in latestSnapshotRow || 'created_at' in latestSnapshotRow)
-      ? ((latestSnapshotRow as { generated_at?: string | null; created_at?: string | null }).generated_at ??
-          (latestSnapshotRow as { generated_at?: string | null; created_at?: string | null }).created_at ??
-          null)
+    latestSnapshotRow && 'generated_at' in latestSnapshotRow
+      ? ((latestSnapshotRow as { generated_at?: string | null }).generated_at ?? null)
       : null;
 
   const snapshotText: string | null =
