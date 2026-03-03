@@ -1,92 +1,151 @@
 // app/components/MagicHomeScreen.tsx
+// Logged-in landing: Direction, Shifts, Timeline, Weekly Digest. Matches Project Read styling.
+
 'use client';
 
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import OnboardingFlow from './OnboardingFlow';
 import PostImportModal from './PostImportModal';
 import Card from './ui/Card';
-import SectionHeader from './ui/SectionHeader';
 import { showError } from './ErrorNotification';
 import GenerateDigestButton from '../tools/components/GenerateDigestButton';
 
-interface HomeData {
+type TimelineEvent = {
+  id: string;
+  occurred_at: string;
+  summary: string;
+  isResult?: boolean;
+};
+
+type ShiftItem = {
+  id: string;
+  occurred_at: string;
+  label: string;
+  pulse_type: string;
+};
+
+type LandingData = {
   hasConversations: boolean;
   hasProjects: boolean;
-  latestDigest: {
+  direction: { snapshotText: string | null; hasArcs: boolean };
+  shifts: ShiftItem[];
+  timelineEvents: TimelineEvent[];
+  weeklyDigest: {
     id: string;
     week_start: string;
     week_end: string;
-    summary: string;
-    top_themes: any;
-    open_loops: any;
+    body: string | null;
+    summary: string | null;
   } | null;
+};
+
+function formatShiftDate(iso: string): string {
+  try {
+    return new Date(iso).toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric',
+    });
+  } catch {
+    return '';
+  }
 }
 
-interface StillOpenItem {
-  type: 'decision' | 'task';
-  id: string;
-  title: string;
-  projectId: string | null;
-  projectName: string | null;
-  conversationId: string | null;
-  conversationTitle: string | null;
-  isBlocker?: boolean;
-  isOpenLoop?: boolean;
-  isAIGenerated?: boolean;
+function formatDigestDate(iso: string | null | undefined): string {
+  if (!iso) return '';
+  try {
+    return new Date(iso).toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  } catch {
+    return '';
+  }
+}
+
+function GlobalTimeline({ events }: { events: TimelineEvent[] }) {
+  if (events.length === 0) {
+    return (
+      <div>
+        <h2 className="font-serif text-lg font-semibold text-[rgb(var(--text))] mb-3">
+          Timeline
+        </h2>
+        <div className="relative h-12">
+          <div className="absolute top-1/2 left-0 right-0 h-px bg-[rgb(var(--ring)/0.12)]" />
+        </div>
+      </div>
+    );
+  }
+
+  const withTime = events
+    .map((e) => {
+      const ts = new Date(e.occurred_at).getTime();
+      if (Number.isNaN(ts)) return null;
+      return { ...e, ts };
+    })
+    .filter((e): e is TimelineEvent & { ts: number } => e !== null)
+    .sort((a, b) => a.ts - b.ts);
+
+  if (withTime.length === 0) return null;
+
+  const first = withTime[0]!;
+  const last = withTime[withTime.length - 1]!;
+  const t0 = first.ts;
+  const tN = last.ts;
+  const span = tN - t0 || 1;
+
+  return (
+    <div>
+      <h2 className="font-serif text-lg font-semibold text-[rgb(var(--text))] mb-3">
+        Timeline
+      </h2>
+      <div className="relative h-12">
+        <div className="absolute top-1/2 left-0 right-0 h-px bg-[rgb(var(--ring)/0.12)]" />
+        {withTime.map((item) => {
+          const pos = span === 0 ? 0.5 : (item.ts - t0) / span;
+          const dateLabel = new Date(item.occurred_at).toLocaleDateString(undefined, {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+          });
+          return (
+            <div
+              key={item.id}
+              className="absolute top-1/2 -translate-y-1/2"
+              style={{ left: `${pos * 100}%` }}
+            >
+              <div className="group relative">
+                <div
+                  className={`rounded-full bg-[rgb(var(--text))] ${
+                    item.isResult ? 'h-3 w-3' : 'h-2 w-2'
+                  }`}
+                />
+                <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="max-w-[260px] min-w-[180px] rounded-md border border-[rgb(var(--ring)/0.12)] bg-[rgb(var(--surface))] px-2 py-1 shadow-sm">
+                    <div className="text-[10px] font-medium text-[rgb(var(--text))]">
+                      {dateLabel}
+                    </div>
+                    <div className="mt-1 text-[10px] text-[rgb(var(--muted))] whitespace-normal break-words">
+                      {item.summary}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 export default function MagicHomeScreen() {
-  const router = useRouter();
-  const [data, setData] = useState<HomeData | null>(null);
-  const [stillOpenItems, setStillOpenItems] = useState<StillOpenItem[]>([]);
-  const [stillOpenLoading, setStillOpenLoading] = useState(true);
+  const [data, setData] = useState<LandingData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [onboardingCompleted, setOnboardingCompleted] = useState<boolean | null>(null);
   const [postImportModalDismissed, setPostImportModalDismissed] = useState(false);
-
-  // All hooks must be called unconditionally at the top level (before any early returns)
-  const formatDate = useCallback((dateString: string | null | undefined) => {
-    if (!dateString) return 'Recently';
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString();
-    } catch {
-      return 'Recently';
-    }
-  }, []);
-
-  // Trigger welcome email on first signed-in experience (idempotent, quiet)
-  useEffect(() => {
-    // Fire-and-forget: call welcome email endpoint once
-    // Safe to call multiple times (idempotent)
-    fetch('/api/lifecycle/welcome', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-    }).catch(() => {
-      // Silently fail - don't spam logs or show errors to user
-    });
-  }, []);
-
-  // Fetch still-open items
-  useEffect(() => {
-    async function fetchStillOpen() {
-      try {
-        const response = await fetch('/api/home/still-open');
-        if (response.ok) {
-          const result = await response.json();
-          setStillOpenItems(result.items || []);
-        }
-      } catch (error) {
-        console.error('Error fetching still open items:', error);
-      } finally {
-        setStillOpenLoading(false);
-      }
-    }
-    fetchStillOpen();
-  }, []);
 
   const fetchHomeData = useCallback(async () => {
     try {
@@ -94,17 +153,12 @@ export default function MagicHomeScreen() {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         const errorMessage = errorData.error || `Failed to fetch home data (${response.status})`;
-        console.error('[Home] API error:', errorMessage, errorData);
         throw new Error(errorMessage);
       }
       const result = await response.json();
-      console.log('[Home] Data received:', { 
-        hasDigest: !!result.latestDigest
-      });
       setData(result);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load home data';
-      console.error('[Home] Error:', err);
       setError(errorMessage);
       showError(errorMessage);
     } finally {
@@ -113,47 +167,35 @@ export default function MagicHomeScreen() {
   }, []);
 
   useEffect(() => {
+    fetch('/api/lifecycle/welcome', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
     fetchHomeData();
   }, [fetchHomeData]);
 
-  // Check onboarding completion status
   useEffect(() => {
-    // Use a more robust check that handles mobile Safari localStorage quirks
-    const checkOnboarding = () => {
-      try {
-        const completed = localStorage.getItem('index_onboarding_completed');
-        const isCompleted = completed === 'true';
-        setOnboardingCompleted(isCompleted);
-        // If completed, ensure it stays completed (defensive check)
-        if (isCompleted && !completed) {
-          localStorage.setItem('index_onboarding_completed', 'true');
-        }
-      } catch (error) {
-        // If localStorage fails, assume not completed (safer default)
-        console.error('Error checking onboarding status:', error);
-        setOnboardingCompleted(false);
-      }
-    };
-    
-    checkOnboarding();
-    // Re-check after a short delay to handle mobile Safari timing issues
-    const timeout = setTimeout(checkOnboarding, 100);
-    return () => clearTimeout(timeout);
+    try {
+      const completed = localStorage.getItem('index_onboarding_completed');
+      setOnboardingCompleted(completed === 'true');
+    } catch {
+      setOnboardingCompleted(false);
+    }
   }, []);
 
-  // Show onboarding if not completed (null means still checking, so don't show yet)
   const showOnboarding = onboardingCompleted === false;
-
-  // Don't block entire page on home data load (same pattern as ReadTab): show layout
-  // immediately; digest and post-import modal use data when ready.
-  const hasData = !!data;
-  const latestDigest = data?.latestDigest ?? null;
+  const hasArcs = data?.direction?.hasArcs ?? false;
+  const directionText = data?.direction?.snapshotText ?? null;
+  const shifts = data?.shifts ?? [];
+  const timelineEvents = data?.timelineEvents ?? [];
+  const weeklyDigest = data?.weeklyDigest ?? null;
   const hasConversations = data?.hasConversations ?? false;
-  const hasProjects = data?.hasProjects ?? false;
 
   return (
-    <div className="space-y-8">
-      {/* Inline error when home data fails - don't block layout */}
+    <div className="space-y-8 max-w-3xl">
       {error && (
         <div className="p-4 rounded-xl bg-red-50 dark:bg-red-900/20 ring-1 ring-red-200 dark:ring-red-800 flex items-center justify-between gap-4">
           <p className="text-red-800 dark:text-red-400 text-sm">{error}</p>
@@ -170,115 +212,110 @@ export default function MagicHomeScreen() {
         </div>
       )}
 
-      {/* Onboarding Flow - Show at top on first login */}
       {showOnboarding && (
         <OnboardingFlow
-          onComplete={() => {
-            setOnboardingCompleted(true);
-          }}
+          onComplete={() => setOnboardingCompleted(true)}
         />
       )}
 
-      {/* Primary: Across your INDEX - Completely hide when onboarding active */}
       {!showOnboarding && (
-        <div>
-          <SectionHeader>Across your INDEX</SectionHeader>
-          
-          {stillOpenLoading ? (
-            <div className="text-sm text-[rgb(var(--muted))]">Loading...</div>
-          ) : stillOpenItems.length > 0 ? (
-            <div className="space-y-3">
-              {stillOpenItems.map((item) => (
-                <Link
-                  key={`${item.type}-${item.id}`}
-                  href={item.projectId ? `/projects/${item.projectId}?tab=${item.type === 'decision' ? 'decisions' : 'tasks'}#${item.id}` : '/projects'}
-                  className="block"
-                >
-                  <Card className="p-4 hover:shadow-md transition-shadow">
-                    <div className="flex items-start gap-3">
-                      <div className="flex-1">
-                        <h3 className="font-medium text-[rgb(var(--text))] mb-1.5">
-                          {item.title}
-                        </h3>
-                        <div className="flex items-center gap-1.5 text-xs text-[rgb(var(--muted))]">
-                          <span>{item.type === 'decision' ? 'Decision' : 'Task'}</span>
-                          {item.isBlocker && (
-                            <span className="px-1.5 py-0.5 text-xs font-medium rounded bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-500">
-                              Blocker
-                            </span>
-                          )}
-                          {item.isOpenLoop && (
-                            <span className="px-1.5 py-0.5 text-xs font-medium rounded bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-500">
-                              Open Loop
-                            </span>
-                          )}
-                          {item.projectName && (
-                            <span>• {item.projectName}</span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </Card>
-                </Link>
-              ))}
+        <>
+          {/* 1. Direction (global snapshot) — plain text block */}
+          <div>
+            <h2 className="font-serif text-lg font-semibold text-[rgb(var(--text))] mb-3">
+              Direction
+            </h2>
+            <div className="text-sm text-[rgb(var(--text))] whitespace-pre-wrap">
+              {loading && !data ? (
+                <p className="text-[rgb(var(--muted))]">Loading...</p>
+              ) : !hasArcs ? (
+                <p className="text-[rgb(var(--text))]">
+                  Your INDEX will show the direction of your thinking as sources are distilled.
+                </p>
+              ) : directionText ? (
+                directionText
+              ) : (
+                <p className="text-[rgb(var(--text))]">Exploration ongoing.</p>
+              )}
             </div>
-          ) : (
-            <Card className="p-12 text-center">
-              <h3 className="font-serif text-xl font-semibold text-[rgb(var(--text))] mb-3">
-                Nothing needs attention right now.
-              </h3>
-              <p className="text-sm text-[rgb(var(--muted))]">
-                You're clear across active projects. Dive into a project to continue.
-              </p>
-            </Card>
-          )}
-        </div>
-      )}
+          </div>
 
-      {/* Secondary: Weekly Digest - Hide when onboarding active */}
-      {!showOnboarding && (
-        <div>
-          <SectionHeader>Weekly Digest</SectionHeader>
-          <Card className="p-6 bg-gradient-to-br from-[rgb(var(--surface2))] to-[rgb(var(--surface))]">
-          <p className="text-sm text-[rgb(var(--muted))] mb-4">
-            Summarize what shifted this week.
-          </p>
-          {loading && !hasData ? (
-            <div className="text-sm text-[rgb(var(--muted))]">Loading...</div>
-          ) : latestDigest ? (
-            <>
-              <div className="mb-4 pb-4 border-b border-[rgb(var(--ring)/0.08)]">
-                <Link href={`/digests/${latestDigest.id}`} className="block">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-[rgb(var(--muted))]">
-                      {formatDate(latestDigest.week_start)} - {formatDate(latestDigest.week_end)}
-                    </span>
-                    <span className="text-sm text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] transition-colors">
-                      View full →
-                    </span>
+          <hr className="my-6 border-[rgb(var(--ring)/0.08)]" />
+
+          {/* 2. Shifts — recent structural pulses */}
+          <div>
+            <h2 className="font-serif text-lg font-semibold text-[rgb(var(--text))] mb-3">
+              Shifts
+            </h2>
+            {loading && !data ? (
+              <p className="text-sm text-[rgb(var(--muted))]">Loading...</p>
+            ) : shifts.length === 0 ? (
+              <p className="text-sm text-[rgb(var(--muted))]">No structural shifts yet.</p>
+            ) : (
+              <ul className="space-y-1.5 text-sm text-[rgb(var(--text))]">
+                {shifts.map((s) => (
+                  <li key={s.id}>
+                    <span className="text-[rgb(var(--muted))]">
+                      {formatShiftDate(s.occurred_at)} —
+                    </span>{' '}
+                    {s.label}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <hr className="my-6 border-[rgb(var(--ring)/0.08)]" />
+
+          {/* 3. Timeline (global) — pulse-based, result = larger dot */}
+          <GlobalTimeline events={timelineEvents} />
+
+          <hr className="my-6 border-[rgb(var(--ring)/0.08)]" />
+
+          {/* 4. Weekly Digest — card */}
+          <div>
+            <h2 className="font-serif text-lg font-semibold text-[rgb(var(--text))] mb-3">
+              Weekly Digest
+            </h2>
+            <Card className="p-6 bg-gradient-to-br from-[rgb(var(--surface2))] to-[rgb(var(--surface))]">
+              {loading && !data ? (
+                <p className="text-sm text-[rgb(var(--muted))]">Loading...</p>
+              ) : weeklyDigest?.body ? (
+                <>
+                  <div className="mb-4 pb-4 border-b border-[rgb(var(--ring)/0.08)]">
+                    <Link
+                      href={`/digests/${weeklyDigest.id}`}
+                      className="block text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] text-xs mb-2"
+                    >
+                      {formatDigestDate(weeklyDigest.week_start)} – {formatDigestDate(weeklyDigest.week_end)} → View full
+                    </Link>
+                    <div className="text-sm text-[rgb(var(--text))] whitespace-pre-wrap">
+                      {weeklyDigest.body}
+                    </div>
                   </div>
-                  <p className="text-[rgb(var(--text))] line-clamp-2 text-sm">
-                    {latestDigest.summary}
+                  <GenerateDigestButton />
+                </>
+              ) : (
+                <>
+                  <p className="text-sm text-[rgb(var(--muted))] mb-4">
+                    Weekly digest appears once structural change occurs.
                   </p>
-                </Link>
-              </div>
-              <GenerateDigestButton />
-            </>
-          ) : (
-            <GenerateDigestButton />
-          )}
-        </Card>
-        </div>
-      )}
+                  <GenerateDigestButton />
+                </>
+              )}
+            </Card>
+          </div>
 
-      {/* Post-Import Modal - Has conversations but no content yet */}
-      <PostImportModal
-        isOpen={hasConversations && stillOpenItems.length === 0 && !latestDigest && !postImportModalDismissed}
-        onClose={() => {
-          setPostImportModalDismissed(true);
-        }}
-      />
+          <PostImportModal
+            isOpen={
+              hasConversations &&
+              !weeklyDigest?.body &&
+              !postImportModalDismissed
+            }
+            onClose={() => setPostImportModalDismissed(true)}
+          />
+        </>
+      )}
     </div>
   );
 }
-

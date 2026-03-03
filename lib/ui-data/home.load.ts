@@ -1,24 +1,37 @@
 // lib/ui-data/home.load.ts
-// Load structural state data for homepage view (projection layer input)
-// Read-only, no inference. Returns data for Direction + Shifts projection only.
+// Load structural state data for homepage view (Direction, Shifts, Timeline).
+// Read-only, no inference.
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { StructuralStatePayload } from '@/lib/structure/hash';
+
+export type HomePulse = {
+  id: string;
+  pulse_type: string;
+  headline: string | null;
+  occurred_at: string;
+  project_id: string | null;
+};
 
 export type HomeViewData = {
   latestSnapshot: {
     id: string;
     state_hash: string;
     generated_at: string;
+    snapshot_text: string | null;
     state_payload: StructuralStatePayload | null;
   } | null;
   /** Previous snapshot payload for Shifts projection (null if only one snapshot) */
   prevSnapshotPayload: StructuralStatePayload | null;
+  /** Recent global pulses (newest first), for Shifts list and Timeline */
+  pulses: HomePulse[];
 };
 
+const PULSE_TYPES_FOR_LANDING = ['arc_shift', 'structural_threshold', 'tension', 'result_recorded'] as const;
+
 /**
- * Load home view data for structural projection (Direction + Shifts).
- * Fetches latest two snapshots only. No arc/phase/pulse tables.
+ * Load home view data for Direction, Shifts, and Timeline.
+ * Fetches latest global snapshot (with snapshot_text), previous payload, and recent pulses.
  */
 export async function loadHomeView(params: {
   supabaseClient: SupabaseClient;
@@ -28,10 +41,9 @@ export async function loadHomeView(params: {
 
   const { data: snapshots } = await supabaseClient
     .from('snapshot_state')
-    .select('id, state_hash, generated_at, created_at, state_payload')
+    .select('id, state_hash, generated_at, created_at, state_payload, snapshot_text')
     .eq('user_id', user_id)
     .eq('scope', 'global')
-    // Prefer generated_at for ordering, but fall back to created_at deterministically.
     .order('generated_at', { ascending: false })
     .order('created_at', { ascending: false })
     .limit(2);
@@ -39,17 +51,37 @@ export async function loadHomeView(params: {
   const latest = snapshots?.[0] ?? null;
   const prev = snapshots?.[1] ?? null;
 
+  // Global pulses for Shifts + Timeline (newest first, cap 5 for list; use more for timeline if needed)
+  const { data: pulseRows } = await supabaseClient
+    .from('pulse')
+    .select('id, pulse_type, headline, occurred_at, project_id')
+    .eq('user_id', user_id)
+    .eq('scope', 'global')
+    .in('pulse_type', [...PULSE_TYPES_FOR_LANDING])
+    .order('occurred_at', { ascending: false })
+    .limit(20);
+
+  const pulses: HomePulse[] = (pulseRows ?? []).map((row: any) => ({
+    id: row.id,
+    pulse_type: row.pulse_type ?? '',
+    headline: row.headline ?? null,
+    occurred_at: row.occurred_at ?? new Date().toISOString(),
+    project_id: row.project_id ?? null,
+  }));
+
   return {
     latestSnapshot: latest
       ? {
           id: latest.id,
           state_hash: latest.state_hash,
           generated_at: latest.generated_at,
+          snapshot_text: (latest as any).snapshot_text ?? null,
           state_payload: latest.state_payload as StructuralStatePayload | null,
         }
       : null,
     prevSnapshotPayload: prev?.state_payload
       ? (prev.state_payload as StructuralStatePayload)
       : null,
+    pulses,
   };
 }

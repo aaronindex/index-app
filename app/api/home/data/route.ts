@@ -1,7 +1,54 @@
 // app/api/home/data/route.ts
+// Landing page data: Direction (global snapshot), Shifts (pulses), Timeline (pulses), Weekly Digest.
+
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabaseServer';
 import { getCurrentUser } from '@/lib/getUser';
+import { loadHomeView } from '@/lib/ui-data/home.load';
+import type { HomePulse } from '@/lib/ui-data/home.load';
+
+function formatPulseShiftLabel(p: HomePulse): string {
+  const headline = (p.headline || '').trim();
+  switch (p.pulse_type) {
+    case 'result_recorded':
+      return headline ? `Result recorded: ${headline}` : 'Result recorded';
+    case 'arc_shift':
+      return headline || 'Arc shifted phase';
+    case 'structural_threshold':
+      return headline || 'Structural threshold';
+    case 'tension':
+      return headline || 'Tension';
+    default:
+      return headline || 'Structural shift';
+  }
+}
+
+function formatDigestBody(d: {
+  summary?: string | null;
+  top_themes?: unknown;
+  open_loops?: unknown;
+}): string {
+  const parts: string[] = [];
+  if (d.summary && String(d.summary).trim()) {
+    parts.push(String(d.summary).trim());
+  }
+  const themes = Array.isArray(d.top_themes) ? d.top_themes : [];
+  if (themes.length > 0) {
+    const themeLines = themes.map((t: unknown) => (typeof t === 'string' ? t : String(t)).trim()).filter(Boolean);
+    if (themeLines.length > 0) {
+      parts.push(themeLines.map((line) => `• ${line}`).join('\n'));
+    }
+  }
+  const loops = Array.isArray(d.open_loops) ? d.open_loops : [];
+  if (loops.length > 0) {
+    const loopLines = loops.map((l: unknown) => (typeof l === 'string' ? l : String(l)).trim()).filter(Boolean);
+    if (loopLines.length > 0) {
+      parts.push(loopLines.map((line) => `• ${line}`).join('\n'));
+    }
+  }
+  if (parts.length === 0) return '';
+  return parts.join('\n\n');
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -12,227 +59,68 @@ export async function GET(request: NextRequest) {
 
     const supabase = await getSupabaseServerClient();
 
-    // 1. Priority Items: Priority tasks and priority decisions first
-    // Stance-based ordering: Priority > Open > Everything else
-    // Default: exclude inactive items and personal projects
-    
-    // Get priority tasks first
-    const { data: priorityTasks } = await supabase
-      .from('tasks')
-      .select('id, title, description, status, project_id, conversation_id, created_at, updated_at, source_query, projects(name)')
-      .eq('user_id', user.id)
-      .eq('is_inactive', false)
-      .eq('status', 'priority')
-      .order('created_at', { ascending: false })
-      .limit(10);
+    const [homeView, conversationCountResult, projectCountResult, digestResult] = await Promise.all([
+      loadHomeView({ supabaseClient: supabase, user_id: user.id }),
+      supabase.from('conversations').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
+      supabase.from('projects').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
+      supabase
+        .from('weekly_digests')
+        .select('id, week_start, week_end, summary, top_themes, open_loops')
+        .eq('user_id', user.id)
+        .order('week_start', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+    ]);
 
-    // Get open/in_progress tasks (excluding priority, which we already have)
-    const { data: openTasksData } = await supabase
-      .from('tasks')
-      .select('id, title, description, status, project_id, conversation_id, created_at, updated_at, source_query, projects(name)')
-      .eq('user_id', user.id)
-      .eq('is_inactive', false)
-      .in('status', ['open', 'in_progress'])
-      .order('updated_at', { ascending: true }) // Oldest updated first (stuck signals)
-      .limit(20);
+    const hasConversations = (conversationCountResult.count ?? 0) > 0;
+    const hasProjects = (projectCountResult.count ?? 0) > 0;
+    const latestDigest = digestResult.data ?? null;
 
-    // Combine and order tasks (no personal filtering - all projects shown)
-    const priorityTasksFiltered = priorityTasks || [];
-    const openTasksFiltered = openTasksData || [];
-    
-    // Combine: Priority first, then open tasks (oldest updated first = stuck signals)
-    const allTasks = [...priorityTasksFiltered, ...openTasksFiltered].slice(0, 10);
+    const payload = homeView.latestSnapshot?.state_payload as { active_arc_ids?: string[] } | null | undefined;
+    const hasArcs = Array.isArray(payload?.active_arc_ids) && payload.active_arc_ids.length > 0;
 
-    // Get decisions without resolution (open loops)
-    // Decisions don't have a status field, so we get recent ones
-    // Stance: prioritize decisions that might need follow-up
-    const { data: recentDecisions } = await supabase
-      .from('decisions')
-      .select('id, title, content, conversation_id, project_id, created_at, conversations(title), projects(name)')
-      .eq('user_id', user.id)
-      .eq('is_inactive', false)
-      .order('created_at', { ascending: false })
-      .limit(5);
+    const directionText =
+      homeView.latestSnapshot?.snapshot_text?.trim() ||
+      (hasArcs ? null : 'Your INDEX will show the direction of your thinking as sources are distilled.');
 
-    // 2. Latest Insights: Recent highlights
-    const { data: recentHighlights } = await supabase
-      .from('highlights')
-      .select('id, content, label, conversation_id, created_at, conversations(title)')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(10);
+    const shifts = homeView.pulses.slice(0, 5).map((p) => ({
+      id: p.id,
+      occurred_at: p.occurred_at,
+      label: formatPulseShiftLabel(p),
+      pulse_type: p.pulse_type,
+    }));
 
+    const timelineEvents = homeView.pulses.map((p) => ({
+      id: p.id,
+      occurred_at: p.occurred_at,
+      summary: formatPulseShiftLabel(p),
+      pulse_type: p.pulse_type,
+      isResult: p.pulse_type === 'result_recorded',
+    }));
 
-    // 4. Latest Digest
-    const { data: latestDigest } = await supabase
-      .from('weekly_digests')
-      .select('id, week_start, week_end, summary, top_themes, open_loops')
-      .eq('user_id', user.id)
-      .order('week_start', { ascending: false })
-      .limit(1)
-      .single();
+    const weeklyDigestText = latestDigest
+      ? formatDigestBody(latestDigest)
+      : null;
 
-    // 5. Recent conversations for "things to revisit" (conversations with no recent activity but have highlights/tasks/decisions)
-    // Stance: Only surface conversations with thought-objects (highlights, tasks, decisions)
-    // Default: exclude inactive conversations
-    const { data: allConversations } = await supabase
-      .from('conversations')
-      .select('id, title, created_at, started_at, ended_at')
-      .eq('user_id', user.id)
-      .eq('is_inactive', false)
-      .order('created_at', { ascending: false })
-      .limit(50); // Get more to filter
-
-    const conversationIds = allConversations?.map((c) => c.id) || [];
-    
-    // Get highlights, tasks, and decisions for these conversations
-    const { data: allHighlights } = await supabase
-      .from('highlights')
-      .select('conversation_id, created_at')
-      .in('conversation_id', conversationIds)
-      .eq('user_id', user.id);
-
-    const { data: allTasksForConvs } = await supabase
-      .from('tasks')
-      .select('conversation_id, created_at')
-      .in('conversation_id', conversationIds)
-      .eq('user_id', user.id)
-      .eq('is_inactive', false);
-
-    const { data: allDecisionsForConvs } = await supabase
-      .from('decisions')
-      .select('conversation_id, created_at')
-      .in('conversation_id', conversationIds)
-      .eq('user_id', user.id)
-      .eq('is_inactive', false);
-
-    // Find conversations that have thought-objects (highlights, tasks, or decisions)
-    // Stance: Only show conversations with meaning objects, not raw conversations
-    const now = new Date();
-    const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
-    
-    const conversationsToRevisit = allConversations
-      ?.filter((conv) => {
-        const convHighlights = allHighlights?.filter((h) => h.conversation_id === conv.id) || [];
-        const convTasks = allTasksForConvs?.filter((t) => t.conversation_id === conv.id) || [];
-        const convDecisions = allDecisionsForConvs?.filter((d) => d.conversation_id === conv.id) || [];
-        
-        // Must have at least one thought-object
-        const hasThoughtObjects = convHighlights.length > 0 || convTasks.length > 0 || convDecisions.length > 0;
-        
-        // Prefer older conversations (stuck signals)
-        const isOld = new Date(conv.created_at) < twoWeeksAgo;
-        
-        return hasThoughtObjects && isOld;
-      })
-      .slice(0, 3) || [];
-
-    // Get project info for conversations to revisit
-    const revisitConvIds = conversationsToRevisit.map((c) => c.id);
-    let projectMap = new Map<string, { project_id: string; project_name: string }>();
-    
-    if (revisitConvIds.length > 0) {
-      const { data: projectConversations, error: projectConvError } = await supabase
-        .from('project_conversations')
-        .select('conversation_id, project_id, projects(name)')
-        .in('conversation_id', revisitConvIds);
-
-      if (projectConvError) {
-        console.error('Error fetching project conversations:', projectConvError);
-      } else {
-        projectConversations?.forEach((pc: any) => {
-          if (pc.project_id && pc.projects) {
-            projectMap.set(pc.conversation_id, {
-              project_id: pc.project_id,
-              project_name: pc.projects.name,
-            });
+    return NextResponse.json({
+      hasConversations,
+      hasProjects,
+      direction: {
+        snapshotText: directionText,
+        hasArcs,
+      },
+      shifts,
+      timelineEvents,
+      weeklyDigest: latestDigest
+        ? {
+            id: latestDigest.id,
+            week_start: latestDigest.week_start,
+            week_end: latestDigest.week_end,
+            body: weeklyDigestText,
+            summary: latestDigest.summary,
           }
-        });
-      }
-    }
-
-    const thingsToRevisit = conversationsToRevisit.map((conv) => {
-      const projectInfo = projectMap.get(conv.id);
-      return {
-        id: conv.id,
-        title: conv.title,
-        created_at: conv.created_at,
-        updated_at: conv.ended_at || conv.created_at,
-        project_id: projectInfo?.project_id || null,
-        project_name: projectInfo?.project_name || null,
-      };
+        : null,
     });
-
-    // Check if user has any conversations or projects (for empty state)
-    // For empty state check, include all (active and inactive, business and personal)
-    const { count: conversationCount } = await supabase
-      .from('conversations')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', user.id);
-
-    const { count: projectCount } = await supabase
-      .from('projects')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', user.id);
-
-    // Get user's weekly digest email preference
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('weekly_digest_enabled')
-      .eq('id', user.id)
-      .single();
-
-    try {
-      return NextResponse.json({
-        success: true,
-        hasConversations: (conversationCount || 0) > 0,
-        hasProjects: (projectCount || 0) > 0,
-        priorityItems: {
-          tasks: (allTasks || []).map((t: any) => ({
-            id: t.id,
-            title: t.title || 'Untitled Task',
-            description: t.description || null,
-            status: t.status || 'open',
-            project_id: t.project_id || null,
-            project_name: (t.projects as any)?.name || null,
-            conversation_id: t.conversation_id || null,
-            created_at: t.created_at,
-            source_query: t.source_query || null,
-          })),
-          decisions: (recentDecisions || []).map((d: any) => ({
-            id: d.id,
-            title: d.title || 'Untitled Decision',
-            content: d.content || null,
-            conversation_id: d.conversation_id || null,
-            conversation_title: (d.conversations as any)?.title || null,
-            project_id: d.project_id || null,
-            project_name: (d.projects as any)?.name || null,
-            created_at: d.created_at,
-          })),
-        },
-        latestInsights: (recentHighlights || []).map((h: any) => ({
-          id: h.id,
-          content: h.content,
-          label: h.label,
-          conversation_id: h.conversation_id,
-          conversation_title: (h.conversations as any)?.title || null,
-          created_at: h.created_at,
-        })),
-        thingsToRevisit: thingsToRevisit || [],
-        latestDigest: latestDigest ? {
-          id: latestDigest.id,
-          week_start: latestDigest.week_start,
-          week_end: latestDigest.week_end,
-          summary: latestDigest.summary,
-          top_themes: latestDigest.top_themes,
-          open_loops: latestDigest.open_loops,
-        } : null,
-        weekly_digest_enabled: profile?.weekly_digest_enabled ?? true,
-      });
-    } catch (jsonError) {
-      console.error('Error serializing response:', jsonError);
-      throw jsonError;
-    }
   } catch (error) {
     console.error('Home data API error:', error);
     return NextResponse.json(
@@ -241,4 +129,3 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-
