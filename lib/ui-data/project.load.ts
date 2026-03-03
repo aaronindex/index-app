@@ -92,7 +92,7 @@ export async function loadProjectView(params: {
     state_payload: StructuralStatePayload | null;
   };
 
-  const snapshotsChrono: (SnapshotMeta & { ts: number })[] = [...snapshotRows]
+  const snapshotsChrono = [...snapshotRows]
     .map((row: any) => {
       const generated_at = (row.generated_at as string | null) ?? null;
       if (!generated_at) return null;
@@ -105,7 +105,7 @@ export async function loadProjectView(params: {
         snapshot_text: (row.snapshot_text as string | null) ?? null,
         state_payload: (row.state_payload as StructuralStatePayload | null) ?? null,
         ts,
-      };
+      } as SnapshotMeta & { ts: number };
     })
     .filter((row): row is SnapshotMeta & { ts: number } => !!row)
     .sort((a, b) => a.ts - b.ts); // oldest → newest
