@@ -483,11 +483,11 @@ function HorizontalSnapshotTimeline(props: {
             <div className="group relative">
               <div className="h-2 w-2 rounded-full bg-[rgb(var(--text))]" />
               <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <div className="max-w-[260px] rounded-md border border-[rgb(var(--ring)/0.12)] bg-[rgb(var(--surface))] px-2 py-1 shadow-sm">
+                <div className="max-w-[260px] min-w-[180px] rounded-md border border-[rgb(var(--ring)/0.12)] bg-[rgb(var(--surface))] px-2 py-1 shadow-sm">
                   <div className="text-[10px] font-medium text-[rgb(var(--text))]">
                     {item.dateLabel}
                   </div>
-                  <div className="mt-1 text-[10px] text-[rgb(var(--muted))] whitespace-pre-line">
+                  <div className="mt-1 text-[10px] text-[rgb(var(--muted))] whitespace-normal break-words">
                     {item.summary}
                   </div>
                 </div>
