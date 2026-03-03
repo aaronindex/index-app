@@ -141,56 +141,35 @@ export default function MagicHomeScreen() {
     return () => clearTimeout(timeout);
   }, []);
 
-  // Early returns after all hooks
-  if (loading) {
-    return (
-      <div className="space-y-8">
-        {/* Content Skeleton */}
-        <div className="space-y-4">
-          <div className="h-7 bg-[rgb(var(--surface2))] rounded w-1/4 animate-pulse"></div>
-          {[1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className="p-4 rounded-xl bg-[rgb(var(--surface))] ring-1 ring-[rgb(var(--ring)/0.08)] animate-pulse"
-            >
-              <div className="h-5 bg-[rgb(var(--surface2))] rounded w-3/4 mb-2"></div>
-              <div className="h-4 bg-[rgb(var(--surface2))] rounded w-full"></div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
+  // Show onboarding if not completed (null means still checking, so don't show yet)
+  const showOnboarding = onboardingCompleted === false;
 
-  if (error) {
-    return (
-      <div className="text-center py-12">
-        <div className="max-w-md mx-auto p-6 rounded-xl bg-red-50 dark:bg-red-900/20 ring-1 ring-red-200 dark:ring-red-800">
-          <p className="text-red-800 dark:text-red-400 mb-4">{error}</p>
+  // Don't block entire page on home data load (same pattern as ReadTab): show layout
+  // immediately; digest and post-import modal use data when ready.
+  const hasData = !!data;
+  const latestDigest = data?.latestDigest ?? null;
+  const hasConversations = data?.hasConversations ?? false;
+  const hasProjects = data?.hasProjects ?? false;
+
+  return (
+    <div className="space-y-8">
+      {/* Inline error when home data fails - don't block layout */}
+      {error && (
+        <div className="p-4 rounded-xl bg-red-50 dark:bg-red-900/20 ring-1 ring-red-200 dark:ring-red-800 flex items-center justify-between gap-4">
+          <p className="text-red-800 dark:text-red-400 text-sm">{error}</p>
           <button
             onClick={() => {
               setError(null);
               setLoading(true);
               fetchHomeData();
             }}
-            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:opacity-90 transition-opacity font-medium"
+            className="shrink-0 px-4 py-2 bg-red-600 text-white rounded-lg hover:opacity-90 transition-opacity font-medium text-sm"
           >
             Try Again
           </button>
         </div>
-      </div>
-    );
-  }
+      )}
 
-  if (!data) {
-    return null;
-  }
-
-  // Show onboarding if not completed (null means still checking, so don't show yet)
-  const showOnboarding = onboardingCompleted === false;
-
-  return (
-    <div className="space-y-8">
       {/* Onboarding Flow - Show at top on first login */}
       {showOnboarding && (
         <OnboardingFlow
@@ -264,20 +243,22 @@ export default function MagicHomeScreen() {
           <p className="text-sm text-[rgb(var(--muted))] mb-4">
             Summarize what shifted this week.
           </p>
-          {data.latestDigest ? (
+          {loading && !hasData ? (
+            <div className="text-sm text-[rgb(var(--muted))]">Loading...</div>
+          ) : latestDigest ? (
             <>
               <div className="mb-4 pb-4 border-b border-[rgb(var(--ring)/0.08)]">
-                <Link href={`/digests/${data.latestDigest.id}`} className="block">
+                <Link href={`/digests/${latestDigest.id}`} className="block">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm font-medium text-[rgb(var(--muted))]">
-                      {formatDate(data.latestDigest.week_start)} - {formatDate(data.latestDigest.week_end)}
+                      {formatDate(latestDigest.week_start)} - {formatDate(latestDigest.week_end)}
                     </span>
                     <span className="text-sm text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] transition-colors">
                       View full →
                     </span>
                   </div>
                   <p className="text-[rgb(var(--text))] line-clamp-2 text-sm">
-                    {data.latestDigest.summary}
+                    {latestDigest.summary}
                   </p>
                 </Link>
               </div>
@@ -292,7 +273,7 @@ export default function MagicHomeScreen() {
 
       {/* Post-Import Modal - Has conversations but no content yet */}
       <PostImportModal
-        isOpen={data.hasConversations && stillOpenItems.length === 0 && !data.latestDigest && !postImportModalDismissed}
+        isOpen={hasConversations && stillOpenItems.length === 0 && !latestDigest && !postImportModalDismissed}
         onClose={() => {
           setPostImportModalDismissed(true);
         }}
