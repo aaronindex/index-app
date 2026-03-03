@@ -36,7 +36,7 @@ const PRO_MAX_DIGEST_PER_30D = parseInt(process.env.PRO_MAX_DIGEST_PER_30D || '3
 
 export const FREE_USER_LIMITS = {
   maxActiveProjects: FREE_MAX_ACTIVE_PROJECTS,
-  importsPer24h: 3,
+  importsPer24h: 20,
   askQueriesPer24h: FREE_MAX_ASK_PER_24H,
   meaningObjectsPer24h: 20, // highlights + tasks + decisions
   assetsPerProject: 50,
