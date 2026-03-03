@@ -59,7 +59,6 @@ export default function ReadTab({
   sourceCount,
 }: ReadTabProps) {
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
   const [stillUnfolding, setStillUnfolding] = useState<StillUnfoldingItem[]>([]);
   const [recentDecisions, setRecentDecisions] = useState<RecentDecision[]>([]);
   const [nextTasks, setNextTasks] = useState<NextTask[]>([]);
@@ -111,15 +110,13 @@ export default function ReadTab({
 
       } catch (error) {
         console.error('Error fetching read data:', error);
-      } finally {
-        setLoading(false);
       }
     }
     fetchReadData();
   }, [projectId]);
 
   // Show empty state if no conversations
-  if (!loading && hasConversations === false) {
+  if (hasConversations === false) {
     return (
       <div className="max-w-2xl mx-auto">
         <div className="p-12 text-center border border-[rgb(var(--ring)/0.08)] rounded-lg">
@@ -135,19 +132,6 @@ export default function ReadTab({
           >
             Import chat
           </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (loading) {
-    return (
-      <div className="space-y-8 max-w-3xl">
-        <div className="h-6 bg-zinc-200 dark:bg-zinc-800 rounded w-1/3 animate-pulse"></div>
-        <div className="space-y-4">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-16 bg-zinc-200 dark:bg-zinc-800 rounded animate-pulse"></div>
-          ))}
         </div>
       </div>
     );
