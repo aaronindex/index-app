@@ -170,7 +170,7 @@ export default function ReadTab({
   return (
     <div className="space-y-8 max-w-3xl">
       {/* Collapse block: visible transformation summary */}
-      <div className="border border-[rgb(var(--ring)/0.08)] rounded-lg px-4 py-3 mt-1 mb-6">
+      <div className="border border-[rgb(var(--ring)/0.08)] rounded-lg px-4 py-2.5 mt-1 mb-6">
         <div className="flex flex-col items-center text-center gap-1.5">
           <div className="text-sm font-medium text-[rgb(var(--text))]">
             {typeof sourceCount === 'number' && sourceCount > 0
@@ -199,14 +199,10 @@ export default function ReadTab({
           Active Arcs
         </h2>
         {activeArcs.length > 0 ? (
-          <ul className="list-disc list-inside space-y-1 text-sm text-[rgb(var(--text))]">
+          <ul className="space-y-1 text-sm text-[rgb(var(--text))]">
             {activeArcs.map((arc, index) => {
               const label = arc.title || `Arc ${index + 1}`;
-              return (
-                <li key={arc.id}>
-                  {label}
-                </li>
-              );
+              return <li key={arc.id}>{label}</li>;
             })}
           </ul>
         ) : (
@@ -216,37 +212,46 @@ export default function ReadTab({
 
       {/* Snapshot */}
       <div>
-        <h2 className="font-serif text-lg font-semibold text-[rgb(var(--text))] mb-3">
-          Project Snapshot
-        </h2>
-      <div className="border border-[rgb(var(--ring)/0.08)] rounded-lg p-4">
-        {snapshotUpdatedLabel && (
-          <p className="text-xs text-[rgb(var(--muted))] mb-2">{snapshotUpdatedLabel}</p>
-        )}
-        <div className="text-sm text-[rgb(var(--text))] whitespace-pre-wrap space-y-1">
-          {latestSnapshotOutcomeText && latestSnapshotOutcomeText.trim().length > 0 && (
-            <p className="font-medium">{latestSnapshotOutcomeText.trim()}</p>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-serif text-lg font-semibold text-[rgb(var(--text))]">
+            Project Snapshot
+          </h2>
+          <button
+            type="button"
+            onClick={() => {
+              // TODO: wire up to Record Result modal
+            }}
+            className="px-2.5 py-1 text-xs font-medium rounded border border-[rgb(var(--ring)/0.16)] text-[rgb(var(--text))] hover:bg-[rgb(var(--surface2))] transition-colors"
+          >
+            Record result
+          </button>
+        </div>
+        <div className="border border-[rgb(var(--ring)/0.08)] rounded-lg p-4">
+          {snapshotUpdatedLabel && (
+            <p className="text-xs text-[rgb(var(--muted))] mb-2">{snapshotUpdatedLabel}</p>
           )}
-          <p>
-            {arcsCount === 0
-              ? 'No arcs active.'
-              : arcsCount === 1
-              ? 'One arc active.'
-              : `${arcsCount} arcs active.`}
-          </p>
-          <p>
-            {decisionsCount === 0
-              ? 'No unresolved decisions.'
-              : decisionsCount === 1
-              ? 'One unresolved decision.'
-              : `${decisionsCount} unresolved decisions.`}
-          </p>
-          {!latestSnapshotOutcomeText && <p>Exploration ongoing.</p>}
+          <div className="text-sm text-[rgb(var(--text))] whitespace-pre-wrap space-y-1">
+            {latestSnapshotOutcomeText && latestSnapshotOutcomeText.trim().length > 0 && (
+              <p className="font-medium">{latestSnapshotOutcomeText.trim()}</p>
+            )}
+            <p>
+              {arcsCount === 0
+                ? 'No arcs active.'
+                : arcsCount === 1
+                ? 'One arc active.'
+                : `${arcsCount} arcs active.`}
+            </p>
+            <p>Exploration ongoing.</p>
+            <p>
+              {decisionsCount === 0
+                ? 'No unresolved decisions.'
+                : decisionsCount === 1
+                ? 'One unresolved decision.'
+                : `${decisionsCount} unresolved decisions.`}
+            </p>
+          </div>
         </div>
       </div>
-      </div>
-
-      <hr className="my-6 border-[rgb(var(--ring)/0.08)]" />
 
       {/* Open Decisions (from active tensions) */}
       <div>
@@ -478,7 +483,7 @@ function HorizontalSnapshotTimeline(props: {
             <div className="group relative">
               <div className="h-2 w-2 rounded-full bg-[rgb(var(--text))]" />
               <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <div className="max-w-[240px] rounded-md border border-[rgb(var(--ring)/0.12)] bg-[rgb(var(--surface))] px-2 py-1 shadow-sm">
+                <div className="max-w-[260px] rounded-md border border-[rgb(var(--ring)/0.12)] bg-[rgb(var(--surface))] px-2 py-1 shadow-sm">
                   <div className="text-[10px] font-medium text-[rgb(var(--text))]">
                     {item.dateLabel}
                   </div>

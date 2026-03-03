@@ -4,7 +4,6 @@
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
 // Start chat is reserved for project-level re-entry; no per-task start chat.
-import TaskStatusControl from './TaskStatusControl';
 import DeleteTaskButton from './DeleteTaskButton';
 import ActiveFilterPills from './ActiveFilterPills';
 import ToggleInactiveButton from './ToggleInactiveButton';
@@ -135,22 +134,23 @@ export default function TasksTab({ tasks, projectId }: TasksTabProps) {
       >
         <div className="p-4">
           <div className="flex items-start justify-between mb-2">
-            <div className="flex-1 flex items-center gap-2 flex-wrap">
-              <h3 className="font-medium text-sm text-[rgb(var(--text))]">
+            <div className="flex-1">
+              <h3 className="font-semibold text-sm text-[rgb(var(--text))]">
                 {task.title}
               </h3>
+            </div>
+            <div className="flex items-center gap-1">
               {badgeLabel && (
                 <span className={`px-2 py-0.5 text-[10px] font-medium rounded-md ${badgeColor}`}>
                   {badgeLabel}
                 </span>
               )}
               {task.is_inactive && (
-                <span className="px-2 py-0.5 text-xs font-medium rounded-md bg-[rgb(var(--surface2))] text-[rgb(var(--muted))]">
+                <span className="px-2 py-0.5 text-[10px] font-medium rounded-md bg-[rgb(var(--surface2))] text-[rgb(var(--muted))]">
                   Inactive
                 </span>
               )}
             </div>
-            <TaskStatusControl taskId={task.id} currentStatus={task.status} />
           </div>
           {cleanDescription && (
             <p className="text-[rgb(var(--text))] mb-3 text-sm">

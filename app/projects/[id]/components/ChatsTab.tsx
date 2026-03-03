@@ -84,7 +84,7 @@ export default function ChatsTab({ conversations, projectId }: ChatsTabProps) {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <SectionHeader
         action={
           <button
@@ -98,7 +98,7 @@ export default function ChatsTab({ conversations, projectId }: ChatsTabProps) {
         Sources
       </SectionHeader>
 
-      <p className="text-sm text-[rgb(var(--muted))]">
+      <p className="mt-1 text-sm text-[rgb(var(--muted))]">
         Sources are the raw material of this project — full chats or selected segments.
       </p>
 
@@ -123,11 +123,11 @@ export default function ChatsTab({ conversations, projectId }: ChatsTabProps) {
           </button>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2.5">
           {filteredConversations.map((conversation) => (
             <div
               key={conversation.id}
-              className={`rounded-xl bg-[rgb(var(--surface))] shadow-sm ring-1 ring-[rgb(var(--ring)/0.08)] p-4 transition-all ${
+              className={`rounded-xl bg-[rgb(var(--surface))] shadow-sm ring-1 ring-[rgb(var(--ring)/0.08)] px-4 py-3 transition-all ${
                 conversation.is_inactive
                   ? 'opacity-60'
                   : 'hover:shadow-md hover:ring-[rgb(var(--ring)/0.12)]'
@@ -138,8 +138,8 @@ export default function ChatsTab({ conversations, projectId }: ChatsTabProps) {
                   href={`/conversations/${conversation.id}`}
                   className="flex-1"
                 >
-                  <div className="flex items-center gap-3 mb-2">
-                    <h3 className="font-medium text-[rgb(var(--text))]">
+                  <div className="flex items-center gap-3 mb-1.5">
+                    <h3 className="font-medium text-sm text-[rgb(var(--text))]">
                       {conversation.title || 'Untitled Chat'}
                     </h3>
                     <StatusPill status={conversation.status} />
@@ -149,7 +149,7 @@ export default function ChatsTab({ conversations, projectId }: ChatsTabProps) {
                       </span>
                     )}
                   </div>
-                  <div className="flex items-center gap-4 text-sm text-[rgb(var(--muted))]">
+                  <div className="flex items-center gap-4 text-xs text-[rgb(var(--muted))]">
                     <span>Updated: {formatDate(conversation.updated_at)}</span>
                   </div>
                 </Link>
