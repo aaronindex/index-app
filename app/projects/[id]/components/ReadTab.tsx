@@ -170,29 +170,25 @@ export default function ReadTab({
   return (
     <div className="space-y-8 max-w-3xl">
       {/* Collapse block: visible transformation summary */}
-      <div className="border border-[rgb(var(--ring)/0.08)] rounded-lg px-5 py-4 mt-1 mb-8">
-        <div className="flex flex-col items-center text-center gap-2">
-          <div className="font-serif text-xl font-semibold text-[rgb(var(--text))]">
+      <div className="border border-[rgb(var(--ring)/0.08)] rounded-lg px-4 py-3 mt-1 mb-6">
+        <div className="flex flex-col items-center text-center gap-1.5">
+          <div className="text-sm font-medium text-[rgb(var(--text))]">
             {typeof sourceCount === 'number' && sourceCount > 0
-              ? `Distilled ${sourceCount} ${sourceCount === 1 ? 'Source' : 'Sources'}`
+              ? `Distilled from ${sourceCount} ${sourceCount === 1 ? 'source' : 'sources'}`
               : 'Distilled'}
           </div>
           {typeof sourceCount === 'number' && sourceCount > 0 && (
-            <div className="text-lg leading-none">↓</div>
+            <div className="text-base leading-none">↓</div>
           )}
-          <div className="text-sm text-[rgb(var(--text))] font-medium">
+          <div className="text-xs text-[rgb(var(--text))] font-medium">
             <span className="font-semibold">{decisionsCount}</span>{' '}
-            {decisionsCount === 1 ? 'Decision' : 'Decisions'}
+            {decisionsCount === 1 ? 'decision' : 'decisions'}
             {' · '}
             <span className="font-semibold">{tasksCount}</span>{' '}
-            {tasksCount === 1 ? 'Task' : 'Tasks'}
-            {arcsCount > 0 && (
-              <>
-                {' · '}
-                <span className="font-semibold">{arcsCount}</span>{' '}
-                {arcsCount === 1 ? 'Arc' : 'Arcs'}
-              </>
-            )}
+            {tasksCount === 1 ? 'task' : 'tasks'}
+            {' · '}
+            <span className="font-semibold">{arcsCount}</span>{' '}
+            {arcsCount === 1 ? 'arc' : 'arcs'}
           </div>
         </div>
       </div>
@@ -204,14 +200,11 @@ export default function ReadTab({
         </h2>
         {activeArcs.length > 0 ? (
           <ul className="list-disc list-inside space-y-1 text-sm text-[rgb(var(--text))]">
-            {activeArcs.map((arc) => {
-              const label = arc.title || 'Untitled arc';
+            {activeArcs.map((arc, index) => {
+              const label = arc.title || `Arc ${index + 1}`;
               return (
                 <li key={arc.id}>
                   {label}
-                  {arc.status && (
-                    <span className="text-xs text-[rgb(var(--muted))]"> — {arc.status}</span>
-                  )}
                 </li>
               );
             })}
@@ -222,16 +215,38 @@ export default function ReadTab({
       </div>
 
       {/* Snapshot */}
+      <div>
+        <h2 className="font-serif text-lg font-semibold text-[rgb(var(--text))] mb-3">
+          Project Snapshot
+        </h2>
       <div className="border border-[rgb(var(--ring)/0.08)] rounded-lg p-4">
         {snapshotUpdatedLabel && (
           <p className="text-xs text-[rgb(var(--muted))] mb-2">{snapshotUpdatedLabel}</p>
         )}
-        <div className="text-sm text-[rgb(var(--text))] whitespace-pre-wrap">
-          {snapshotText && snapshotText.trim()
-            ? snapshotText
-            : 'Snapshot text not yet generated.'}
+        <div className="text-sm text-[rgb(var(--text))] whitespace-pre-wrap space-y-1">
+          {latestSnapshotOutcomeText && latestSnapshotOutcomeText.trim().length > 0 && (
+            <p className="font-medium">{latestSnapshotOutcomeText.trim()}</p>
+          )}
+          <p>
+            {arcsCount === 0
+              ? 'No arcs active.'
+              : arcsCount === 1
+              ? 'One arc active.'
+              : `${arcsCount} arcs active.`}
+          </p>
+          <p>
+            {decisionsCount === 0
+              ? 'No unresolved decisions.'
+              : decisionsCount === 1
+              ? 'One unresolved decision.'
+              : `${decisionsCount} unresolved decisions.`}
+          </p>
+          {!latestSnapshotOutcomeText && <p>Exploration ongoing.</p>}
         </div>
       </div>
+      </div>
+
+      <hr className="my-6 border-[rgb(var(--ring)/0.08)]" />
 
       {/* Open Decisions (from active tensions) */}
       <div>
@@ -243,7 +258,7 @@ export default function ReadTab({
             href={`/projects/${projectId}/decisions?tab=decisions`}
             className="text-xs text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] transition-colors"
           >
-            View
+            View all decisions
           </Link>
         </div>
         {openDecisions.length > 0 ? (
@@ -276,6 +291,8 @@ export default function ReadTab({
         )}
       </div>
 
+      <hr className="my-6 border-[rgb(var(--ring)/0.08)]" />
+
       {/* Open Tasks (tasks that still carry weight) */}
       <div>
         <div className="flex items-center justify-between mb-3">
@@ -286,7 +303,7 @@ export default function ReadTab({
             href={`/projects/${projectId}/tasks?tab=tasks`}
             className="text-xs text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] transition-colors"
           >
-            View
+            View all tasks
           </Link>
         </div>
         {totalOpenTasks > 0 ? (
@@ -328,6 +345,8 @@ export default function ReadTab({
           <p className="text-sm text-[rgb(var(--muted))]">No open tasks.</p>
         )}
       </div>
+
+      <hr className="my-6 border-[rgb(var(--ring)/0.08)]" />
 
       {/* Motion Timeline (snapshot-based, horizontal) */}
       <HorizontalSnapshotTimeline snapshots={projectSnapshots} />
@@ -446,7 +465,7 @@ function HorizontalSnapshotTimeline(props: {
   return (
     <div>
       <h2 className="font-serif text-lg font-semibold text-[rgb(var(--text))] mb-3">
-        Motion Timeline
+        Timeline
       </h2>
       <div className="relative h-12">
         <div className="absolute top-1/2 left-0 right-0 h-px bg-[rgb(var(--ring)/0.12)]" />
@@ -459,7 +478,7 @@ function HorizontalSnapshotTimeline(props: {
             <div className="group relative">
               <div className="h-2 w-2 rounded-full bg-[rgb(var(--text))]" />
               <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <div className="max-w-xs rounded-md border border-[rgb(var(--ring)/0.12)] bg-[rgb(var(--surface))] px-2 py-1 shadow-sm">
+                <div className="max-w-[240px] rounded-md border border-[rgb(var(--ring)/0.12)] bg-[rgb(var(--surface))] px-2 py-1 shadow-sm">
                   <div className="text-[10px] font-medium text-[rgb(var(--text))]">
                     {item.dateLabel}
                   </div>
