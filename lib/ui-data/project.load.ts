@@ -172,7 +172,7 @@ export async function loadProjectView(params: {
   }
 
   // Dedupe consecutive snapshots with identical state_hash for timeline purposes.
-  type TimelineSnapshot = SnapshotMeta & SnapshotIntervalMeta;
+  type TimelineSnapshot = SnapshotMeta & SnapshotIntervalMeta & { ts: number };
 
   const dedupedTimelineSnapshots: TimelineSnapshot[] = [];
   let currentGroup: TimelineSnapshot[] = [];
