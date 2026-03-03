@@ -29,7 +29,7 @@ function isDevEnv(): boolean {
 export async function dispatchStructureRecompute(
   params: DispatchStructureRecomputeParams
 ): Promise<void> {
-  const { supabaseClient, user_id, scope, reason, debounce_key } = params;
+  const { supabaseClient, user_id, scope, project_id, reason, debounce_key } = params;
 
   // Generate debounce key if not provided
   const finalDebounceKey = debounce_key || generateDebounceKey(scope, reason);
@@ -38,6 +38,7 @@ export async function dispatchStructureRecompute(
   const jobPayload: StructureJobPayload = {
     scope,
     user_id,
+    project_id: project_id ?? null,
     reason,
     debounce_key: finalDebounceKey,
   };
@@ -50,6 +51,7 @@ export async function dispatchStructureRecompute(
       console.log('[StructureDispatch][Enqueued]', {
         user_id,
         scope,
+        project_id: project_id ?? null,
         reason,
         debounce_key: finalDebounceKey,
         job_id: result.job_id,

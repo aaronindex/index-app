@@ -89,6 +89,10 @@ export async function runStructureJob(
     reason: string;
   };
 
+  // For now, structural processing is always user-level.
+  // Scope (user/project) is treated as metadata for dedupe and logging.
+  const structureScope: "user" = "user";
+
   // Mark running
   const startedAt = new Date().toISOString();
   await supabaseAdminClient
@@ -115,7 +119,7 @@ export async function runStructureJob(
     const structuralPayload = await inferArcsAndBuildState(
       supabaseAdminClient,
       payload.user_id,
-      payload.scope as "user",
+      structureScope,
       sortedSignals,
       nowIso
     );
@@ -127,7 +131,7 @@ export async function runStructureJob(
     const latestSnapshot = await loadLatestSnapshot(
       supabaseAdminClient,
       payload.user_id,
-      payload.scope
+      structureScope
     );
 
     // Dev-only: log hash comparison for snapshot debugging
@@ -173,7 +177,7 @@ export async function runStructureJob(
     const { snapshot_id } = await writeSnapshotState(
       supabaseAdminClient,
       payload.user_id,
-      payload.scope,
+      structureScope,
       stateHash,
       structuralPayload,
       null
@@ -183,7 +187,7 @@ export async function runStructureJob(
     const pulseTypes = await createMinimalPulses(
       supabaseAdminClient,
       payload.user_id,
-      payload.scope,
+      structureScope,
       prevPayload,
       structuralPayload,
       stateHash
@@ -218,7 +222,7 @@ export async function runStructureJob(
         const projectPayload = await inferArcsAndBuildState(
           supabaseAdminClient,
           payload.user_id,
-          payload.scope as "user",
+          structureScope,
           projectSignals,
           nowIso
         );

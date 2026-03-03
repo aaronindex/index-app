@@ -17,7 +17,10 @@ interface ReadTabProps {
     generated_at: string | null;
     snapshot_text: string | null;
     state_payload: any | null;
+    hasOutcome: boolean;
+    latestOutcomeText: string | null;
   }>;
+  latestSnapshotOutcomeText?: string | null;
   sourceCount?: number | null;
 }
 
@@ -52,6 +55,7 @@ export default function ReadTab({
   snapshotGeneratedAt,
   activeArcs,
   projectSnapshots,
+  latestSnapshotOutcomeText,
   sourceCount,
 }: ReadTabProps) {
   const router = useRouter();

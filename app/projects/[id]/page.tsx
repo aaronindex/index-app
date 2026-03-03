@@ -325,6 +325,7 @@ export default async function ProjectDetailPage({
                 snapshotGeneratedAt={projectViewData?.snapshotGeneratedAt ?? null}
                 activeArcs={projectViewData?.activeArcs ?? []}
                 projectSnapshots={projectViewData?.projectSnapshots ?? []}
+                latestSnapshotOutcomeText={projectViewData?.latestSnapshotOutcomeText ?? null}
                 sourceCount={sourceCount}
               />
             )}

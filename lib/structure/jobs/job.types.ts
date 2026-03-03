@@ -3,9 +3,11 @@
 
 /**
  * Structure job scope
- * Minimal for now - only user-level
+ *
+ * - "user": global/user-level structural state
+ * - "project": project-scoped recompute trigger (payload may include project_id)
  */
-export type StructureScope = "user";
+export type StructureScope = "user" | "project";
 
 /**
  * Structure job type
@@ -29,11 +31,14 @@ export type StructureJobStatus =
 export type StructureJobPayload = {
   scope: StructureScope;
   user_id: string;
+  // Optional project context for project-scoped recomputes
+  project_id?: string | null;
   reason:
     | "ingestion"
     | "decision_change"
     | "manual"
-    | "backfill";
+    | "backfill"
+    | "outcome_recorded";
   debounce_key?: string; // used for dedupe
 };
 

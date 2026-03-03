@@ -21,7 +21,10 @@ export type ProjectViewData = {
     generated_at: string | null;
     snapshot_text: string | null;
     state_payload: StructuralStatePayload | null;
+    hasOutcome: boolean;
+    latestOutcomeText: string | null;
   }>;
+  latestSnapshotOutcomeText: string | null;
   activeArcs: Array<{
     id: string;
     title: string | null;
@@ -58,26 +61,198 @@ export async function loadProjectView(params: {
   // Load project-scoped snapshot history (capped) including editorial text + timestamps
   const { data: snapshots } = await supabaseClient
     .from('snapshot_state')
-    .select('id, state_payload, snapshot_text, generated_at, project_id')
+    .select('id, state_hash, state_payload, snapshot_text, generated_at, project_id')
     .eq('user_id', user_id)
     .eq('scope', 'project')
     .eq('project_id', project_id)
-    // Oldest → newest for stable left-to-right timeline spacing.
-    .order('generated_at', { ascending: true })
-    .limit(60);
+    // Newest first; we'll derive chronological order in code below.
+    .order('generated_at', { ascending: false })
+    .limit(50);
 
-  // Snapshot history for UI (horizontal timeline)
-  const projectSnapshots =
-    snapshots?.map((row: any) => ({
-      id: row.id as string,
-      generated_at: (row.generated_at as string | null) ?? null,
-      snapshot_text: (row.snapshot_text as string | null) ?? null,
-      state_payload: (row.state_payload as StructuralStatePayload | null) ?? null,
-    })) ?? [];
+  const snapshotRows = snapshots ?? [];
 
-  // Latest / previous payloads for existing consumers (derive from history)
+  // Fetch recent project outcomes (newest first, capped)
+  const { data: outcomes } = await supabaseClient
+    .from('project_outcome')
+    .select('id, text, occurred_at, created_at, project_id')
+    .eq('user_id', user_id)
+    .eq('project_id', project_id)
+    .order('occurred_at', { ascending: false })
+    .order('created_at', { ascending: false })
+    .limit(50);
+
+  const outcomeRows = outcomes ?? [];
+
+  // Prepare snapshot timeline metadata: assign outcomes to snapshot intervals.
+  type SnapshotMeta = {
+    id: string;
+    generated_at: string | null;
+    state_hash: string | null;
+    snapshot_text: string | null;
+    state_payload: StructuralStatePayload | null;
+  };
+
+  const snapshotsChrono: (SnapshotMeta & { ts: number })[] = [...snapshotRows]
+    .map((row: any) => {
+      const generated_at = (row.generated_at as string | null) ?? null;
+      if (!generated_at) return null;
+      const ts = new Date(generated_at).getTime();
+      if (Number.isNaN(ts)) return null;
+      return {
+        id: row.id as string,
+        generated_at,
+        state_hash: (row.state_hash as string | null) ?? null,
+        snapshot_text: (row.snapshot_text as string | null) ?? null,
+        state_payload: (row.state_payload as StructuralStatePayload | null) ?? null,
+        ts,
+      };
+    })
+    .filter((row): row is SnapshotMeta & { ts: number } => !!row)
+    .sort((a, b) => a.ts - b.ts); // oldest → newest
+
+  type OutcomeMeta = {
+    id: string;
+    text: string;
+    occurred_at: string;
+    ts: number;
+  };
+
+  const outcomesChrono: OutcomeMeta[] = [...outcomeRows]
+    .map((row: any) => {
+      const occurred_at = (row.occurred_at as string | null) ?? (row.created_at as string | null) ?? null;
+      if (!occurred_at) return null;
+      const ts = new Date(occurred_at).getTime();
+      if (Number.isNaN(ts)) return null;
+      return {
+        id: row.id as string,
+        text: String(row.text ?? '').trim(),
+        occurred_at,
+        ts,
+      };
+    })
+    .filter((row): row is OutcomeMeta => !!row && !!row.text)
+    .sort((a, b) => a.ts - b.ts); // oldest → newest
+
+  // Assign outcomes to snapshot intervals (prev, current] in chronological order.
+  type SnapshotIntervalMeta = {
+    hasOutcome: boolean;
+    latestOutcomeText: string | null;
+  };
+  const snapshotIntervalMeta = new Map<string, SnapshotIntervalMeta>();
+
+  let outcomeIndex = 0;
+  let prevTs = Number.NEGATIVE_INFINITY;
+
+  for (const snap of snapshotsChrono) {
+    const upperTs = snap.ts;
+    const intervalOutcomes: OutcomeMeta[] = [];
+
+    while (outcomeIndex < outcomesChrono.length && outcomesChrono[outcomeIndex]!.ts <= upperTs) {
+      const candidate = outcomesChrono[outcomeIndex]!;
+      if (candidate.ts > prevTs) {
+        intervalOutcomes.push(candidate);
+      }
+      outcomeIndex += 1;
+    }
+
+    if (intervalOutcomes.length > 0) {
+      const latest = intervalOutcomes[intervalOutcomes.length - 1]!;
+      snapshotIntervalMeta.set(snap.id, {
+        hasOutcome: true,
+        latestOutcomeText: latest.text,
+      });
+    } else {
+      snapshotIntervalMeta.set(snap.id, {
+        hasOutcome: false,
+        latestOutcomeText: null,
+      });
+    }
+
+    prevTs = upperTs;
+  }
+
+  // Dedupe consecutive snapshots with identical state_hash for timeline purposes.
+  type TimelineSnapshot = SnapshotMeta & SnapshotIntervalMeta;
+
+  const dedupedTimelineSnapshots: TimelineSnapshot[] = [];
+  let currentGroup: TimelineSnapshot[] = [];
+
+  for (const snap of snapshotsChrono) {
+    const interval = snapshotIntervalMeta.get(snap.id) ?? {
+      hasOutcome: false,
+      latestOutcomeText: null,
+    };
+    const enriched: TimelineSnapshot = {
+      id: snap.id,
+      generated_at: snap.generated_at,
+      state_hash: snap.state_hash,
+      snapshot_text: snap.snapshot_text,
+      state_payload: snap.state_payload,
+      hasOutcome: interval.hasOutcome,
+      latestOutcomeText: interval.latestOutcomeText,
+      ts: snap.ts,
+    };
+
+    if (currentGroup.length === 0) {
+      currentGroup.push(enriched);
+      continue;
+    }
+
+    const lastInGroup = currentGroup[currentGroup.length - 1]!;
+    if (lastInGroup.state_hash && enriched.state_hash && lastInGroup.state_hash === enriched.state_hash) {
+      currentGroup.push(enriched);
+    } else {
+      // Finalize previous group: keep newest (last), merge outcome flags/text.
+      const groupNewest = currentGroup[currentGroup.length - 1]!;
+      const groupHasOutcome = currentGroup.some((s) => s.hasOutcome);
+      const groupLatestOutcomeText =
+        [...currentGroup]
+          .filter((s) => s.hasOutcome && s.latestOutcomeText)
+          .map((s) => s.latestOutcomeText as string)
+          .pop() ?? null;
+
+      dedupedTimelineSnapshots.push({
+        ...groupNewest,
+        hasOutcome: groupHasOutcome,
+        latestOutcomeText: groupLatestOutcomeText,
+      });
+
+      currentGroup = [enriched];
+    }
+  }
+
+  if (currentGroup.length > 0) {
+    const groupNewest = currentGroup[currentGroup.length - 1]!;
+    const groupHasOutcome = currentGroup.some((s) => s.hasOutcome);
+    const groupLatestOutcomeText =
+      [...currentGroup]
+        .filter((s) => s.hasOutcome && s.latestOutcomeText)
+        .map((s) => s.latestOutcomeText as string)
+        .pop() ?? null;
+
+    dedupedTimelineSnapshots.push({
+      ...groupNewest,
+      hasOutcome: groupHasOutcome,
+      latestOutcomeText: groupLatestOutcomeText,
+    });
+  }
+
+  // Snapshot history for UI (horizontal timeline, newest last for left-to-right)
+  const projectSnapshots = dedupedTimelineSnapshots
+    .slice()
+    .sort((a, b) => a.ts - b.ts)
+    .map((snap) => ({
+      id: snap.id,
+      generated_at: snap.generated_at,
+      snapshot_text: snap.snapshot_text,
+      state_payload: snap.state_payload,
+      hasOutcome: snap.hasOutcome,
+      latestOutcomeText: snap.latestOutcomeText,
+    }));
+
+  // Latest / previous payloads for existing consumers (derive from full history, newest first)
   const latestSnapshotRow =
-    snapshots && snapshots.length > 0 ? snapshots[snapshots.length - 1] : null;
+    snapshotRows && snapshotRows.length > 0 ? snapshotRows[0] : null;
   const latestSnapshotPayload: StructuralStatePayload | null =
     latestSnapshotRow && latestSnapshotRow.state_payload
       ? (latestSnapshotRow.state_payload as StructuralStatePayload)
@@ -97,6 +272,13 @@ export async function loadProjectView(params: {
     latestSnapshotRow && 'snapshot_text' in latestSnapshotRow
       ? ((latestSnapshotRow as { snapshot_text: string | null }).snapshot_text ?? null)
       : null;
+
+  // Latest outcome text for the latest snapshot interval (if any)
+  let latestSnapshotOutcomeText: string | null = null;
+  if (projectSnapshots.length > 0) {
+    const latestTimelineSnapshot = projectSnapshots[projectSnapshots.length - 1]!;
+    latestSnapshotOutcomeText = latestTimelineSnapshot.latestOutcomeText ?? null;
+  }
 
   // Resolve active arcs for this project from snapshot payload + arc tables (read-only)
   let activeArcs: Array<{ id: string; title: string | null; status: string | null }> = [];
@@ -160,6 +342,7 @@ export async function loadProjectView(params: {
     snapshotText,
     snapshotGeneratedAt,
     projectSnapshots,
+    latestSnapshotOutcomeText,
     activeArcs,
     timelineEvents,
   };
