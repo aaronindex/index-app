@@ -66,9 +66,21 @@ export default function ToggleInactiveButton({ type, id, isInactive, onToggle }:
       onClick={handleToggle}
       disabled={loading}
       className="text-xs text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] transition-colors disabled:opacity-50"
-      title={isInactive ? 'Mark as active' : 'Mark as inactive'}
+      title={
+        isInactive
+          ? 'Mark as active'
+          : type === 'decision' || type === 'task'
+            ? 'Mark as resolved'
+            : 'Mark as inactive'
+      }
     >
-      {loading ? '...' : isInactive ? 'Mark active' : 'Mark inactive'}
+      {loading
+        ? '...'
+        : isInactive
+          ? 'Mark active'
+          : type === 'decision' || type === 'task'
+            ? 'Mark resolved'
+            : 'Mark inactive'}
     </button>
   );
 }

@@ -91,12 +91,16 @@ export default function ChatsTab({ conversations, projectId }: ChatsTabProps) {
             onClick={() => router.push(`/import?project=${projectId}`)}
             className="px-4 py-2 bg-[rgb(var(--text))] text-[rgb(var(--bg))] rounded-lg hover:opacity-90 transition-opacity font-medium text-sm"
           >
-            Import chats
+            Import sources
           </button>
         }
       >
-        Chats
+        Sources
       </SectionHeader>
+
+      <p className="text-sm text-[rgb(var(--muted))]">
+        Sources are the raw material of this project — full chats or selected segments.
+      </p>
 
       {conversations.length > 0 && (
         <ActiveFilterPills
@@ -109,13 +113,13 @@ export default function ChatsTab({ conversations, projectId }: ChatsTabProps) {
       {conversations.length === 0 ? (
         <div className="text-center py-12">
           <p className="text-zinc-600 dark:text-zinc-400 mb-4">
-            No chats in this project yet.
+            No sources in this project yet.
           </p>
           <button 
             onClick={() => router.push(`/import?project=${projectId}`)}
             className="px-4 py-2 bg-foreground text-background rounded-lg hover:opacity-90 transition-opacity font-medium text-sm"
           >
-            Import Chats Into This Project
+            Import sources into this project
           </button>
         </div>
       ) : (
@@ -147,16 +151,8 @@ export default function ChatsTab({ conversations, projectId }: ChatsTabProps) {
                   </div>
                   <div className="flex items-center gap-4 text-sm text-[rgb(var(--muted))]">
                     <span>Updated: {formatDate(conversation.updated_at)}</span>
-                    <span>Highlights: {conversation.highlights_count}</span>
                   </div>
                 </Link>
-                <div className="ml-4" onClick={(e) => e.stopPropagation()}>
-                  <ToggleInactiveButton
-                    type="conversation"
-                    id={conversation.id}
-                    isInactive={conversation.is_inactive || false}
-                  />
-                </div>
               </div>
             </div>
           ))}

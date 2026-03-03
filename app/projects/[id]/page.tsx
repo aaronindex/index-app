@@ -10,7 +10,6 @@ import ChatsTab from './components/ChatsTab';
 import DecisionsTab from './components/DecisionsTab';
 import TasksTab from './components/TasksTab';
 import ProjectStartChatButton from './components/ProjectStartChatButton';
-import ExportChecklistButton from './components/ExportChecklistButton';
 import ProjectOverflowMenu from './components/ProjectOverflowMenu';
 import { loadProjectView } from '@/lib/ui-data';
 
@@ -267,7 +266,6 @@ export default async function ProjectDetailPage({
               {/* Desktop: Show all actions inline */}
               <div className="hidden sm:flex items-center gap-3">
                 <ProjectStartChatButton projectId={id} projectName={project.name} />
-                <ExportChecklistButton projectId={id} />
                 <ProjectOverflowMenu projectId={id} projectName={project.name} />
               </div>
               
@@ -281,7 +279,6 @@ export default async function ProjectDetailPage({
           {/* Mobile: Action buttons stack below as full-width */}
           <div className="mt-4 sm:hidden flex flex-col gap-2">
             <ProjectStartChatButton projectId={id} projectName={project.name} />
-            <ExportChecklistButton projectId={id} />
           </div>
           
           {/* Project Title */}

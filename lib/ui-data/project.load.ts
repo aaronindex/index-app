@@ -37,6 +37,13 @@ export type ProjectViewData = {
   }>;
 };
 
+function isDevEnv(): boolean {
+  return (
+    typeof process !== 'undefined' &&
+    (process.env.NODE_ENV === 'development' || process.env.APP_ENV === 'development')
+  );
+}
+
 /**
  * Load project view structural data.
  *
@@ -311,23 +318,54 @@ export async function loadProjectView(params: {
   }
 
   // Load timeline events from structural signals (decision/result only)
-  const allSignals = await collectStructuralSignals(supabaseClient, user_id);
-  const timelineEvents = allSignals
-    .filter(
-      (signal) =>
-        signal.project_id === project_id &&
-        (signal.kind === 'decision' || signal.kind === 'result')
-    )
-    .map((signal) => ({
-      kind: signal.kind as 'decision' | 'result',
-      occurred_at: signal.occurred_at,
-      project_id: signal.project_id || '',
-    }))
-    .sort(
-      (a, b) =>
-        new Date(a.occurred_at).getTime() -
-        new Date(b.occurred_at).getTime()
-    );
+  let timelineEvents: Array<{
+    kind: 'decision' | 'result';
+    occurred_at: string;
+    project_id: string;
+  }> = [];
+
+  const signalsStarted = Date.now();
+  try {
+    const allSignals = await collectStructuralSignals(supabaseClient, user_id);
+    timelineEvents = allSignals
+      .filter(
+        (signal) =>
+          signal.project_id === project_id &&
+          (signal.kind === 'decision' || signal.kind === 'result')
+      )
+      .map((signal) => ({
+        kind: signal.kind as 'decision' | 'result',
+        occurred_at: signal.occurred_at,
+        project_id: signal.project_id || '',
+      }))
+      .sort(
+        (a, b) =>
+          new Date(a.occurred_at).getTime() -
+          new Date(b.occurred_at).getTime()
+      );
+
+    if (isDevEnv()) {
+      // eslint-disable-next-line no-console
+      console.log('[ReadLoader][SignalsDone]', {
+        user_id,
+        project_id,
+        ms: Date.now() - signalsStarted,
+        signals_count: allSignals.length,
+        timeline_events: timelineEvents.length,
+      });
+    }
+  } catch (error) {
+    if (isDevEnv()) {
+      // eslint-disable-next-line no-console
+      console.error('[ReadLoader][SignalsFailed]', {
+        user_id,
+        project_id,
+        ms: Date.now() - signalsStarted,
+        error_message: error instanceof Error ? error.message : String(error),
+      });
+    }
+    // Degrade gracefully: timelineEvents remains empty.
+  }
 
   return {
     project: project

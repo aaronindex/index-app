@@ -3,13 +3,12 @@
 
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
-import TaskStartChatButton from './TaskStartChatButton';
+// Start chat is reserved for project-level re-entry; no per-task start chat.
 import TaskStatusControl from './TaskStatusControl';
 import DeleteTaskButton from './DeleteTaskButton';
 import ActiveFilterPills from './ActiveFilterPills';
 import ToggleInactiveButton from './ToggleInactiveButton';
-import PinTaskButton from './PinTaskButton';
-import TaskReorderControls from './TaskReorderControls';
+// Pinning and manual reorder are intentionally removed to keep Tasks lightweight.
 import Card from '@/app/components/ui/Card';
 import CreateTaskButton from './CreateTaskButton';
 import SectionHeader from '@/app/components/ui/SectionHeader';
@@ -63,33 +62,13 @@ export default function TasksTab({ tasks, projectId }: TasksTabProps) {
   // No horizon grouping - tasks are displayed in a single list
   const sortedTasks = useMemo(() => {
     return [...filteredByActive].sort((a, b) => {
-      // Pinned tasks first
-      if (a.is_pinned && !b.is_pinned) return -1;
-      if (!a.is_pinned && b.is_pinned) return 1;
-
-      // If both pinned or both unpinned, sort by sort_order
-      if (a.is_pinned && b.is_pinned) {
-        if (a.sort_order !== null && b.sort_order !== null) {
-          return a.sort_order - b.sort_order;
-        }
-        if (a.sort_order !== null) return -1;
-        if (b.sort_order !== null) return 1;
-      }
-
-      // For unpinned tasks, also consider sort_order if set
-      if (!a.is_pinned && !b.is_pinned) {
-        if (a.sort_order !== null && b.sort_order !== null) {
-          return a.sort_order - b.sort_order;
-        }
-      }
-
-      // Then by status: priority first
+      // By status: priority first
       const aStatus = getDisplayStatus(a.status);
       const bStatus = getDisplayStatus(b.status);
       if (aStatus === 'priority' && bStatus !== 'priority') return -1;
       if (aStatus !== 'priority' && bStatus === 'priority') return 1;
 
-      // Finally by created_at (newest first)
+      // Then by created_at (newest first)
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
   }, [filteredByActive]);
@@ -123,9 +102,6 @@ export default function TasksTab({ tasks, projectId }: TasksTabProps) {
   // projectId is passed as prop from the parent page
 
   const renderTaskCard = (task: Task, index: number) => {
-    const canMoveUp = index > 0;
-    const canMoveDown = index < sortedTasks.length - 1;
-
     // Detect task type from description prefix
     const isCommitment = task.description?.includes('[Commitment]');
     const isBlocker = task.description?.includes('[Blocker]');
@@ -135,13 +111,13 @@ export default function TasksTab({ tasks, projectId }: TasksTabProps) {
     let badgeColor = '';
     let badgeLabel = '';
     if (isCommitment) {
-      badgeColor = 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400';
+      badgeColor = 'bg-[rgb(var(--surface2))] text-[rgb(var(--muted))]';
       badgeLabel = 'Commitment';
     } else if (isBlocker) {
-      badgeColor = 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400';
+      badgeColor = 'bg-[rgb(var(--surface2))] text-[rgb(var(--muted))]';
       badgeLabel = 'Blocker';
     } else if (isOpenLoop) {
-      badgeColor = 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-400';
+      badgeColor = 'bg-[rgb(var(--surface2))] text-[rgb(var(--muted))]';
       badgeLabel = 'Open Loop';
     }
 
@@ -160,21 +136,11 @@ export default function TasksTab({ tasks, projectId }: TasksTabProps) {
         <div className="p-4">
           <div className="flex items-start justify-between mb-2">
             <div className="flex-1 flex items-center gap-2 flex-wrap">
-              <PinTaskButton
-                taskId={task.id}
-                isPinned={task.is_pinned || false}
-                projectId={projectId}
-              />
-              <TaskReorderControls
-                taskId={task.id}
-                projectId={projectId}
-                currentOrder={task.sort_order}
-                canMoveUp={canMoveUp}
-                canMoveDown={canMoveDown}
-              />
-              <h3 className="font-medium text-[rgb(var(--text))]">{task.title}</h3>
+              <h3 className="font-medium text-sm text-[rgb(var(--text))]">
+                {task.title}
+              </h3>
               {badgeLabel && (
-                <span className={`px-2 py-0.5 text-xs font-medium rounded-md ${badgeColor}`}>
+                <span className={`px-2 py-0.5 text-[10px] font-medium rounded-md ${badgeColor}`}>
                   {badgeLabel}
                 </span>
               )}
@@ -192,7 +158,7 @@ export default function TasksTab({ tasks, projectId }: TasksTabProps) {
             </p>
           )}
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4 text-sm text-[rgb(var(--muted))]">
+            <div className="flex items-center gap-4 text-xs text-[rgb(var(--muted))]">
               {task.conversation_id && task.conversation_title ? (
                 <Link
                   href={`/conversations/${task.conversation_id}`}
@@ -204,9 +170,6 @@ export default function TasksTab({ tasks, projectId }: TasksTabProps) {
               ) : (
                 <span>Created: {formatDate(task.created_at)}</span>
               )}
-              {task.source_query === 'AI Insight Extraction' && (
-                <span className="text-xs text-[rgb(var(--muted))]">Generated by INDEX</span>
-              )}
             </div>
             <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
               <ToggleInactiveButton
@@ -214,7 +177,6 @@ export default function TasksTab({ tasks, projectId }: TasksTabProps) {
                 id={task.id}
                 isInactive={task.is_inactive || false}
               />
-              <TaskStartChatButton taskId={task.id} />
               <DeleteTaskButton taskId={task.id} taskTitle={task.title} />
             </div>
           </div>
@@ -234,6 +196,7 @@ export default function TasksTab({ tasks, projectId }: TasksTabProps) {
         <ActiveFilterPills
           activeCount={activeTasks.length}
           inactiveCount={inactiveTasks.length}
+          activeLabel="Open"
           onFilterChange={setActiveFilter}
         />
       )}

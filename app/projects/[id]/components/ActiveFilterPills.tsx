@@ -9,9 +9,17 @@ interface ActiveFilterPillsProps {
   activeCount: number;
   inactiveCount: number;
   onFilterChange: (filter: Filter) => void;
+  activeLabel?: string;
+  inactiveLabel?: string;
 }
 
-export default function ActiveFilterPills({ activeCount, inactiveCount, onFilterChange }: ActiveFilterPillsProps) {
+export default function ActiveFilterPills({
+  activeCount,
+  inactiveCount,
+  onFilterChange,
+  activeLabel = 'Active',
+  inactiveLabel = 'Inactive',
+}: ActiveFilterPillsProps) {
   const [currentFilter, setCurrentFilter] = useState<Filter>('active');
 
   const handleFilterChange = (filter: Filter) => {
@@ -32,7 +40,7 @@ export default function ActiveFilterPills({ activeCount, inactiveCount, onFilter
           }
         `}
       >
-        Active ({activeCount})
+        {activeLabel} ({activeCount})
       </button>
       <button
         onClick={() => handleFilterChange('all')}
@@ -59,7 +67,7 @@ export default function ActiveFilterPills({ activeCount, inactiveCount, onFilter
             }
           `}
         >
-          Inactive ({inactiveCount})
+          {inactiveLabel} ({inactiveCount})
         </button>
       )}
     </div>

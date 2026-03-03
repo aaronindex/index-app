@@ -3,12 +3,11 @@
 
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
-import DecisionStartChatButton from './DecisionStartChatButton';
+// Start chat is reserved for project-level re-entry; no per-decision start chat.
 import DeleteDecisionButton from './DeleteDecisionButton';
 import CreateDecisionButton from './CreateDecisionButton';
 import ActiveFilterPills from './ActiveFilterPills';
 import ToggleInactiveButton from './ToggleInactiveButton';
-import PinDecisionButton from './PinDecisionButton';
 import Card from '@/app/components/ui/Card';
 import SectionHeader from '@/app/components/ui/SectionHeader';
 
@@ -64,6 +63,8 @@ export default function DecisionsTab({ decisions, projectId }: DecisionsTabProps
         <ActiveFilterPills
           activeCount={activeDecisions.length}
           inactiveCount={inactiveDecisions.length}
+          activeLabel="Unresolved"
+          inactiveLabel="Resolved"
           onFilterChange={setFilter}
         />
       )}
@@ -84,12 +85,9 @@ export default function DecisionsTab({ decisions, projectId }: DecisionsTabProps
             >
               <div className="p-4">
                 <div className="flex items-center gap-2 mb-2">
-                  <PinDecisionButton
-                    decisionId={decision.id}
-                    isPinned={decision.is_pinned || false}
-                    projectId={projectId}
-                  />
-                  <h3 className="font-medium text-[rgb(var(--text))]">{decision.title}</h3>
+                  <h3 className="font-semibold text-[rgb(var(--text))] text-sm sm:text-base">
+                    {decision.title}
+                  </h3>
                   {decision.is_inactive && (
                     <span className="px-2 py-0.5 text-xs font-medium rounded-md bg-[rgb(var(--surface2))] text-[rgb(var(--muted))]">
                       Inactive
@@ -97,12 +95,12 @@ export default function DecisionsTab({ decisions, projectId }: DecisionsTabProps
                   )}
                 </div>
                 {decision.content && (
-                  <p className="text-[rgb(var(--text))] mb-3">
+                  <p className="text-sm text-[rgb(var(--muted))] mb-3">
                     {decision.content}
                   </p>
                 )}
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4 text-sm text-[rgb(var(--muted))]">
+                  <div className="flex items-center gap-4 text-xs text-[rgb(var(--muted))]">
                     {decision.conversation_id && decision.conversation_title ? (
                       <Link
                         href={`/conversations/${decision.conversation_id}`}
@@ -123,7 +121,6 @@ export default function DecisionsTab({ decisions, projectId }: DecisionsTabProps
                       id={decision.id}
                       isInactive={decision.is_inactive || false}
                     />
-                    <DecisionStartChatButton decisionId={decision.id} />
                     <DeleteDecisionButton decisionId={decision.id} decisionTitle={decision.title} />
                   </div>
                 </div>

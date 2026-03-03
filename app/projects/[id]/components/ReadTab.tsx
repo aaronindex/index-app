@@ -221,7 +221,7 @@ export default function ReadTab({
         {activeArcs.length > 0 ? (
           <ul className="list-disc list-inside space-y-1 text-sm text-[rgb(var(--text))]">
             {activeArcs.map((arc) => {
-              const label = arc.title || arc.id;
+              const label = arc.title || 'Untitled arc';
               return (
                 <li key={arc.id}>
                   {label}
@@ -233,7 +233,7 @@ export default function ReadTab({
             })}
           </ul>
         ) : (
-          <p className="text-sm text-[rgb(var(--muted))]">Not yet distinct.</p>
+          <p className="text-sm text-[rgb(var(--muted))]">No active arcs.</p>
         )}
       </div>
 
@@ -250,11 +250,19 @@ export default function ReadTab({
       </div>
 
       {/* Open Decisions (from active tensions) */}
-      {openDecisions.length > 0 && (
-        <div>
-          <h2 className="font-serif text-lg font-semibold text-[rgb(var(--text))] mb-3">
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-serif text-lg font-semibold text-[rgb(var(--text))]">
             Open Decisions
           </h2>
+          <Link
+            href={`/projects/${projectId}/decisions?tab=decisions`}
+            className="text-xs text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] transition-colors"
+          >
+            View
+          </Link>
+        </div>
+        {openDecisions.length > 0 ? (
           <ul className="space-y-2">
             {openDecisions.map((item) => (
               <li key={`decision-${item.id}`}>
@@ -279,15 +287,25 @@ export default function ReadTab({
               </li>
             ))}
           </ul>
-        </div>
-      )}
+        ) : (
+          <p className="text-sm text-[rgb(var(--muted))]">No unresolved decisions.</p>
+        )}
+      </div>
 
       {/* Open Tasks (tasks that still carry weight) */}
-      {totalOpenTasks > 0 && (
-        <div>
-          <h2 className="font-serif text-lg font-semibold text-[rgb(var(--text))] mb-3">
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-serif text-lg font-semibold text-[rgb(var(--text))]">
             Open Tasks
           </h2>
+          <Link
+            href={`/projects/${projectId}/tasks?tab=tasks`}
+            className="text-xs text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] transition-colors"
+          >
+            View
+          </Link>
+        </div>
+        {totalOpenTasks > 0 ? (
           <ul className="space-y-2">
             {openTasksFromStill.map((item) => (
               <li key={`still-task-${item.id}`}>
@@ -322,8 +340,10 @@ export default function ReadTab({
               </li>
             ))}
           </ul>
-        </div>
-      )}
+        ) : (
+          <p className="text-sm text-[rgb(var(--muted))]">No open tasks.</p>
+        )}
+      </div>
 
       {/* Motion Timeline (snapshot-based, horizontal) */}
       <HorizontalSnapshotTimeline snapshots={projectSnapshots} />
