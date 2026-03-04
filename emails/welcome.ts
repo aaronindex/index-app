@@ -27,22 +27,26 @@ export function renderWelcomeEmail(): string {
                 Welcome to INDEX
               </h2>
               <p style="margin: 0 0 24px 0; font-size: 16px; line-height: 1.6; color: #121211;">
-                INDEX is where thinking becomes usable.
+                INDEX is where thinking becomes structure.
               </p>
               <p style="margin: 0 0 24px 0; font-size: 16px; line-height: 1.6; color: #121211;">
-                Start small: import one conversation that still matters.
+                Conversations, notes, and ideas happen everywhere.<br>
+                INDEX is where they are distilled into arcs, decisions, and open loops.
               </p>
-              <p style="margin: 0 0 16px 0; font-size: 16px; line-height: 1.6; color: #121211;">
-                Then reduce it:
+              <p style="margin: 0 0 24px 0; font-size: 16px; line-height: 1.6; color: #121211;">
+                Start small.
               </p>
-              <ul style="margin: 16px 0 24px 0; padding-left: 20px; color: #121211;">
-                <li style="margin: 8px 0; font-size: 16px; line-height: 1.6;">Create a project</li>
-                <li style="margin: 8px 0; font-size: 16px; line-height: 1.6;">Make <strong>one</strong> task or decision</li>
-                <li style="margin: 8px 0; font-size: 16px; line-height: 1.6;">Use Ask Index to see what remains</li>
-                <li style="margin: 8px 0; font-size: 16px; line-height: 1.6;">Generate a digest (optional)</li>
-              </ul>
+              <p style="margin: 0 0 24px 0; font-size: 16px; line-height: 1.6; color: #121211;">
+                Import one conversation that still matters.
+              </p>
+              <p style="margin: 0 0 24px 0; font-size: 16px; line-height: 1.6; color: #121211;">
+                Then reduce it.
+              </p>
+              <p style="margin: 0 0 24px 0; font-size: 16px; line-height: 1.6; color: #121211;">
+                You'll begin to see the shape of the work: what's active, what's unresolved, and where things are moving.
+              </p>
               <p style="margin: 24px 0 0 0; font-size: 16px; line-height: 1.6; color: #121211;">
-                That's it.
+                That's all INDEX does.
               </p>
               <p style="margin: 32px 0 0 0; font-size: 14px; color: #666666; font-style: italic;">
                 — INDEX

@@ -126,16 +126,18 @@ export default function ReadTab({
       <div className="max-w-2xl mx-auto">
         <div className="p-12 text-center border border-[rgb(var(--ring)/0.08)] rounded-lg">
           <h3 className="font-serif text-xl font-semibold text-[rgb(var(--text))] mb-3">
-            Import your first chat to get started
+            Distill your first source
           </h3>
           <p className="text-sm text-[rgb(var(--muted))] mb-6">
-            Once you import a conversation, INDEX will extract insights, tasks, and decisions.
+            Once a source is imported, INDEX distills it into structure.
+            <br />
+            Arcs, decisions, and open loops will appear here as the project takes shape.
           </p>
           <button
             onClick={() => router.push(`/import?project=${projectId}`)}
             className="px-4 py-2 bg-[rgb(var(--text))] text-[rgb(var(--bg))] rounded-lg hover:opacity-90 transition-opacity"
           >
-            Import chat
+            Import source
           </button>
         </div>
       </div>

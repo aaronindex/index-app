@@ -19,19 +19,29 @@ function isDevEnv(): boolean {
 }
 
 /**
- * Resolve a fully-qualified app base URL (with protocol) for server-side fetch.
- * Prefers NEXT_PUBLIC_APP_URL (normalized to https if no protocol); else VERCEL_URL; else localhost.
+ * Normalize a base URL to a fully-qualified origin (with scheme). Node fetch requires absolute URLs.
  */
-function getAppBaseUrl(): string {
-  const fromApp = process.env.NEXT_PUBLIC_APP_URL?.trim();
-  if (fromApp) {
-    const lower = fromApp.toLowerCase();
-    if (lower.startsWith('http://') || lower.startsWith('https://')) return fromApp;
-    return `https://${fromApp.replace(/^\/+/, '')}`;
-  }
-  const vercel = process.env.VERCEL_URL?.trim();
-  if (vercel) return `https://${vercel}`;
-  return 'http://localhost:3000';
+function normalizeBaseUrl(raw?: string | null): string {
+  if (!raw) return '';
+  const s = raw.trim();
+  if (!s) return '';
+  const lower = s.toLowerCase();
+  if (lower.startsWith('http://') || lower.startsWith('https://')) return s;
+  return `https://${s}`;
+}
+
+/**
+ * Resolve base URL for semantic trigger fetch. Priority: NEXT_PUBLIC_APP_URL → VERCEL_URL → localhost.
+ * Always returns a normalized origin (with scheme) so new URL(path, base) is valid.
+ */
+function getSemanticTriggerBaseUrl(): { rawBase: string; normalizedBase: string } {
+  const fromApp = process.env.NEXT_PUBLIC_APP_URL;
+  const fromVercel = process.env.VERCEL_URL;
+  const rawBase = fromApp ?? fromVercel ?? 'http://localhost:3000';
+  let normalizedBase = normalizeBaseUrl(rawBase);
+  if (!normalizedBase) normalizedBase = normalizeBaseUrl(fromVercel);
+  if (!normalizedBase) normalizedBase = 'http://localhost:3000';
+  return { rawBase: rawBase ?? '', normalizedBase };
 }
 
 /**
@@ -159,8 +169,8 @@ async function triggerSemanticGenerate(
     }));
   }
 
-  const baseUrl = getAppBaseUrl();
-  const generateUrl = new URL('/api/admin/semantic/generate', baseUrl).toString();
+  const { rawBase, normalizedBase } = getSemanticTriggerBaseUrl();
+  const url = new URL('/api/admin/semantic/generate', normalizedBase).toString();
 
   const secret = process.env.INDEX_ADMIN_SECRET;
   if (!secret) {
@@ -169,6 +179,11 @@ async function triggerSemanticGenerate(
       console.warn('[SemanticTrigger] INDEX_ADMIN_SECRET not set, skipping generate');
     }
     return;
+  }
+
+  if (isDevEnv()) {
+    // eslint-disable-next-line no-console
+    console.log('[SemanticTrigger][URL]', { base: rawBase, normalizedBase, url });
   }
 
   const body: Record<string, unknown> = {
@@ -183,18 +198,7 @@ async function triggerSemanticGenerate(
     body.stats = { ...statsParam, pulse_count: pulses.length };
   }
 
-  if (isDevEnv()) {
-    // eslint-disable-next-line no-console
-    console.log('[SemanticTrigger]', {
-      base_url: baseUrl,
-      generate_url: generateUrl,
-      state_hash_prefix: state_hash.substring(0, 16),
-      arc_count: arcs.length || arc_ids.length,
-      pulse_count: pulses.length,
-    });
-  }
-
-  const res = await fetch(generateUrl, {
+  const res = await fetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
