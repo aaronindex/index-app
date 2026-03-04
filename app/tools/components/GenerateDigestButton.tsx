@@ -74,7 +74,7 @@ export default function GenerateDigestButton() {
         }
       }
 
-      // Generate digest
+      // Generate digest (returns digest or no-movement digest; never hangs)
       const response = await fetch('/api/digests/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -82,7 +82,7 @@ export default function GenerateDigestButton() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error || 'Failed to generate digest');
       }
 
@@ -90,6 +90,7 @@ export default function GenerateDigestButton() {
       router.push(`/digests/${digest.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to generate digest');
+    } finally {
       setLoading(false);
     }
   };

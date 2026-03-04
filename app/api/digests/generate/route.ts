@@ -64,11 +64,31 @@ export async function POST(request: NextRequest) {
       .order('created_at', { ascending: false })
       .limit(DIGEST_LIMITS.maxConversations);
 
+    // No conversations in range: save a graceful "no movement" digest and return (no hang, no AI call)
     if (!conversations || conversations.length === 0) {
-      return NextResponse.json(
-        { error: 'No conversations found for this week' },
-        { status: 400 }
-      );
+      const { data: noMovementDigest, error: insertError } = await supabase
+        .from('weekly_digests')
+        .insert({
+          user_id: user.id,
+          week_start: weekStart,
+          week_end: weekEnd,
+          summary: 'No structural movement in this period.',
+          what_changed: null,
+          top_themes: [],
+          open_loops: [],
+          recommended_next_steps: [],
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error('Error saving no-movement digest:', insertError);
+        return NextResponse.json(
+          { error: insertError.message || 'Failed to save digest' },
+          { status: 500 }
+        );
+      }
+      return NextResponse.json({ success: true, digest: noMovementDigest });
     }
 
     // Get messages count and highlights for each conversation

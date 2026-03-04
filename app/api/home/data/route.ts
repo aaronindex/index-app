@@ -84,20 +84,24 @@ export async function GET(request: NextRequest) {
       homeView.latestSnapshot?.snapshot_text?.trim() ||
       (hasArcs ? null : 'Your INDEX will show the direction of your thinking as sources are distilled.');
 
-    const shifts = homeView.pulses.slice(0, 5).map((p) => ({
+    // Shifts: 5–10 items, newest first (already ordered by occurred_at desc from loader)
+    const shifts = homeView.pulses.slice(0, 10).map((p) => ({
       id: p.id,
       occurred_at: p.occurred_at,
       label: formatPulseShiftLabel(p),
       pulse_type: p.pulse_type,
     }));
 
-    const timelineEvents = homeView.pulses.map((p) => ({
-      id: p.id,
-      occurred_at: p.occurred_at,
-      summary: formatPulseShiftLabel(p),
-      pulse_type: p.pulse_type,
-      isResult: p.pulse_type === 'result_recorded',
-    }));
+    // Timeline: same events as pulses, ordered by occurred_at asc for display
+    const timelineEvents = [...homeView.pulses]
+      .sort((a, b) => new Date(a.occurred_at).getTime() - new Date(b.occurred_at).getTime())
+      .map((p) => ({
+        id: p.id,
+        occurred_at: p.occurred_at,
+        summary: formatPulseShiftLabel(p),
+        pulse_type: p.pulse_type,
+        isResult: p.pulse_type === 'result_recorded',
+      }));
 
     const weeklyDigestText = latestDigest
       ? formatDigestBody(latestDigest)
@@ -110,6 +114,7 @@ export async function GET(request: NextRequest) {
       direction: {
         snapshotText: directionText,
         hasArcs,
+        generatedAt: homeView.latestSnapshot?.generated_at ?? null,
       },
       shifts,
       timelineEvents,

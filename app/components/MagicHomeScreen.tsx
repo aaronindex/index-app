@@ -7,7 +7,6 @@ import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import OnboardingFlow from './OnboardingFlow';
 import PostImportModal from './PostImportModal';
-import Card from './ui/Card';
 import { showError } from './ErrorNotification';
 import GenerateDigestButton from '../tools/components/GenerateDigestButton';
 
@@ -28,7 +27,11 @@ type ShiftItem = {
 type LandingData = {
   hasConversations: boolean;
   hasProjects: boolean;
-  direction: { snapshotText: string | null; hasArcs: boolean };
+  direction: {
+    snapshotText: string | null;
+    hasArcs: boolean;
+    generatedAt: string | null;
+  };
   shifts: ShiftItem[];
   timelineEvents: TimelineEvent[];
   weeklyDigest: {
@@ -40,14 +43,36 @@ type LandingData = {
   } | null;
 };
 
+/** "Mar 3, 2026" for Shifts list */
 function formatShiftDate(iso: string): string {
   try {
     return new Date(iso).toLocaleDateString(undefined, {
       month: 'short',
       day: 'numeric',
+      year: 'numeric',
     });
   } catch {
     return '';
+  }
+}
+
+/** "Updated X ago" from snapshot_state.generated_at */
+function formatUpdatedAgo(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  try {
+    const date = new Date(iso);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    if (diffMins < 1) return 'Updated just now';
+    if (diffMins < 60) return `Updated ${diffMins} min ago`;
+    if (diffHours < 24) return `Updated ${diffHours} hr ago`;
+    if (diffDays < 7) return `Updated ${diffDays} days ago`;
+    return `Updated ${date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`;
+  } catch {
+    return null;
   }
 }
 
@@ -74,6 +99,9 @@ function GlobalTimeline({ events }: { events: TimelineEvent[] }) {
         <div className="relative h-12">
           <div className="absolute top-1/2 left-0 right-0 h-px bg-[rgb(var(--ring)/0.12)]" />
         </div>
+        <p className="mt-2 text-sm text-[rgb(var(--muted))]">
+          Structural events will appear here as your thinking evolves.
+        </p>
       </div>
     );
   }
@@ -121,8 +149,8 @@ function GlobalTimeline({ events }: { events: TimelineEvent[] }) {
                     item.isResult ? 'h-3 w-3' : 'h-2 w-2'
                   }`}
                 />
-                <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <div className="max-w-[260px] min-w-[180px] rounded-md border border-[rgb(var(--ring)/0.12)] bg-[rgb(var(--surface))] px-2 py-1 shadow-sm">
+                <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                  <div className="max-w-[260px] min-w-[220px] rounded-md border border-[rgb(var(--ring)/0.12)] bg-[rgb(var(--surface))] px-2 py-1 shadow-sm">
                     <div className="text-[10px] font-medium text-[rgb(var(--text))]">
                       {dateLabel}
                     </div>
@@ -197,10 +225,12 @@ export default function MagicHomeScreen() {
   const showOnboarding = onboardingCompleted === false;
   const hasArcs = data?.direction?.hasArcs ?? false;
   const directionText = data?.direction?.snapshotText ?? null;
+  const directionGeneratedAt = data?.direction?.generatedAt ?? null;
   const shifts = data?.shifts ?? [];
   const timelineEvents = data?.timelineEvents ?? [];
   const weeklyDigest = data?.weeklyDigest ?? null;
   const hasConversations = data?.hasConversations ?? false;
+  const hasSnapshot = !!directionGeneratedAt;
 
   return (
     <div className="space-y-8 max-w-3xl">
@@ -224,32 +254,42 @@ export default function MagicHomeScreen() {
 
       {!showOnboarding && (
         <>
-          {/* 1. Direction (global snapshot) — plain text block */}
+          {/* Page title — same hierarchy as other page titles */}
+          <h1 className="font-serif text-xl font-semibold text-[rgb(var(--text))] mb-2">
+            Across your INDEX
+          </h1>
+
+          <hr className="my-6 border-[rgb(var(--ring)/0.08)]" />
+
+          {/* 1. Direction (global snapshot) — plain text block, no card */}
           <div>
             <h2 className="font-serif text-lg font-semibold text-[rgb(var(--text))] mb-3">
               Direction
             </h2>
-            <div className="text-sm text-[rgb(var(--text))] whitespace-pre-wrap">
-              {!hasArcs || !data ? (
-                <p className="text-[rgb(var(--text))]">
-                  Your INDEX will show the direction of your thinking as sources are distilled.
-                </p>
-              ) : directionText ? (
-                directionText
-              ) : (
-                <p className="text-[rgb(var(--text))]">Exploration ongoing.</p>
-              )}
-            </div>
+            {!data || !hasSnapshot ? (
+              <p className="text-sm text-[rgb(var(--text))]">
+                Your INDEX will show the direction of your thinking as sources are distilled.
+              </p>
+            ) : (
+              <div className="text-sm text-[rgb(var(--text))] whitespace-pre-wrap">
+                {formatUpdatedAgo(directionGeneratedAt) && (
+                  <p className="text-xs text-[rgb(var(--muted))] mb-2">
+                    {formatUpdatedAgo(directionGeneratedAt)}
+                  </p>
+                )}
+                {directionText || 'Exploration ongoing.'}
+              </div>
+            )}
           </div>
 
           <hr className="my-6 border-[rgb(var(--ring)/0.08)]" />
 
-          {/* 2. Shifts — recent structural pulses */}
+          {/* 2. Shifts — global pulses list (no "recent" in title) */}
           <div>
             <h2 className="font-serif text-lg font-semibold text-[rgb(var(--text))] mb-3">
               Shifts
             </h2>
-            {(!data || shifts.length === 0) ? (
+            {!data || shifts.length === 0 ? (
               <p className="text-sm text-[rgb(var(--muted))]">No structural shifts yet.</p>
             ) : (
               <ul className="space-y-1.5 text-sm text-[rgb(var(--text))]">
@@ -265,43 +305,35 @@ export default function MagicHomeScreen() {
             )}
           </div>
 
-          <hr className="my-6 border-[rgb(var(--ring)/0.08)]" />
-
-          {/* 3. Timeline (global) — pulse-based, result = larger dot */}
+          {/* 3. Timeline — always rendered; no HRs under Timeline (per spec) */}
           <GlobalTimeline events={timelineEvents} />
 
-          <hr className="my-6 border-[rgb(var(--ring)/0.08)]" />
-
-          {/* 4. Weekly Digest — card */}
+          {/* 4. Weekly Digest — single container (no nested card) */}
           <div>
             <h2 className="font-serif text-lg font-semibold text-[rgb(var(--text))] mb-3">
               Weekly Digest
             </h2>
-            <Card className="p-6 bg-gradient-to-br from-[rgb(var(--surface2))] to-[rgb(var(--surface))]">
-              {weeklyDigest?.body ? (
-                <>
-                  <div className="mb-4 pb-4 border-b border-[rgb(var(--ring)/0.08)]">
-                    <Link
-                      href={`/digests/${weeklyDigest.id}`}
-                      className="block text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] text-xs mb-2"
-                    >
-                      {formatDigestDate(weeklyDigest.week_start)} – {formatDigestDate(weeklyDigest.week_end)} → View full
-                    </Link>
-                    <div className="text-sm text-[rgb(var(--text))] whitespace-pre-wrap">
-                      {weeklyDigest.body}
-                    </div>
-                  </div>
-                  <GenerateDigestButton />
-                </>
-              ) : (
-                <>
-                  <p className="text-sm text-[rgb(var(--muted))] mb-4">
-                    Weekly digest appears once structural change occurs.
-                  </p>
-                  <GenerateDigestButton />
-                </>
-              )}
-            </Card>
+            {weeklyDigest?.body ? (
+              <div>
+                <Link
+                  href={`/digests/${weeklyDigest.id}`}
+                  className="block text-xs text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] mb-2"
+                >
+                  {formatDigestDate(weeklyDigest.week_start)} – {formatDigestDate(weeklyDigest.week_end)} → View full
+                </Link>
+                <div className="text-sm text-[rgb(var(--text))] whitespace-pre-wrap mb-4">
+                  {weeklyDigest.body}
+                </div>
+                <GenerateDigestButton />
+              </div>
+            ) : (
+              <div>
+                <p className="text-sm text-[rgb(var(--muted))] mb-4">
+                  Weekly digest appears once structural change occurs.
+                </p>
+                <GenerateDigestButton />
+              </div>
+            )}
           </div>
 
           <PostImportModal
