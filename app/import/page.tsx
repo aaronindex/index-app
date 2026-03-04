@@ -155,12 +155,13 @@ export default function ImportPage() {
         }
 
         const latencyMs = Date.now() - startTime;
+        const errorMessage = typeof data.error === 'string' ? data.error : 'Failed to import conversation';
         trackEvent('import_failed', {
           import_type: 'quick_paste',
           latency_ms: latencyMs,
-          error: data.error || 'Failed to import conversation',
+          error: errorMessage,
         });
-        setQuickError(data.error || 'Failed to import conversation');
+        setQuickError(errorMessage);
         return;
       }
 
