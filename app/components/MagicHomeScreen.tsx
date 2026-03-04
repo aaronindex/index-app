@@ -306,8 +306,6 @@ export default function MagicHomeScreen() {
             )}
           </div>
 
-          <hr className="my-6 border-[rgb(var(--ring)/0.08)]" />
-
           {/* 3. Timeline — always rendered */}
           <GlobalTimeline events={timelineEvents} />
 

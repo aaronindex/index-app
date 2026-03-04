@@ -210,17 +210,17 @@ async function processQuickImportSync(
       })
       .eq('id', conversation.id);
 
-    // Dispatch structure recomputation (debounced)
-    // Ingestion creates new conversations which may generate decision signals
+    // Dispatch structure recomputation (debounced, fire-and-forget).
+    // Do not block the quick import UX on downstream structure jobs.
     try {
-      await dispatchStructureRecompute({
+      void dispatchStructureRecompute({
         supabaseClient: supabase,
         user_id: userId,
         scope: 'user',
         reason: 'ingestion',
       });
     } catch (dispatchError) {
-      // Log but don't fail the import if dispatch fails
+      // Log but don't fail the import if dispatch scheduling fails
       console.error('[QuickImport] Failed to dispatch structure recompute:', dispatchError);
     }
 
