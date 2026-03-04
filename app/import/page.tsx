@@ -137,7 +137,6 @@ export default function ImportPage() {
             latency_ms: latencyMs,
             error: 'duplicate',
           });
-          setQuickLoading(false);
           return;
         }
 
@@ -148,7 +147,6 @@ export default function ImportPage() {
           error: data.error || 'Failed to import conversation',
         });
         setQuickError(data.error || 'Failed to import conversation');
-        setQuickLoading(false);
         return;
       }
 
@@ -180,7 +178,6 @@ export default function ImportPage() {
           title: data.title,
           messageCount: data.messageCount,
         });
-        setQuickLoading(false);
       }
     } catch (err) {
       const latencyMs = startTime ? Date.now() - startTime : 0;
@@ -191,6 +188,7 @@ export default function ImportPage() {
       });
       setQuickError('Failed to import conversation. Please try again.');
       console.error(err);
+    } finally {
       setQuickLoading(false);
     }
   };
