@@ -88,7 +88,7 @@ export async function POST(
     }
 
     const { data: outcome, error: insertError } = await supabase
-      .from('project_outcomes')
+      .from('project_outcome')
       .insert(insertPayload)
       .select('*')
       .single();
