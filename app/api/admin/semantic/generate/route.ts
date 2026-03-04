@@ -279,8 +279,13 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  // C3: Direction semantics are keyed to state_hash and stored under object_id "current" (unique per user_id, scope_type, scope_id, state_hash)
-  if (direction) {
+  if (!direction) {
+    if (isDevEnv()) {
+      // eslint-disable-next-line no-console
+      console.log('[SemanticGenerate][NoDirection]', { state_hash_prefix: state_hash.substring(0, 16) });
+    }
+  } else {
+    // C3: Direction semantics are keyed to state_hash and stored under object_id "current"
     rows.push({
       user_id,
       scope_type,
@@ -294,6 +299,10 @@ export async function POST(request: NextRequest) {
       model: MODEL,
     });
   }
+
+  const direction_upserted = direction ? 1 : 0;
+  const arc_titles_upserted = rows.filter((r) => r.object_type === 'arc').length;
+  const pulse_headlines_upserted = rows.filter((r) => r.object_type === 'pulse').length;
 
   if (rows.length > 0) {
     const { error } = await supabase.from('semantic_labels').upsert(rows, {
@@ -310,10 +319,11 @@ export async function POST(request: NextRequest) {
 
   if (isDevEnv()) {
     // eslint-disable-next-line no-console
-    console.log('[SemanticGenerate][UpsertsSucceeded]', {
-      arc_count: Object.keys(arc_titles).length,
-      pulse_count: Object.keys(pulse_headlines).length,
-      has_direction: !!direction,
+    console.log('[SemanticGenerate][Upserts]', {
+      direction: direction_upserted,
+      arcs: arc_titles_upserted,
+      pulses: pulse_headlines_upserted,
+      state_hash_prefix: state_hash.substring(0, 16),
     });
   }
 

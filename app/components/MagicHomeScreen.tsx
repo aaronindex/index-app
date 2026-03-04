@@ -185,7 +185,7 @@ function GlobalTimeline({ events }: { events: TimelineEvent[] }) {
                       {formatFullDate(item.occurred_at)}
                     </div>
                     <div className="mt-1 text-[10px] text-[rgb(var(--muted))] whitespace-normal break-words">
-                      {item.summary}
+                      {item.isResult ? `Result: ${item.summary}` : item.summary}
                     </div>
                   </div>
                 </div>
@@ -265,7 +265,7 @@ export default function MagicHomeScreen() {
   const hasConversations = data?.hasConversations ?? false;
   const hasSnapshot = !!directionGeneratedAt;
   const hasStructuralChange = shifts.length > 0;
-  const showDirectionStatusLine = activeArcCount > 0 || projectCount > 0;
+  const showDirectionStatusLine = activeArcCount > 0;
 
   return (
     <div className="space-y-8">
@@ -317,16 +317,16 @@ export default function MagicHomeScreen() {
                   {formatLastChangeAgo(lastChangeAt)}
                 </p>
               )}
-              {!data || !hasSnapshot ? (
+              {!directionText?.trim() ? (
                 <div className="text-sm text-[rgb(var(--muted))] font-sans">
                   <p>No direction yet.</p>
                   <p className="mt-1 text-xs">
-                    Direction appears once sources are distilled.
+                    Direction appears after a reduction produces structure.
                   </p>
                 </div>
               ) : (
                 <div className="text-sm text-[rgb(var(--text))] whitespace-pre-wrap font-sans">
-                  {directionText || 'Exploration ongoing.'}
+                  {directionText}
                 </div>
               )}
             </div>

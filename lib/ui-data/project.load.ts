@@ -36,6 +36,13 @@ export type ProjectViewData = {
     occurred_at: string;
     project_id: string;
   }>;
+  /** Events for project timeline: pulses + outcomes, with labels (semantic or fallback) */
+  projectTimelineEvents: Array<{
+    id: string;
+    occurred_at: string;
+    kind: 'pulse' | 'result';
+    label: string;
+  }>;
 };
 
 function isDevEnv(): boolean {
@@ -337,6 +344,73 @@ export async function loadProjectView(params: {
     }
   }
 
+  // Project timeline: pulses (for this project) + outcomes as events with labels
+  const PULSE_TYPES_PROJECT = ['arc_shift', 'structural_threshold', 'tension', 'result_recorded'] as const;
+  function pulseTypeLabel(pt: string): string {
+    switch (pt) {
+      case 'tension':
+        return 'Tension surfaced';
+      case 'arc_shift':
+        return 'Arc shifted';
+      case 'structural_threshold':
+        return 'Structure updated';
+      case 'result_recorded':
+        return 'Result recorded';
+      default:
+        return 'Structure updated';
+    }
+  }
+
+  let projectTimelineEvents: Array<{ id: string; occurred_at: string; kind: 'pulse' | 'result'; label: string }> = [];
+
+  const { data: projectPulses } = await supabaseClient
+    .from('pulse')
+    .select('id, pulse_type, headline, occurred_at, state_hash')
+    .eq('user_id', user_id)
+    .eq('scope', 'global')
+    .eq('project_id', project_id)
+    .in('pulse_type', [...PULSE_TYPES_PROJECT])
+    .order('occurred_at', { ascending: false })
+    .limit(50);
+
+  const pulseOverlay =
+    projectPulses && projectPulses.length > 0 && latestStateHash
+      ? await getSemanticOverlay({
+          supabaseClient,
+          user_id,
+          scope_type: 'global',
+          scope_id: null,
+          state_hash: latestStateHash,
+          pulse_id_state_hash_pairs: projectPulses.map((p: { id: string; state_hash: string }) => ({
+            pulse_id: p.id,
+            state_hash: p.state_hash,
+          })),
+        })
+      : { pulseHeadlines: {} as Record<string, string> };
+
+  const pulseEvents = (projectPulses ?? []).map((p: { id: string; pulse_type: string; headline: string | null; occurred_at: string }) => {
+    const semantic = pulseOverlay.pulseHeadlines[p.id]?.trim();
+    const editorial = (p.headline ?? '').trim();
+    const label = semantic || editorial || pulseTypeLabel(p.pulse_type);
+    return {
+      id: p.id,
+      occurred_at: p.occurred_at,
+      kind: 'pulse' as const,
+      label,
+    };
+  });
+
+  const resultEvents = outcomesChrono.map((o) => ({
+    id: o.id,
+    occurred_at: o.occurred_at,
+    kind: 'result' as const,
+    label: `Result recorded: ${o.text.length > 60 ? o.text.slice(0, 57) + '…' : o.text}`,
+  }));
+
+  projectTimelineEvents = [...pulseEvents, ...resultEvents].sort(
+    (a, b) => new Date(a.occurred_at).getTime() - new Date(b.occurred_at).getTime()
+  );
+
   // Load timeline events from structural signals (decision/result only)
   let timelineEvents: Array<{
     kind: 'decision' | 'result';
@@ -403,6 +477,7 @@ export async function loadProjectView(params: {
     latestSnapshotOutcomeText,
     activeArcs,
     timelineEvents,
+    projectTimelineEvents,
   };
 }
 

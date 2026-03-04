@@ -21,6 +21,12 @@ interface ReadTabProps {
     hasOutcome: boolean;
     latestOutcomeText: string | null;
   }>;
+  projectTimelineEvents?: Array<{
+    id: string;
+    occurred_at: string;
+    kind: 'pulse' | 'result';
+    label: string;
+  }>;
   latestSnapshotOutcomeText?: string | null;
   sourceCount?: number | null;
 }
@@ -67,6 +73,7 @@ export default function ReadTab({
   const [showOutcomeModal, setShowOutcomeModal] = useState(false);
   const [outcomeText, setOutcomeText] = useState('');
   const [outcomeSaving, setOutcomeSaving] = useState(false);
+  const [outcomeSavedAndClosing, setOutcomeSavedAndClosing] = useState(false);
   const [outcomeError, setOutcomeError] = useState<string | null>(null);
 
   // Check if project has conversations
@@ -266,7 +273,7 @@ export default function ReadTab({
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
           onClick={() => {
-            if (!outcomeSaving) {
+            if (!outcomeSaving && !outcomeSavedAndClosing) {
               setShowOutcomeModal(false);
               setOutcomeError(null);
             }
@@ -288,7 +295,7 @@ export default function ReadTab({
               rows={4}
               className="w-full px-3 py-2 text-sm border border-[rgb(var(--ring)/0.16)] rounded-lg bg-[rgb(var(--bg))] text-[rgb(var(--text))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--ring)/0.2)]"
               placeholder="Summarize a concrete result in a single sentence..."
-              disabled={outcomeSaving}
+              disabled={outcomeSaving || outcomeSavedAndClosing}
             />
             {outcomeError && (
               <div className="mt-2 text-xs text-red-600 dark:text-red-400">
@@ -299,12 +306,12 @@ export default function ReadTab({
               <button
                 type="button"
                 onClick={() => {
-                  if (outcomeSaving) return;
+                  if (outcomeSaving || outcomeSavedAndClosing) return;
                   setShowOutcomeModal(false);
                   setOutcomeError(null);
                 }}
                 className="px-3 py-1.5 text-xs font-medium rounded-lg border border-[rgb(var(--ring)/0.16)] text-[rgb(var(--muted))] hover:bg-[rgb(var(--surface2))] disabled:opacity-50"
-                disabled={outcomeSaving}
+                disabled={outcomeSaving || outcomeSavedAndClosing}
               >
                 Cancel
               </button>
@@ -342,10 +349,15 @@ export default function ReadTab({
                       return;
                     }
 
-                    setShowOutcomeModal(false);
-                    setOutcomeText('');
-                    await router.refresh();
-                    showSuccess('Result recorded.');
+                    setOutcomeSaving(false);
+                    setOutcomeSavedAndClosing(true);
+                    setTimeout(() => {
+                      setShowOutcomeModal(false);
+                      setOutcomeText('');
+                      setOutcomeSavedAndClosing(false);
+                      router.refresh();
+                      showSuccess('Result recorded.');
+                    }, 800);
                   } catch (err) {
                     setOutcomeError(
                       err instanceof Error ? err.message : 'Failed to record outcome.'
@@ -355,9 +367,9 @@ export default function ReadTab({
                   }
                 }}
                 className="px-3 py-1.5 text-xs font-medium rounded-lg bg-[rgb(var(--text))] text-[rgb(var(--bg))] hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={outcomeSaving || !outcomeText.trim()}
+                disabled={outcomeSaving || outcomeSavedAndClosing || !outcomeText.trim()}
               >
-                {outcomeSaving ? 'Saving…' : 'Save'}
+                {outcomeSavedAndClosing ? 'Saved' : outcomeSaving ? 'Saving…' : 'Save'}
               </button>
             </div>
           </div>
@@ -464,8 +476,8 @@ export default function ReadTab({
 
       <hr className="my-6 border-[rgb(var(--ring)/0.08)]" />
 
-      {/* Motion Timeline (snapshot-based, horizontal) */}
-      <HorizontalSnapshotTimeline snapshots={projectSnapshots} />
+      {/* Project timeline: pulses + results (events with labels) */}
+      <ProjectEventTimeline events={projectTimelineEvents} />
 
       {/* Empty state if no data */}
       {openDecisions.length === 0 && totalOpenTasks === 0 && hasConversations === true && (
@@ -485,98 +497,30 @@ export default function ReadTab({
   );
 }
 
-type SnapshotTimelineItem = {
+type ProjectTimelineEvent = {
   id: string;
-  position: number;
-  dateLabel: string;
-  summary: string;
+  occurred_at: string;
+  kind: 'pulse' | 'result';
+  label: string;
 };
 
-function buildSnapshotTimelineItems(
-  snapshots: Array<{
-    id: string;
-    generated_at: string | null;
-    snapshot_text: string | null;
-    state_payload: any | null;
-  }>
-): SnapshotTimelineItem[] {
-  const withTime = snapshots
-    .map((s) => {
-      const tsString = s.generated_at;
-      if (!tsString) return null;
-      const ts = new Date(tsString);
-      if (Number.isNaN(ts.getTime())) return null;
-      return { ...s, ts };
+function ProjectEventTimeline(props: { events: ProjectTimelineEvent[] }) {
+  const events = props.events
+    .map((e) => {
+      const ts = new Date(e.occurred_at).getTime();
+      if (Number.isNaN(ts)) return null;
+      return { ...e, ts };
     })
-    .filter((s): s is typeof snapshots[number] & { ts: Date } => !!s);
+    .filter((e): e is ProjectTimelineEvent & { ts: number } => e !== null)
+    .sort((a, b) => a.ts - b.ts);
 
-  if (withTime.length === 0) return [];
+  if (events.length === 0) return null;
 
-  withTime.sort((a, b) => a.ts.getTime() - b.ts.getTime());
-
-  const first = withTime[0]!;
-  const last = withTime[withTime.length - 1]!;
-  const t0 = first.ts.getTime();
-  const tN = last.ts.getTime();
+  const first = events[0]!;
+  const last = events[events.length - 1]!;
+  const t0 = first.ts;
+  const tN = last.ts;
   const span = tN - t0 || 1;
-
-  return withTime.map((s) => {
-    const pos = span === 0 ? 0.5 : (s.ts.getTime() - t0) / span;
-    const dateLabel = s.ts.toLocaleDateString(undefined, {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
-
-    let summary = 'Snapshot';
-    const text = (s.snapshot_text || '').trim();
-    if (text) {
-      const firstLine = text.split('\n')[0] ?? text;
-      summary =
-        firstLine.length > 120 ? `${firstLine.slice(0, 117)}...` : firstLine;
-    } else if (s.state_payload) {
-      const payload = s.state_payload as {
-        active_arc_ids?: string[];
-        decision_density_bucket?: number;
-        result_density_bucket?: number;
-      };
-      const arcCount = Array.isArray(payload.active_arc_ids)
-        ? payload.active_arc_ids.length
-        : 0;
-      const decisionBucket =
-        typeof payload.decision_density_bucket === 'number'
-          ? payload.decision_density_bucket
-          : null;
-      const resultBucket =
-        typeof payload.result_density_bucket === 'number'
-          ? payload.result_density_bucket
-          : null;
-
-      const parts: string[] = [];
-      if (arcCount > 0) parts.push(`${arcCount} active arcs`);
-      if (decisionBucket !== null)
-        parts.push(`Decision density ${decisionBucket}`);
-      if (resultBucket !== null)
-        parts.push(`Result density ${resultBucket}`);
-      if (parts.length > 0) {
-        summary = parts.join(' · ');
-      }
-    }
-
-    return {
-      id: s.id,
-      position: pos,
-      dateLabel,
-      summary,
-    };
-  });
-}
-
-function HorizontalSnapshotTimeline(props: {
-  snapshots: ReadTabProps['projectSnapshots'];
-}) {
-  const items = buildSnapshotTimelineItems(props.snapshots);
-  if (items.length === 0) return null;
 
   return (
     <div>
@@ -585,27 +529,39 @@ function HorizontalSnapshotTimeline(props: {
       </h2>
       <div className="relative h-12">
         <div className="absolute top-1/2 left-0 right-0 h-px bg-[rgb(var(--ring)/0.12)]" />
-        {items.map((item) => (
-          <div
-            key={item.id}
-            className="absolute top-1/2 -translate-y-1/2"
-            style={{ left: `${item.position * 100}%` }}
-          >
-            <div className="group relative">
-              <div className="h-2 w-2 rounded-full bg-[rgb(var(--text))]" />
-              <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <div className="max-w-[260px] min-w-[180px] rounded-md border border-[rgb(var(--ring)/0.12)] bg-[rgb(var(--surface))] px-2 py-1 shadow-sm">
-                  <div className="text-[10px] font-medium text-[rgb(var(--text))]">
-                    {item.dateLabel}
-                  </div>
-                  <div className="mt-1 text-[10px] text-[rgb(var(--muted))] whitespace-normal break-words">
-                    {item.summary}
+        {events.map((item) => {
+          const pos = span === 0 ? 0.5 : (item.ts - t0) / span;
+          const dateLabel = new Date(item.occurred_at).toLocaleDateString(undefined, {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+          });
+          return (
+            <div
+              key={item.id}
+              className="absolute top-1/2 -translate-y-1/2"
+              style={{ left: `${pos * 100}%` }}
+            >
+              <div className="group relative">
+                <div
+                  className={`rounded-full bg-[rgb(var(--text))] ${
+                    item.kind === 'result' ? 'h-3 w-3' : 'h-2 w-2'
+                  }`}
+                />
+                <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                  <div className="max-w-[260px] min-w-[180px] rounded-md border border-[rgb(var(--ring)/0.12)] bg-[rgb(var(--surface))] px-2 py-1 shadow-sm font-sans">
+                    <div className="text-[10px] font-medium text-[rgb(var(--text))]">
+                      {dateLabel}
+                    </div>
+                    <div className="mt-1 text-[10px] text-[rgb(var(--muted))] whitespace-normal break-words">
+                      {item.label}
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

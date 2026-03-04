@@ -10,38 +10,13 @@ import type { StructuralStatePayload } from '../hash';
 import { inferArcsAndBuildState } from '../inference/arcs';
 import { loadLatestSnapshot, writeSnapshotState, createMinimalPulses } from '../snapshot';
 import { JobNotFoundError, MissingThinkingTimeError } from './job.errors';
+import { getAppBaseUrl } from '@/lib/url';
 
 function isDevEnv(): boolean {
   return (
     typeof process !== 'undefined' &&
     (process.env.NODE_ENV === 'development' || process.env.APP_ENV === 'development')
   );
-}
-
-/**
- * Normalize a base URL to a fully-qualified origin (with scheme). Node fetch requires absolute URLs.
- */
-function normalizeBaseUrl(raw?: string | null): string {
-  if (!raw) return '';
-  const s = raw.trim();
-  if (!s) return '';
-  const lower = s.toLowerCase();
-  if (lower.startsWith('http://') || lower.startsWith('https://')) return s;
-  return `https://${s}`;
-}
-
-/**
- * Resolve base URL for semantic trigger fetch. Priority: NEXT_PUBLIC_APP_URL → VERCEL_URL → localhost.
- * Always returns a normalized origin (with scheme) so new URL(path, base) is valid.
- */
-function getSemanticTriggerBaseUrl(): { rawBase: string; normalizedBase: string } {
-  const fromApp = process.env.NEXT_PUBLIC_APP_URL;
-  const fromVercel = process.env.VERCEL_URL;
-  const rawBase = fromApp ?? fromVercel ?? 'http://localhost:3000';
-  let normalizedBase = normalizeBaseUrl(rawBase);
-  if (!normalizedBase) normalizedBase = normalizeBaseUrl(fromVercel);
-  if (!normalizedBase) normalizedBase = 'http://localhost:3000';
-  return { rawBase: rawBase ?? '', normalizedBase };
 }
 
 /**
@@ -169,8 +144,14 @@ async function triggerSemanticGenerate(
     }));
   }
 
-  const { rawBase, normalizedBase } = getSemanticTriggerBaseUrl();
-  const url = new URL('/api/admin/semantic/generate', normalizedBase).toString();
+  const baseUrl = getAppBaseUrl();
+  const url = new URL('/api/admin/semantic/generate', baseUrl).toString();
+  let urlHost = '';
+  try {
+    urlHost = new URL(url).host;
+  } catch {
+    urlHost = '(parse failed)';
+  }
 
   const secret = process.env.INDEX_ADMIN_SECRET;
   if (!secret) {
@@ -181,9 +162,20 @@ async function triggerSemanticGenerate(
     return;
   }
 
+  const stateHashPrefix = state_hash.substring(0, 16);
+  const arcsCount = arcs.length || arc_ids.length;
+  const pulsesCount = pulses.length;
+
   if (isDevEnv()) {
     // eslint-disable-next-line no-console
-    console.log('[SemanticTrigger][URL]', { base: rawBase, normalizedBase, url });
+    console.log('[SemanticTrigger][Request]', {
+      scope_type,
+      scope_id: scope_id ?? undefined,
+      state_hash_prefix: stateHashPrefix,
+      arcs_count: arcsCount,
+      pulses_count: pulsesCount,
+      url_host: urlHost,
+    });
   }
 
   const body: Record<string, unknown> = {
@@ -198,17 +190,30 @@ async function triggerSemanticGenerate(
     body.stats = { ...statsParam, pulse_count: pulses.length };
   }
 
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-index-admin-secret': secret,
-    },
-    body: JSON.stringify(body),
-  });
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-index-admin-secret': secret,
+      },
+      body: JSON.stringify(body),
+    });
 
-  if (!res.ok) {
-    throw new Error(`Semantic generate failed: ${res.status}`);
+    if (!res.ok) {
+      throw new Error(`Semantic generate failed: ${res.status}`);
+    }
+  } catch (err) {
+    if (isDevEnv()) {
+      // eslint-disable-next-line no-console
+      console.error('[SemanticTrigger][Error]', {
+        message: err instanceof Error ? err.message : String(err),
+        url_host: urlHost,
+        scope_type,
+        state_hash_prefix: stateHashPrefix,
+      });
+    }
+    throw err;
   }
 }
 

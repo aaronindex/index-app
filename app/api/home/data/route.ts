@@ -22,11 +22,11 @@ function getTypedHeadline(p: HomePulse, semanticHeadline?: string | null): strin
     case 'arc_shift':
       return 'Arc shifted';
     case 'structural_threshold':
-      return 'Threshold crossed';
+      return 'Structure updated';
     case 'result_recorded':
       return 'Result recorded';
     default:
-      return 'Structural shift';
+      return 'Structure updated';
   }
 }
 
