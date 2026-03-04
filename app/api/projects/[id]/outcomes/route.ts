@@ -48,7 +48,8 @@ export async function POST(
       );
     }
 
-    if (/[\\n\\r]/.test(text)) {
+    // Disallow actual newline characters (but allow letters "n" and "r")
+    if (/[\n\r]/.test(text)) {
       return NextResponse.json(
         { error: 'Outcome must be a single line (no newlines).' },
         { status: 400 }
