@@ -9,18 +9,50 @@ import type { HomePulse } from '@/lib/ui-data/home.load';
 
 function formatPulseShiftLabel(p: HomePulse): string {
   const headline = (p.headline || '').trim();
+  if (headline) return headline;
+
   switch (p.pulse_type) {
-    case 'result_recorded':
-      return headline ? `Result recorded: ${headline}` : 'Result recorded';
-    case 'arc_shift':
-      return headline || 'Arc shifted phase';
-    case 'structural_threshold':
-      return headline || 'Structural threshold';
     case 'tension':
-      return headline || 'Tension';
+      return 'Structural tension surfaced';
+    case 'arc_shift':
+      return 'Arc shift';
+    case 'structural_threshold':
+      return 'Structural threshold';
+    case 'result_recorded':
+      return 'Result recorded';
     default:
-      return headline || 'Structural shift';
+      return 'Structural shift';
   }
+}
+
+function dedupePulses(pulses: HomePulse[]): HomePulse[] {
+  const result: HomePulse[] = [];
+  for (const pulse of pulses) {
+    const occurred = pulse.occurred_at || '';
+    const day = occurred.slice(0, 10);
+    if (!day) {
+      result.push(pulse);
+      continue;
+    }
+
+    const last = result[result.length - 1];
+    if (last) {
+      const lastDay = (last.occurred_at || '').slice(0, 10);
+      const sameProject =
+        (last.project_id || null) === (pulse.project_id || null);
+      if (
+        last.pulse_type === pulse.pulse_type &&
+        lastDay === day &&
+        sameProject
+      ) {
+        // Collapse obvious duplicate (same type + same day + same project/null)
+        continue;
+      }
+    }
+
+    result.push(pulse);
+  }
+  return result;
 }
 
 function formatDigestBody(d: {
@@ -81,19 +113,20 @@ export async function GET(request: NextRequest) {
     const hasArcs = Array.isArray(payload?.active_arc_ids) && payload.active_arc_ids.length > 0;
 
     const directionText =
-      homeView.latestSnapshot?.snapshot_text?.trim() ||
-      (hasArcs ? null : 'Your INDEX will show the direction of your thinking as sources are distilled.');
+      homeView.latestSnapshot?.snapshot_text?.trim() || null;
 
-    // Shifts: 5–10 items, newest first (already ordered by occurred_at desc from loader)
-    const shifts = homeView.pulses.slice(0, 10).map((p) => ({
+    // Shifts source: de-duplicated pulses (newest first), capped to last ~5 items
+    const deduped = dedupePulses(homeView.pulses);
+    const shiftSource = deduped.slice(0, 5);
+    const shifts = shiftSource.map((p) => ({
       id: p.id,
       occurred_at: p.occurred_at,
       label: formatPulseShiftLabel(p),
       pulse_type: p.pulse_type,
     }));
 
-    // Timeline: same events as pulses, ordered by occurred_at asc for display
-    const timelineEvents = [...homeView.pulses]
+    // Timeline: same events as Shifts, ordered by occurred_at asc for display
+    const timelineEvents = [...shiftSource]
       .sort((a, b) => new Date(a.occurred_at).getTime() - new Date(b.occurred_at).getTime())
       .map((p) => ({
         id: p.id,

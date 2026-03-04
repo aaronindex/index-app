@@ -231,7 +231,7 @@ export default function MagicHomeScreen() {
   const weeklyDigest = data?.weeklyDigest ?? null;
   const hasConversations = data?.hasConversations ?? false;
   const hasSnapshot = !!directionGeneratedAt;
-  const hasStructuralChange = hasSnapshot || shifts.length > 0;
+  const hasStructuralChange = shifts.length > 0;
 
   return (
     <div className="space-y-8">
@@ -268,9 +268,12 @@ export default function MagicHomeScreen() {
               Direction
             </h2>
             {!data || !hasSnapshot ? (
-              <p className="text-sm text-[rgb(var(--text))]">
-                Your INDEX will show the direction of your thinking as sources are distilled.
-              </p>
+              <div className="text-sm text-[rgb(var(--muted))]">
+                <p>No direction yet.</p>
+                <p className="mt-1 text-xs">
+                  Direction appears once sources are distilled.
+                </p>
+              </div>
             ) : (
               <div className="text-sm text-[rgb(var(--text))] whitespace-pre-wrap">
                 {formatUpdatedAgo(directionGeneratedAt) && (
@@ -291,7 +294,7 @@ export default function MagicHomeScreen() {
               Shifts
             </h2>
             {!data || shifts.length === 0 ? (
-              <p className="text-sm text-[rgb(var(--muted))]">No structural shifts yet.</p>
+              <p className="text-sm text-[rgb(var(--muted))]">No shifts yet.</p>
             ) : (
               <ul className="space-y-1.5 text-sm text-[rgb(var(--text))]">
                 {shifts.map((s) => (
@@ -305,6 +308,8 @@ export default function MagicHomeScreen() {
               </ul>
             )}
           </div>
+
+          <hr className="my-6 border-[rgb(var(--ring)/0.08)]" />
 
           {/* 3. Timeline — always rendered */}
           <GlobalTimeline events={timelineEvents} />
@@ -333,7 +338,7 @@ export default function MagicHomeScreen() {
               <div>
                 {!hasStructuralChange ? (
                   <p className="text-sm text-[rgb(var(--muted))] mb-3">
-                    Nothing to digest yet.
+                    No structural changes to digest yet.
                   </p>
                 ) : (
                   <p className="text-sm text-[rgb(var(--muted))] mb-3">

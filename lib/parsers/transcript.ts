@@ -118,13 +118,23 @@ export function parseTranscript(
         debugTurnHeaders.push(line.trim().substring(0, 80));
       }
       // Save previous message if exists
-      if (currentRole && currentContent.length > 0) {
+      if (currentContent.length > 0) {
         const content = currentContent.join('\n').trim();
         if (content) {
-          messages.push({
-            role: swapRoles ? (currentRole === 'user' ? 'assistant' : 'user') : currentRole,
-            content,
-          });
+          if (currentRole) {
+            // Normal case: we were already inside a turn
+            messages.push({
+              role: swapRoles ? (currentRole === 'user' ? 'assistant' : 'user') : currentRole,
+              content,
+            });
+          } else {
+            // We hit the first explicit marker after accumulating text with no role.
+            // Preserve that leading text as a user turn instead of dropping it.
+            messages.push({
+              role: swapRoles ? 'assistant' : 'user',
+              content,
+            });
+          }
         }
       }
       // Start new message

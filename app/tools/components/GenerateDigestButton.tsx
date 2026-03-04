@@ -79,22 +79,45 @@ export default function GenerateDigestButton({ disabled = false, variant = 'prim
         }
       }
 
-      // Generate digest (returns digest or no-movement digest; never hangs)
+      // Generate digest with a client-side timeout to avoid hanging
+      const controller = new AbortController();
+      const timeoutMs = 60_000;
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
       const response = await fetch('/api/digests/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ weekStart, weekEnd }),
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Failed to generate digest');
+      const text = await response.text();
+      let data: any = {};
+      try {
+        data = text.trim() ? JSON.parse(text) : {};
+      } catch {
+        throw new Error('Invalid response from server. Please try again.');
       }
 
-      const { digest } = await response.json();
+      if (!response.ok) {
+        const message =
+          typeof data.error === 'string' ? data.error : 'Failed to generate digest';
+        throw new Error(message);
+      }
+
+      const digest = data.digest;
+      if (!digest || !digest.id) {
+        throw new Error('Digest was generated but no ID was returned.');
+      }
+
       router.push(`/digests/${digest.id}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to generate digest');
+      if (err instanceof Error && err.name === 'AbortError') {
+        setError('Digest generation is taking too long. Please try again.');
+      } else {
+        setError(err instanceof Error ? err.message : 'Failed to generate digest');
+      }
     } finally {
       setLoading(false);
     }
@@ -119,7 +142,7 @@ export default function GenerateDigestButton({ disabled = false, variant = 'prim
   }
 
   return (
-    <div className="border border-[rgb(var(--ring)/0.08)] rounded-lg p-4 bg-[rgb(var(--surface))]">
+    <div className="border border-[rgb(var(--ring)/0.08)] rounded-lg p-4">
       <h3 className="font-serif text-base font-semibold text-[rgb(var(--text))] mb-3">Generate Weekly Digest</h3>
       <div className="space-y-4">
         <div>

@@ -63,6 +63,10 @@ export default function ReadTab({
   const [recentDecisions, setRecentDecisions] = useState<RecentDecision[]>([]);
   const [nextTasks, setNextTasks] = useState<NextTask[]>([]);
   const [hasConversations, setHasConversations] = useState<boolean | null>(null);
+  const [showOutcomeModal, setShowOutcomeModal] = useState(false);
+  const [outcomeText, setOutcomeText] = useState('');
+  const [outcomeSaving, setOutcomeSaving] = useState(false);
+  const [outcomeError, setOutcomeError] = useState<string | null>(null);
 
   // Check if project has conversations
   useEffect(() => {
@@ -219,7 +223,9 @@ export default function ReadTab({
           <button
             type="button"
             onClick={() => {
-              // TODO: wire up to Record Result modal
+              setOutcomeText('');
+              setOutcomeError(null);
+              setShowOutcomeModal(true);
             }}
             className="px-2.5 py-1 text-xs font-medium rounded border border-[rgb(var(--ring)/0.16)] text-[rgb(var(--text))] hover:bg-[rgb(var(--surface2))] transition-colors"
           >
@@ -252,6 +258,107 @@ export default function ReadTab({
           </div>
         </div>
       </div>
+
+      {showOutcomeModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+          onClick={() => {
+            if (!outcomeSaving) {
+              setShowOutcomeModal(false);
+              setOutcomeError(null);
+            }
+          }}
+        >
+          <div
+            className="bg-[rgb(var(--surface))] rounded-2xl p-6 max-w-md w-full shadow-xl ring-1 ring-[rgb(var(--ring)/0.12)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="font-serif text-lg font-semibold text-[rgb(var(--text))] mb-2">
+              Record result
+            </h3>
+            <p className="text-xs text-[rgb(var(--muted))] mb-4">
+              Recording an outcome updates the structural state of this project. This cannot be edited.
+            </p>
+            <textarea
+              value={outcomeText}
+              onChange={(e) => setOutcomeText(e.target.value)}
+              rows={4}
+              className="w-full px-3 py-2 text-sm border border-[rgb(var(--ring)/0.16)] rounded-lg bg-[rgb(var(--bg))] text-[rgb(var(--text))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--ring)/0.2)]"
+              placeholder="Summarize a concrete result in a single sentence..."
+              disabled={outcomeSaving}
+            />
+            {outcomeError && (
+              <div className="mt-2 text-xs text-red-600 dark:text-red-400">
+                {outcomeError}
+              </div>
+            )}
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  if (outcomeSaving) return;
+                  setShowOutcomeModal(false);
+                  setOutcomeError(null);
+                }}
+                className="px-3 py-1.5 text-xs font-medium rounded-lg border border-[rgb(var(--ring)/0.16)] text-[rgb(var(--muted))] hover:bg-[rgb(var(--surface2))] disabled:opacity-50"
+                disabled={outcomeSaving}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  const text = outcomeText.trim();
+                  if (!text) {
+                    setOutcomeError('Outcome text is required.');
+                    return;
+                  }
+                  setOutcomeSaving(true);
+                  setOutcomeError(null);
+                  try {
+                    const response = await fetch(`/api/projects/${projectId}/outcomes`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ text }),
+                    });
+
+                    const bodyText = await response.text();
+                    let json: any = {};
+                    try {
+                      json = bodyText.trim() ? JSON.parse(bodyText) : {};
+                    } catch {
+                      throw new Error('Invalid response from server. Please try again.');
+                    }
+
+                    if (!response.ok) {
+                      const message =
+                        typeof json.error === 'string'
+                          ? json.error
+                          : 'Failed to record outcome.';
+                      setOutcomeError(message);
+                      return;
+                    }
+
+                    setShowOutcomeModal(false);
+                    setOutcomeText('');
+                    await router.refresh();
+                  } catch (err) {
+                    setOutcomeError(
+                      err instanceof Error ? err.message : 'Failed to record outcome.'
+                    );
+                  } finally {
+                    setOutcomeSaving(false);
+                  }
+                }}
+                className="px-3 py-1.5 text-xs font-medium rounded-lg bg-[rgb(var(--text))] text-[rgb(var(--bg))] hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={outcomeSaving || !outcomeText.trim()}
+              >
+                {outcomeSaving ? 'Saving…' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Open Decisions (from active tensions) */}
       <div>
