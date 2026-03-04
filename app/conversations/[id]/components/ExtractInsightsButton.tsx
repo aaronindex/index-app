@@ -1,7 +1,7 @@
 // app/conversations/[id]/components/ExtractInsightsButton.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { track } from '@/lib/analytics/track';
 
@@ -12,6 +12,8 @@ interface ExtractInsightsButtonProps {
 
 export default function ExtractInsightsButton({ conversationId, projectId }: ExtractInsightsButtonProps) {
   const router = useRouter();
+  const extractInFlightRef = useRef(false);
+  const extractTimeoutRef = useRef(false);
   const [extracting, setExtracting] = useState(false);
   const [result, setResult] = useState<{
     success: boolean;
@@ -43,47 +45,77 @@ export default function ExtractInsightsButton({ conversationId, projectId }: Ext
   }, [showSuccessModal, router]);
 
   const handleExtract = async () => {
+    if (extractInFlightRef.current) return;
+    extractInFlightRef.current = true;
     setExtracting(true);
     setError(null);
     setResult(null);
+
+    const abortController = new AbortController();
+    const timeoutMs = 180_000; // 3 minutes
+    extractTimeoutRef.current = false;
+    let timeoutId: ReturnType<typeof setTimeout> | null = setTimeout(() => {
+      extractTimeoutRef.current = true;
+      abortController.abort();
+    }, timeoutMs);
 
     try {
       const response = await fetch('/api/insights/extract', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ conversationId }),
+        signal: abortController.signal,
       });
+      if (timeoutId != null) clearTimeout(timeoutId);
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to extract insights');
+      const text = await response.text();
+      let data: Record<string, unknown>;
+      try {
+        data = text.trim() ? (JSON.parse(text) as Record<string, unknown>) : {};
+      } catch {
+        setError('Invalid response from server. Please try again.');
+        return;
       }
 
-      const data = await response.json();
-      setResult(data);
+      if (!response.ok) {
+        const errMsg = typeof data.error === 'string' ? data.error : 'Failed to extract insights';
+        setError(errMsg);
+        return;
+      }
 
-      // Track insights extraction event
-      if (data.success) {
+      setResult(data as typeof result);
+
+      if (data.success && data.insights && typeof data.insights === 'object') {
+        const insights = data.insights as Record<string, number>;
         const eventParams = {
           conversation_id: conversationId,
           project_id: projectId || null,
-          total_insights: data.created,
-          decisions_count: data.insights.decisions,
-          commitments_count: data.insights.commitments,
-          blockers_count: data.insights.blockers,
-          open_loops_count: data.insights.openLoops,
-          highlights_count: data.insights.suggestedHighlights,
+          total_insights: typeof data.created === 'number' ? data.created : 0,
+          decisions_count: insights.decisions ?? 0,
+          commitments_count: insights.commitments ?? 0,
+          blockers_count: insights.blockers ?? 0,
+          open_loops_count: insights.openLoops ?? 0,
+          highlights_count: insights.suggestedHighlights ?? 0,
         };
-        
         track('insights_extracted', eventParams);
         console.log('[Analytics] insights_extracted', eventParams);
-        
-        // Show success modal
         setShowSuccessModal(true);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to extract insights');
+      if (timeoutId != null) clearTimeout(timeoutId);
+      const isAbort = err instanceof Error && err.name === 'AbortError';
+      const isTimeout = isAbort && extractTimeoutRef.current;
+      setError(
+        isTimeout
+          ? 'Reduce is taking too long. Try again in a moment.'
+          : isAbort
+            ? 'Request was canceled. Click Reduce again.'
+            : err instanceof Error
+              ? err.message
+              : 'Failed to extract insights'
+      );
     } finally {
+      extractInFlightRef.current = false;
       setExtracting(false);
     }
   };

@@ -2,6 +2,8 @@
 // API endpoint to update message roles and handle splits in a conversation
 
 import { NextRequest, NextResponse } from 'next/server';
+
+export const maxDuration = 60;
 import { getSupabaseServerClient } from '@/lib/supabaseServer';
 import { getCurrentUser } from '@/lib/getUser';
 

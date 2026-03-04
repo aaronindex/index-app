@@ -46,6 +46,8 @@ export default function DefineRolesModal({
   } | null>(null);
   const messageRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
   const tempIdCounter = useRef(0);
+  const saveInFlightRef = useRef(false);
+  const saveTimeoutRef = useRef(false);
 
   // Reset to original when modal opens
   useEffect(() => {
@@ -295,7 +297,18 @@ export default function DefineRolesModal({
   };
 
   const handleSave = async () => {
+    if (saveInFlightRef.current) return;
+    saveInFlightRef.current = true;
     setSaving(true);
+
+    const abortController = new AbortController();
+    const timeoutMs = 60_000; // 1 minute — define-roles is DB-only
+    saveTimeoutRef.current = false;
+    let timeoutId: ReturnType<typeof setTimeout> | null = setTimeout(() => {
+      saveTimeoutRef.current = true;
+      abortController.abort();
+    }, timeoutMs);
+
     try {
       const response = await fetch('/api/conversations/define-roles', {
         method: 'POST',
@@ -311,19 +324,43 @@ export default function DefineRolesModal({
           })),
           originalMessageIds: originalMessages.map((m) => m.id),
         }),
+        signal: abortController.signal,
       });
+      if (timeoutId != null) clearTimeout(timeoutId);
+
+      const text = await response.text();
+      let data: Record<string, unknown>;
+      try {
+        data = text.trim() ? (JSON.parse(text) as Record<string, unknown>) : {};
+      } catch {
+        showError('Invalid response from server. Please try again.');
+        return;
+      }
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to save roles');
+        const errMsg = typeof data.error === 'string' ? data.error : 'Failed to save roles';
+        showError(errMsg);
+        return;
       }
 
       showSuccess('Roles updated successfully');
       router.refresh();
       onClose();
     } catch (err) {
-      showError(err instanceof Error ? err.message : 'Failed to save roles');
+      if (timeoutId != null) clearTimeout(timeoutId);
+      const isAbort = err instanceof Error && err.name === 'AbortError';
+      const isTimeout = isAbort && saveTimeoutRef.current;
+      showError(
+        isTimeout
+          ? 'Save is taking too long. Try again.'
+          : isAbort
+            ? 'Request was canceled. Click Save Roles again.'
+            : err instanceof Error
+              ? err.message
+              : 'Failed to save roles'
+      );
     } finally {
+      saveInFlightRef.current = false;
       setSaving(false);
     }
   };

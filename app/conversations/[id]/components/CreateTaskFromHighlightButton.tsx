@@ -1,7 +1,7 @@
 // app/conversations/[id]/components/CreateTaskFromHighlightButton.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 
 interface CreateTaskFromHighlightButtonProps {
@@ -18,6 +18,8 @@ export default function CreateTaskFromHighlightButton({
   projectId,
 }: CreateTaskFromHighlightButtonProps) {
   const router = useRouter();
+  const createInFlightRef = useRef(false);
+  const createTimeoutRef = useRef(false);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -26,9 +28,18 @@ export default function CreateTaskFromHighlightButton({
       setError('Link conversation to a project first');
       return;
     }
-
+    if (createInFlightRef.current) return;
+    createInFlightRef.current = true;
     setCreating(true);
     setError(null);
+
+    const abortController = new AbortController();
+    const timeoutMs = 60_000;
+    createTimeoutRef.current = false;
+    let timeoutId: ReturnType<typeof setTimeout> | null = setTimeout(() => {
+      createTimeoutRef.current = true;
+      abortController.abort();
+    }, timeoutMs);
 
     try {
       const response = await fetch('/api/tasks/create', {
@@ -42,36 +53,49 @@ export default function CreateTaskFromHighlightButton({
           source_highlight_id: highlightId,
           status: 'open',
         }),
+        signal: abortController.signal,
       });
+      if (timeoutId != null) clearTimeout(timeoutId);
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        
-        // Track limit hit if 429
-        if (response.status === 429) {
-          const { trackEvent } = await import('@/lib/analytics');
-          trackEvent('limit_hit', {
-            limit_type: 'meaning_object',
-          });
-        }
-        
-        throw new Error(errorData.error || 'Failed to create task');
+      const text = await response.text();
+      let data: Record<string, unknown>;
+      try {
+        data = text.trim() ? (JSON.parse(text) as Record<string, unknown>) : {};
+      } catch {
+        setError('Invalid response from server. Please try again.');
+        return;
       }
 
-      const { task } = await response.json();
-      
-      // Track task created
-      const { trackEvent } = await import('@/lib/analytics');
-      trackEvent('task_created', {
-        task_id: task.id,
-        has_project: !!projectId,
-        from_highlight: true,
-      });
+      if (!response.ok) {
+        if (response.status === 429) {
+          const { trackEvent } = await import('@/lib/analytics');
+          trackEvent('limit_hit', { limit_type: 'meaning_object' });
+        }
+        setError(typeof data.error === 'string' ? data.error : 'Failed to create task');
+        return;
+      }
 
-      // Navigate to project tasks tab
+      const task = data.task as { id: string } | undefined;
+      if (task?.id) {
+        const { trackEvent } = await import('@/lib/analytics');
+        trackEvent('task_created', { task_id: task.id, has_project: !!projectId, from_highlight: true });
+      }
       router.push(`/projects/${projectId}?tab=tasks`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create task');
+      if (timeoutId != null) clearTimeout(timeoutId);
+      const isAbort = err instanceof Error && err.name === 'AbortError';
+      const isTimeout = isAbort && createTimeoutRef.current;
+      setError(
+        isTimeout
+          ? 'Request took too long. Try again.'
+          : isAbort
+            ? 'Request was canceled. Try again.'
+            : err instanceof Error
+              ? err.message
+              : 'Failed to create task'
+      );
+    } finally {
+      createInFlightRef.current = false;
       setCreating(false);
     }
   };

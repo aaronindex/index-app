@@ -17,6 +17,8 @@ export default function CreateTaskButton({ projectId, onTaskCreated }: CreateTas
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const createInFlightRef = useRef(false);
+  const createTimeoutRef = useRef(false);
 
   // Focus input when creating mode is activated
   useEffect(() => {
@@ -30,9 +32,18 @@ export default function CreateTaskButton({ projectId, onTaskCreated }: CreateTas
       setError('Task title is required');
       return;
     }
-
+    if (createInFlightRef.current) return;
+    createInFlightRef.current = true;
     setCreating(true);
     setError(null);
+
+    const abortController = new AbortController();
+    const timeoutMs = 60_000;
+    createTimeoutRef.current = false;
+    let timeoutId: ReturnType<typeof setTimeout> | null = setTimeout(() => {
+      createTimeoutRef.current = true;
+      abortController.abort();
+    }, timeoutMs);
 
     try {
       const response = await fetch('/api/tasks/create', {
@@ -43,55 +54,64 @@ export default function CreateTaskButton({ projectId, onTaskCreated }: CreateTas
           project_id: projectId,
           status: 'open',
         }),
+        signal: abortController.signal,
       });
+      if (timeoutId != null) clearTimeout(timeoutId);
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        
-        // Track limit hit if 429
-        if (response.status === 429) {
-          const { trackEvent } = await import('@/lib/analytics');
-          trackEvent('limit_hit', {
-            limit_type: 'meaning_object',
-          });
-          showError(errorData.error || 'Task limit reached');
-        } else {
-          showError(errorData.error || 'Failed to create task');
-        }
-        
-        setCreating(false);
+      const text = await response.text();
+      let data: Record<string, unknown>;
+      try {
+        data = text.trim() ? (JSON.parse(text) as Record<string, unknown>) : {};
+      } catch {
+        showError('Invalid response from server. Please try again.');
         return;
       }
 
-      const { task } = await response.json();
-      
-      // Track task created
-      const { trackEvent } = await import('@/lib/analytics');
-      trackEvent('task_created', {
-        task_id: task.id,
-        has_project: !!projectId,
-        from_highlight: false,
-        source: 'manual',
-      });
+      if (!response.ok) {
+        if (response.status === 429) {
+          const { trackEvent } = await import('@/lib/analytics');
+          trackEvent('limit_hit', { limit_type: 'meaning_object' });
+          showError(typeof data.error === 'string' ? data.error : 'Task limit reached');
+        } else {
+          showError(typeof data.error === 'string' ? data.error : 'Failed to create task');
+        }
+        return;
+      }
 
-      // Reset form
+      const task = data.task as { id: string } | undefined;
+      if (task?.id) {
+        const { trackEvent } = await import('@/lib/analytics');
+        trackEvent('task_created', {
+          task_id: task.id,
+          has_project: !!projectId,
+          from_highlight: false,
+          source: 'manual',
+        });
+      }
       setTitle('');
       setIsCreating(false);
       setError(null);
-      
       showSuccess('Task created');
-      
-      // Call callback if provided, otherwise refresh
       if (onTaskCreated) {
         onTaskCreated();
       } else {
         router.refresh();
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to create task';
+      if (timeoutId != null) clearTimeout(timeoutId);
+      const isAbort = err instanceof Error && err.name === 'AbortError';
+      const isTimeout = isAbort && createTimeoutRef.current;
+      const errorMessage = isTimeout
+        ? 'Request took too long. Try again.'
+        : isAbort
+          ? 'Request was canceled. Try again.'
+          : err instanceof Error
+            ? err.message
+            : 'Failed to create task';
       setError(errorMessage);
       showError(errorMessage);
     } finally {
+      createInFlightRef.current = false;
       setCreating(false);
     }
   };

@@ -1,5 +1,7 @@
 // app/api/insights/extract/route.ts
 import { NextRequest, NextResponse } from 'next/server';
+
+export const maxDuration = 300;
 import { getSupabaseServerClient } from '@/lib/supabaseServer';
 import { getCurrentUser } from '@/lib/getUser';
 import { extractInsights, ExtractedInsight, type InsightExtractionResult, type ReduceDebug } from '@/lib/ai/insights';

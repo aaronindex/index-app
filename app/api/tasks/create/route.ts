@@ -1,5 +1,7 @@
 // app/api/tasks/create/route.ts
 import { NextRequest, NextResponse } from 'next/server';
+
+export const maxDuration = 60;
 import { getSupabaseServerClient } from '@/lib/supabaseServer';
 import { getCurrentUser } from '@/lib/getUser';
 import { checkMeaningObjectLimit, incrementLimit } from '@/lib/limits';

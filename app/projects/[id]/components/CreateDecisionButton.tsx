@@ -1,7 +1,7 @@
 // app/projects/[id]/components/CreateDecisionButton.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 
 interface CreateDecisionButtonProps {
@@ -11,6 +11,8 @@ interface CreateDecisionButtonProps {
 
 export default function CreateDecisionButton({ projectId, conversationId }: CreateDecisionButtonProps) {
   const router = useRouter();
+  const createInFlightRef = useRef(false);
+  const createTimeoutRef = useRef(false);
   const [showModal, setShowModal] = useState(false);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -23,9 +25,18 @@ export default function CreateDecisionButton({ projectId, conversationId }: Crea
       setError('Title is required');
       return;
     }
-
+    if (createInFlightRef.current) return;
+    createInFlightRef.current = true;
     setCreating(true);
     setError(null);
+
+    const abortController = new AbortController();
+    const timeoutMs = 60_000;
+    createTimeoutRef.current = false;
+    let timeoutId: ReturnType<typeof setTimeout> | null = setTimeout(() => {
+      createTimeoutRef.current = true;
+      abortController.abort();
+    }, timeoutMs);
 
     try {
       const response = await fetch('/api/decisions/create', {
@@ -37,39 +48,53 @@ export default function CreateDecisionButton({ projectId, conversationId }: Crea
           conversation_id: conversationId || null,
           project_id: projectId,
         }),
+        signal: abortController.signal,
       });
+      if (timeoutId != null) clearTimeout(timeoutId);
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        
-        // Track limit hit if 429
-        if (response.status === 429) {
-          const { trackEvent } = await import('@/lib/analytics');
-          trackEvent('limit_hit', {
-            limit_type: 'meaning_object',
-          });
-        }
-        
-        throw new Error(errorData.error || 'Failed to create decision');
+      const text = await response.text();
+      let data: Record<string, unknown>;
+      try {
+        data = text.trim() ? (JSON.parse(text) as Record<string, unknown>) : {};
+      } catch {
+        setError('Invalid response from server. Please try again.');
+        return;
       }
 
-      const { decision } = await response.json();
-      
-      // Track decision created
-      const { trackEvent } = await import('@/lib/analytics');
-      trackEvent('decision_created', {
-        decision_id: decision.id,
-        has_project: !!projectId,
-      });
+      if (!response.ok) {
+        if (response.status === 429) {
+          const { trackEvent } = await import('@/lib/analytics');
+          trackEvent('limit_hit', { limit_type: 'meaning_object' });
+        }
+        const errMsg = typeof data.error === 'string' ? data.error : 'Failed to create decision';
+        setError(errMsg);
+        return;
+      }
 
-      // Reset form and close modal
+      const decision = data.decision as { id: string } | undefined;
+      if (decision?.id) {
+        const { trackEvent } = await import('@/lib/analytics');
+        trackEvent('decision_created', { decision_id: decision.id, has_project: !!projectId });
+      }
       setTitle('');
       setContent('');
       setShowModal(false);
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create decision');
+      if (timeoutId != null) clearTimeout(timeoutId);
+      const isAbort = err instanceof Error && err.name === 'AbortError';
+      const isTimeout = isAbort && createTimeoutRef.current;
+      setError(
+        isTimeout
+          ? 'Request took too long. Try again.'
+          : isAbort
+            ? 'Request was canceled. Try again.'
+            : err instanceof Error
+              ? err.message
+              : 'Failed to create decision'
+      );
     } finally {
+      createInFlightRef.current = false;
       setCreating(false);
     }
   };
