@@ -165,12 +165,16 @@ export default function ImportPage() {
         return;
       }
 
-      if (data.processed && data.conversationId) {
+      const conversationId = typeof data.conversationId === 'string' ? data.conversationId : '';
+      const title = typeof data.title === 'string' ? data.title : '';
+      const messageCount = typeof data.messageCount === 'number' ? data.messageCount : 0;
+
+      if (data.processed && conversationId) {
         void fetch('/api/thinking-time/resolve', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            conversation_id: data.conversationId,
+            conversation_id: conversationId,
             choice: quickThinkingTimeChoice,
           }),
         }).catch(() => {});
@@ -178,16 +182,16 @@ export default function ImportPage() {
         const latencyMs = Date.now() - startTime;
         trackEvent('import_completed', {
           import_type: 'quick_paste',
-          import_id: data.importId || undefined,
+          import_id: typeof data.importId === 'string' ? data.importId : undefined,
           latency_ms: latencyMs,
           conversation_count: 1,
-          message_count: data.messageCount || 0,
+          message_count: messageCount,
         });
 
         setQuickSuccess({
-          conversationId: data.conversationId,
-          title: data.title,
-          messageCount: data.messageCount,
+          conversationId,
+          title,
+          messageCount,
         });
       }
     } catch (err) {
