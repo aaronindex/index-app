@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
 
     const supabase = await getSupabaseServerClient();
 
-    const [homeView, conversationCountResult, projectCountResult, digestResult] = await Promise.all([
+    const [homeView, conversationCountResult, projectCountResult, digestResult, profileResult] = await Promise.all([
       loadHomeView({ supabaseClient: supabase, user_id: user.id }),
       supabase.from('conversations').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
       supabase.from('projects').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
@@ -70,6 +70,7 @@ export async function GET(request: NextRequest) {
         .order('week_start', { ascending: false })
         .limit(1)
         .maybeSingle(),
+      supabase.from('profiles').select('weekly_digest_enabled').eq('id', user.id).maybeSingle(),
     ]);
 
     const hasConversations = (conversationCountResult.count ?? 0) > 0;
@@ -102,6 +103,7 @@ export async function GET(request: NextRequest) {
       ? formatDigestBody(latestDigest)
       : null;
 
+    const profile = profileResult.data;
     return NextResponse.json({
       hasConversations,
       hasProjects,
@@ -120,6 +122,7 @@ export async function GET(request: NextRequest) {
             summary: latestDigest.summary,
           }
         : null,
+      weekly_digest_enabled: profile?.weekly_digest_enabled ?? true,
     });
   } catch (error) {
     console.error('Home data API error:', error);

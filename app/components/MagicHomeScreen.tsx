@@ -142,14 +142,17 @@ function GlobalTimeline({ events }: { events: TimelineEvent[] }) {
 
 export default function MagicHomeScreen() {
   const [data, setData] = useState<LandingData | null>(null);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [onboardingCompleted, setOnboardingCompleted] = useState<boolean | null>(null);
   const [postImportModalDismissed, setPostImportModalDismissed] = useState(false);
 
   const fetchHomeData = useCallback(async () => {
+    setError(null);
     try {
-      const response = await fetch('/api/home/data');
+      const response = await fetch('/api/home/data', {
+        credentials: 'same-origin',
+        headers: { Accept: 'application/json' },
+      });
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         const errorMessage = errorData.error || `Failed to fetch home data (${response.status})`;
@@ -158,11 +161,16 @@ export default function MagicHomeScreen() {
       const result = await response.json();
       setData(result);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load home data';
+      const isNetworkError =
+        err instanceof TypeError ||
+        (err instanceof Error && (err.message === 'Failed to fetch' || err.message.includes('network')));
+      const errorMessage = isNetworkError
+        ? 'Connection problem. Check your network and try again.'
+        : err instanceof Error
+          ? err.message
+          : 'Failed to load home data';
       setError(errorMessage);
       showError(errorMessage);
-    } finally {
-      setLoading(false);
     }
   }, []);
 
@@ -200,11 +208,7 @@ export default function MagicHomeScreen() {
         <div className="p-4 rounded-xl bg-red-50 dark:bg-red-900/20 ring-1 ring-red-200 dark:ring-red-800 flex items-center justify-between gap-4">
           <p className="text-red-800 dark:text-red-400 text-sm">{error}</p>
           <button
-            onClick={() => {
-              setError(null);
-              setLoading(true);
-              fetchHomeData();
-            }}
+            onClick={() => fetchHomeData()}
             className="shrink-0 px-4 py-2 bg-red-600 text-white rounded-lg hover:opacity-90 transition-opacity font-medium text-sm"
           >
             Try Again
@@ -226,9 +230,7 @@ export default function MagicHomeScreen() {
               Direction
             </h2>
             <div className="text-sm text-[rgb(var(--text))] whitespace-pre-wrap">
-              {loading && !data ? (
-                <p className="text-[rgb(var(--muted))]">Loading...</p>
-              ) : !hasArcs ? (
+              {!hasArcs || !data ? (
                 <p className="text-[rgb(var(--text))]">
                   Your INDEX will show the direction of your thinking as sources are distilled.
                 </p>
@@ -247,9 +249,7 @@ export default function MagicHomeScreen() {
             <h2 className="font-serif text-lg font-semibold text-[rgb(var(--text))] mb-3">
               Shifts
             </h2>
-            {loading && !data ? (
-              <p className="text-sm text-[rgb(var(--muted))]">Loading...</p>
-            ) : shifts.length === 0 ? (
+            {(!data || shifts.length === 0) ? (
               <p className="text-sm text-[rgb(var(--muted))]">No structural shifts yet.</p>
             ) : (
               <ul className="space-y-1.5 text-sm text-[rgb(var(--text))]">
@@ -278,9 +278,7 @@ export default function MagicHomeScreen() {
               Weekly Digest
             </h2>
             <Card className="p-6 bg-gradient-to-br from-[rgb(var(--surface2))] to-[rgb(var(--surface))]">
-              {loading && !data ? (
-                <p className="text-sm text-[rgb(var(--muted))]">Loading...</p>
-              ) : weeklyDigest?.body ? (
+              {weeklyDigest?.body ? (
                 <>
                   <div className="mb-4 pb-4 border-b border-[rgb(var(--ring)/0.08)]">
                     <Link
