@@ -1,7 +1,7 @@
 // app/import/page.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSupabaseBrowserClient } from '@/lib/supabaseClient';
 import { parseTranscript } from '@/lib/parsers/transcript';
@@ -10,6 +10,7 @@ import { trackEvent } from '@/lib/analytics';
 
 export default function ImportPage() {
   const router = useRouter();
+  const quickImportInFlightRef = useRef(false);
 
   // Quick Import state
   const [quickTranscript, setQuickTranscript] = useState('');
@@ -94,6 +95,8 @@ export default function ImportPage() {
       return;
     }
 
+    if (quickImportInFlightRef.current) return;
+    quickImportInFlightRef.current = true;
     setQuickLoading(true);
     setQuickError(null);
     const startTime = Date.now();
@@ -122,7 +125,18 @@ export default function ImportPage() {
         }),
       });
 
-      const data = await response.json();
+      let data: Record<string, unknown>;
+      try {
+        const text = await response.text();
+        if (!text.trim()) {
+          data = {};
+        } else {
+          data = JSON.parse(text) as Record<string, unknown>;
+        }
+      } catch (_) {
+        setQuickError('Invalid response from server. Please try again.');
+        return;
+      }
 
       if (!response.ok) {
         if (response.status === 429) {
@@ -151,18 +165,14 @@ export default function ImportPage() {
       }
 
       if (data.processed && data.conversationId) {
-        try {
-          await fetch('/api/thinking-time/resolve', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              conversation_id: data.conversationId,
-              choice: quickThinkingTimeChoice,
-            }),
-          });
-        } catch (resolveErr) {
-          console.warn('[QuickImport] Thinking time resolve failed:', resolveErr);
-        }
+        void fetch('/api/thinking-time/resolve', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            conversation_id: data.conversationId,
+            choice: quickThinkingTimeChoice,
+          }),
+        }).catch(() => {});
 
         const latencyMs = Date.now() - startTime;
         trackEvent('import_completed', {
@@ -181,14 +191,17 @@ export default function ImportPage() {
       }
     } catch (err) {
       const latencyMs = startTime ? Date.now() - startTime : 0;
+      const errMessage = err instanceof Error ? err.message : 'Failed to import conversation';
+      const isAbort = err instanceof Error && err.name === 'AbortError';
       trackEvent('import_failed', {
         import_type: 'quick_paste',
         latency_ms: latencyMs,
-        error: err instanceof Error ? err.message : 'Failed to import conversation',
+        error: isAbort ? 'aborted' : errMessage,
       });
-      setQuickError('Failed to import conversation. Please try again.');
-      console.error(err);
+      setQuickError(isAbort ? 'Request was canceled. Click Import again.' : 'Failed to import conversation. Please try again.');
+      console.error('[QuickImport]', err);
     } finally {
+      quickImportInFlightRef.current = false;
       setQuickLoading(false);
     }
   };
