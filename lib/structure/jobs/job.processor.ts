@@ -19,6 +19,22 @@ function isDevEnv(): boolean {
 }
 
 /**
+ * Resolve a fully-qualified app base URL (with protocol) for server-side fetch.
+ * Prefers NEXT_PUBLIC_APP_URL (normalized to https if no protocol); else VERCEL_URL; else localhost.
+ */
+function getAppBaseUrl(): string {
+  const fromApp = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  if (fromApp) {
+    const lower = fromApp.toLowerCase();
+    if (lower.startsWith('http://') || lower.startsWith('https://')) return fromApp;
+    return `https://${fromApp.replace(/^\/+/, '')}`;
+  }
+  const vercel = process.env.VERCEL_URL?.trim();
+  if (vercel) return `https://${vercel}`;
+  return 'http://localhost:3000';
+}
+
+/**
  * Get Supabase service role client for admin operations
  */
 function getSupabaseServiceClient(): SupabaseClient {
@@ -143,7 +159,9 @@ async function triggerSemanticGenerate(
     }));
   }
 
-  const base = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  const baseUrl = getAppBaseUrl();
+  const generateUrl = new URL('/api/admin/semantic/generate', baseUrl).toString();
+
   const secret = process.env.INDEX_ADMIN_SECRET;
   if (!secret) {
     if (isDevEnv()) {
@@ -168,13 +186,15 @@ async function triggerSemanticGenerate(
   if (isDevEnv()) {
     // eslint-disable-next-line no-console
     console.log('[SemanticTrigger]', {
+      base_url: baseUrl,
+      generate_url: generateUrl,
       state_hash_prefix: state_hash.substring(0, 16),
       arc_count: arcs.length || arc_ids.length,
       pulse_count: pulses.length,
     });
   }
 
-  const res = await fetch(`${base}/api/admin/semantic/generate`, {
+  const res = await fetch(generateUrl, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
