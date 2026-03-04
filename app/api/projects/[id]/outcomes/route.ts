@@ -1,4 +1,4 @@
-// app/api/projects/[projectId]/outcomes/route.ts
+// app/api/projects/[id]/outcomes/route.ts
 // Record an immutable, user-authored outcome (result) for a project.
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -20,7 +20,7 @@ type OutcomeRequestBody = {
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ projectId: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getCurrentUser();
@@ -28,7 +28,7 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { projectId } = await params;
+    const { id: projectId } = await params;
     const supabase = await getSupabaseServerClient();
 
     const body = (await request.json().catch(() => ({}))) as OutcomeRequestBody;
@@ -79,101 +79,63 @@ export async function POST(
       user_id: user.id,
       project_id: projectId,
       text,
+      occurred_at: occurredAt ?? new Date().toISOString(),
     };
 
-    if (occurredAt) {
-      insertPayload.occurred_at = occurredAt;
+    if (isDevEnv()) {
+      console.log('[ProjectOutcome] insert payload:', insertPayload);
     }
 
     const { data: outcome, error: insertError } = await supabase
-      .from('project_outcome')
+      .from('project_outcomes')
       .insert(insertPayload)
-      .select('id, project_id, occurred_at')
+      .select('*')
       .single();
 
     if (insertError || !outcome) {
+      console.error('[ProjectOutcome] Insert error:', insertError);
       return NextResponse.json(
-        {
-          error:
-            insertError?.message || 'Failed to record outcome.',
-        },
+        { error: 'Failed to record outcome.' },
         { status: 500 }
       );
     }
 
-    if (isDevEnv()) {
-      // eslint-disable-next-line no-console
-      console.log('[Outcome][Inserted]', {
-        user_id: user.id,
-        project_id: projectId,
-        outcome_id: outcome.id,
-      });
-    }
-
-    // Enqueue structure recompute (project-scoped) so snapshots/timeline can update.
-    const debounceKey = `project:${projectId}:outcome_recorded`;
-
+    // Fire-and-forget structure recompute for this project
     try {
-      await dispatchStructureRecompute({
+      void dispatchStructureRecompute({
         supabaseClient: supabase,
         user_id: user.id,
         scope: 'project',
         project_id: projectId,
-        reason: 'outcome_recorded',
-        debounce_key: debounceKey,
+        reason: 'ingestion',
       });
-
-      if (isDevEnv()) {
-        // eslint-disable-next-line no-console
-        console.log('[Outcome][RecomputeEnqueued]', {
-          user_id: user.id,
-          project_id: projectId,
-        });
-      }
-    } catch (enqueueError) {
-      if (isDevEnv()) {
-        // eslint-disable-next-line no-console
-        console.error('[Outcome][RecomputeEnqueueFailed]', {
-          user_id: user.id,
-          project_id: projectId,
-          error_message:
-            enqueueError instanceof Error
-              ? enqueueError.message
-              : String(enqueueError),
-        });
-      }
-
-      return NextResponse.json(
-        {
-          error: 'Failed to enqueue structure recompute after recording outcome.',
-        },
-        { status: 500 }
-      );
+    } catch (err) {
+      console.error('[ProjectOutcome] Failed to dispatch structure recompute:', err);
     }
 
     return NextResponse.json(
       {
-        id: outcome.id,
-        project_id: outcome.project_id,
-        occurred_at: outcome.occurred_at,
+        success: true,
+        outcome: {
+          id: outcome.id,
+          text: outcome.text,
+          occurred_at: outcome.occurred_at,
+          created_at: outcome.created_at,
+        },
       },
       { status: 201 }
     );
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('[Outcome][UnexpectedError]', error);
+    console.error('[ProjectOutcome] Unexpected error:', error);
     return NextResponse.json(
       {
-        error: error instanceof Error ? error.message : 'Failed to record outcome.',
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Failed to record project outcome.',
       },
       { status: 500 }
     );
   }
 }
-
-// Manual test (example):
-// curl -X POST "https://YOUR_DEPLOYMENT/api/projects/PROJECT_UUID/outcomes" \
-//   -H "Content-Type: application/json" \
-//   -H "Authorization: Bearer YOUR_SUPABASE_JWT" \
-//   -d '{"text":"INDEX v2 launched publicly","occurred_at":"2026-03-03T18:02:00.000Z"}'
 
