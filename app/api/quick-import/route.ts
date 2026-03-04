@@ -2,12 +2,15 @@
 // Quick Import: paste one conversation transcript
 
 import { NextRequest, NextResponse } from 'next/server';
+
+// Allow up to 5 minutes so long conversations can finish (embeddings + title + DB)
+export const maxDuration = 300;
 import { getSupabaseServerClient } from '@/lib/supabaseServer';
 import { getCurrentUser } from '@/lib/getUser';
 import { parseTranscript } from '@/lib/parsers/transcript';
 import { generateConversationTitle } from '@/lib/ai/title';
 import { chunkText } from '@/lib/chunking';
-import { embedTexts } from '@/lib/ai/embeddings';
+import { embedTextsInBatches } from '@/lib/ai/embeddings';
 import { generateDedupeHash } from '@/lib/jobs/importProcessor';
 import { dispatchStructureRecompute } from '@/lib/structure/dispatch';
 import crypto from 'crypto';
@@ -175,9 +178,9 @@ async function processQuickImportSync(
       return { conversationId: conversation.id, error: `Failed to insert chunks: ${chunksError?.message || 'Unknown error'}` };
     }
 
-    // Embed chunks in batches
+    // Embed chunks in batches to avoid timeouts on long conversations
     const chunkContents = insertedChunks.map((c: { content: string }) => c.content);
-    const embeddings = await embedTexts(chunkContents);
+    const embeddings = await embedTextsInBatches(chunkContents);
 
     // Insert embeddings
     const embeddingsToInsert = insertedChunks.map((chunk: { id: string }, idx: number) => ({

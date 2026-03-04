@@ -117,3 +117,19 @@ export async function embedTexts(texts: string[]): Promise<number[][]> {
   }
 }
 
+const EMBED_BATCH_SIZE = 50;
+
+/**
+ * Generates embeddings for many texts in batches to avoid timeouts and rate limits.
+ */
+export async function embedTextsInBatches(texts: string[]): Promise<number[][]> {
+  if (texts.length === 0) return [];
+  const result: number[][] = [];
+  for (let i = 0; i < texts.length; i += EMBED_BATCH_SIZE) {
+    const batch = texts.slice(i, i + EMBED_BATCH_SIZE);
+    const batchEmbeddings = await embedTexts(batch);
+    result.push(...batchEmbeddings);
+  }
+  return result;
+}
+

@@ -11,6 +11,7 @@ import { trackEvent } from '@/lib/analytics';
 export default function ImportPage() {
   const router = useRouter();
   const quickImportInFlightRef = useRef(false);
+  const quickImportTimeoutRef = useRef(false);
 
   // Quick Import state
   const [quickTranscript, setQuickTranscript] = useState('');
@@ -107,6 +108,14 @@ export default function ImportPage() {
       has_project: quickProjectAction === 'existing' || quickProjectAction === 'new',
     });
 
+    const abortController = new AbortController();
+    const timeoutMs = 180_000; // 3 minutes — allow time for embeddings on long conversations
+    quickImportTimeoutRef.current = false;
+    let timeoutId: ReturnType<typeof setTimeout> | null = setTimeout(() => {
+      quickImportTimeoutRef.current = true;
+      abortController.abort();
+    }, timeoutMs);
+
     try {
       const response = await fetch('/api/quick-import', {
         method: 'POST',
@@ -123,7 +132,9 @@ export default function ImportPage() {
                 }
               : undefined,
         }),
+        signal: abortController.signal,
       });
+      if (timeoutId != null) clearTimeout(timeoutId);
 
       let data: Record<string, unknown>;
       try {
@@ -195,15 +206,23 @@ export default function ImportPage() {
         });
       }
     } catch (err) {
+      if (timeoutId) clearTimeout(timeoutId);
       const latencyMs = startTime ? Date.now() - startTime : 0;
       const errMessage = err instanceof Error ? err.message : 'Failed to import conversation';
       const isAbort = err instanceof Error && err.name === 'AbortError';
+      const isTimeout = isAbort && quickImportTimeoutRef.current;
       trackEvent('import_failed', {
         import_type: 'quick_paste',
         latency_ms: latencyMs,
-        error: isAbort ? 'aborted' : errMessage,
+        error: isTimeout ? 'timeout' : isAbort ? 'aborted' : errMessage,
       });
-      setQuickError(isAbort ? 'Request was canceled. Click Import again.' : 'Failed to import conversation. Please try again.');
+      setQuickError(
+        isTimeout
+          ? 'Import is taking too long. Try a shorter conversation or try again.'
+          : isAbort
+            ? 'Request was canceled. Click Import again.'
+            : 'Failed to import conversation. Please try again.'
+      );
       console.error('[QuickImport]', err);
     } finally {
       quickImportInFlightRef.current = false;
