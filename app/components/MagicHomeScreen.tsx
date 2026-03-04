@@ -231,9 +231,10 @@ export default function MagicHomeScreen() {
   const weeklyDigest = data?.weeklyDigest ?? null;
   const hasConversations = data?.hasConversations ?? false;
   const hasSnapshot = !!directionGeneratedAt;
+  const hasStructuralChange = hasSnapshot || shifts.length > 0;
 
   return (
-    <div className="space-y-8 max-w-3xl">
+    <div className="space-y-8">
       {error && (
         <div className="p-4 rounded-xl bg-red-50 dark:bg-red-900/20 ring-1 ring-red-200 dark:ring-red-800 flex items-center justify-between gap-4">
           <p className="text-red-800 dark:text-red-400 text-sm">{error}</p>
@@ -305,10 +306,14 @@ export default function MagicHomeScreen() {
             )}
           </div>
 
-          {/* 3. Timeline — always rendered; no HRs under Timeline (per spec) */}
+          <hr className="my-6 border-[rgb(var(--ring)/0.08)]" />
+
+          {/* 3. Timeline — always rendered */}
           <GlobalTimeline events={timelineEvents} />
 
-          {/* 4. Weekly Digest — single container (no nested card) */}
+          <hr className="my-6 border-[rgb(var(--ring)/0.08)]" />
+
+          {/* 4. Weekly Digest — single container; button disabled until there is something to digest */}
           <div>
             <h2 className="font-serif text-lg font-semibold text-[rgb(var(--text))] mb-3">
               Weekly Digest
@@ -324,14 +329,20 @@ export default function MagicHomeScreen() {
                 <div className="text-sm text-[rgb(var(--text))] whitespace-pre-wrap mb-4">
                   {weeklyDigest.body}
                 </div>
-                <GenerateDigestButton />
+                <GenerateDigestButton disabled={false} variant="secondary" />
               </div>
             ) : (
               <div>
-                <p className="text-sm text-[rgb(var(--muted))] mb-4">
-                  Weekly digest appears once structural change occurs.
-                </p>
-                <GenerateDigestButton />
+                {!hasStructuralChange ? (
+                  <p className="text-sm text-[rgb(var(--muted))] mb-3">
+                    Nothing to digest yet.
+                  </p>
+                ) : (
+                  <p className="text-sm text-[rgb(var(--muted))] mb-3">
+                    Choose a week to generate a digest.
+                  </p>
+                )}
+                <GenerateDigestButton disabled={!hasStructuralChange} variant="secondary" />
               </div>
             )}
           </div>

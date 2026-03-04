@@ -17,7 +17,7 @@ export default async function HomePage() {
 
   return (
     <main className="min-h-screen bg-[rgb(var(--bg))]">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <MagicHomeScreen />
       </div>
     </main>
