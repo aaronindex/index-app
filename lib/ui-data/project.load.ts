@@ -5,6 +5,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { collectStructuralSignals } from '../structure/signals';
 import type { StructuralStatePayload } from '@/lib/structure/hash';
+import { getSemanticOverlay } from '@/lib/semantic-overlay/get-overlay';
 
 export type ProjectViewData = {
   project: {
@@ -314,6 +315,25 @@ export async function loadProjectView(params: {
           title: arc.summary,
           status: arcStatuses[arc.id] ?? arc.status ?? null,
         })) ?? [];
+    }
+  }
+
+  // Semantic overlay: replace arc titles when present (keyed by state_hash; does not alter state)
+  const latestStateHash = (latestSnapshotRow as { state_hash?: string | null } | null)?.state_hash ?? null;
+  if (latestStateHash && activeArcs.length > 0) {
+    const overlay = await getSemanticOverlay({
+      supabaseClient,
+      user_id,
+      scope_type: 'project',
+      scope_id: project_id,
+      state_hash: latestStateHash,
+      arc_ids: activeArcs.map((a) => a.id),
+    });
+    if (Object.keys(overlay.arcTitles).length > 0) {
+      activeArcs = activeArcs.map((arc) => ({
+        ...arc,
+        title: overlay.arcTitles[arc.id] ?? arc.title,
+      }));
     }
   }
 

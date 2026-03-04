@@ -4,11 +4,13 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { StructuralStatePayload } from '@/lib/structure/hash';
+import { getSemanticOverlay } from '@/lib/semantic-overlay/get-overlay';
 
 export type HomePulse = {
   id: string;
   pulse_type: string;
   headline: string | null;
+  state_hash: string;
   occurred_at: string;
   project_id: string | null;
 };
@@ -25,6 +27,10 @@ export type HomeViewData = {
   prevSnapshotPayload: StructuralStatePayload | null;
   /** Recent global pulses (newest first), for Shifts list and Timeline */
   pulses: HomePulse[];
+  /** Semantic direction text when overlay exists for latest state_hash */
+  semanticDirection: string | null;
+  /** Semantic headline per pulse id when overlay exists */
+  semanticPulseHeadlines: Record<string, string>;
 };
 
 const PULSE_TYPES_FOR_LANDING = ['arc_shift', 'structural_threshold', 'tension', 'result_recorded'] as const;
@@ -54,7 +60,7 @@ export async function loadHomeView(params: {
   // Global pulses for Shifts + Timeline (newest first, cap 5 for list; use more for timeline if needed)
   const { data: pulseRows } = await supabaseClient
     .from('pulse')
-    .select('id, pulse_type, headline, occurred_at, project_id')
+    .select('id, pulse_type, headline, state_hash, occurred_at, project_id')
     .eq('user_id', user_id)
     .eq('scope', 'global')
     .in('pulse_type', [...PULSE_TYPES_FOR_LANDING])
@@ -65,9 +71,27 @@ export async function loadHomeView(params: {
     id: row.id,
     pulse_type: row.pulse_type ?? '',
     headline: row.headline ?? null,
+    state_hash: row.state_hash ?? '',
     occurred_at: row.occurred_at ?? new Date().toISOString(),
     project_id: row.project_id ?? null,
   }));
+
+  const latestStateHash = latest?.state_hash ?? null;
+  let semanticDirection: string | null = null;
+  let semanticPulseHeadlines: Record<string, string> = {};
+
+  if (latestStateHash) {
+    const overlay = await getSemanticOverlay({
+      supabaseClient,
+      user_id,
+      scope_type: 'global',
+      scope_id: null,
+      state_hash: latestStateHash,
+      pulse_id_state_hash_pairs: pulses.map((p) => ({ pulse_id: p.id, state_hash: p.state_hash })),
+    });
+    semanticDirection = overlay.direction;
+    semanticPulseHeadlines = overlay.pulseHeadlines;
+  }
 
   return {
     latestSnapshot: latest
@@ -83,5 +107,7 @@ export async function loadHomeView(params: {
       ? (prev.state_payload as StructuralStatePayload)
       : null,
     pulses,
+    semanticDirection,
+    semanticPulseHeadlines,
   };
 }

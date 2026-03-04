@@ -4,6 +4,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { showSuccess } from '@/app/components/ErrorNotification';
 
 interface ReadTabProps {
   projectId: string;
@@ -342,6 +343,7 @@ export default function ReadTab({
                     setShowOutcomeModal(false);
                     setOutcomeText('');
                     await router.refresh();
+                    showSuccess('Result recorded.');
                   } catch (err) {
                     setOutcomeError(
                       err instanceof Error ? err.message : 'Failed to record outcome.'

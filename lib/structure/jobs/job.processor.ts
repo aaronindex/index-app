@@ -38,6 +38,156 @@ function getSupabaseServiceClient(): SupabaseClient {
   });
 }
 
+type SemanticTriggerParams = {
+  user_id: string;
+  scope_type: 'global' | 'project';
+  scope_id: string | null;
+  state_hash: string;
+  arc_ids: string[];
+  /** For global scope only: state_hash used to fetch recent pulse ids */
+  state_hash_for_pulses?: string;
+  /** Optional stats for Direction generation (global scope) */
+  stats?: {
+    active_arc_count: number;
+    pulse_count: number;
+    outcome_count: number;
+    decision_count: number;
+    project_count: number;
+  };
+};
+
+/**
+ * Trigger semantic overlay generation if missing for this scope/state_hash.
+ * Existence check: user_id + scope_type + scope_id IS NOT DISTINCT FROM + state_hash.
+ * If semantics already exist for that state_hash, skip generation (avoids duplicate requests).
+ * Non-blocking: call .catch() from caller. Does not alter state_hash inputs.
+ */
+async function triggerSemanticGenerate(
+  supabaseAdminClient: SupabaseClient,
+  params: SemanticTriggerParams
+): Promise<void> {
+  const { user_id, scope_type, scope_id, state_hash, arc_ids, state_hash_for_pulses, stats: statsParam } = params;
+
+  // Patch 1 & 5: Short-circuit if semantic_labels already has rows for (user_id, scope_type, scope_id, state_hash)
+  let q = supabaseAdminClient
+    .from('semantic_labels')
+    .select('id')
+    .eq('user_id', user_id)
+    .eq('scope_type', scope_type)
+    .eq('state_hash', state_hash)
+    .limit(1);
+
+  if (scope_type === 'global') {
+    q = q.is('scope_id', null);
+  } else {
+    q = q.eq('scope_id', scope_id);
+  }
+
+  const { data: existing } = await q;
+  if (existing && existing.length > 0) {
+    return;
+  }
+
+  // Patch 3: Fetch arc context (id, phase, summary, started_at, last_signal_at)
+  type ArcRow = { id: string; summary: string | null; created_at: string | null; last_signal_at: string | null };
+  type PhaseRow = { arc_id: string; phase_index: number; summary: string | null; started_at: string | null; last_signal_at: string | null };
+  let arcs: Array<{ id: string; phase: number | null; summary: string | null; started_at: string | null; last_signal_at: string | null }> = [];
+  if (arc_ids.length > 0) {
+    const { data: arcRows } = await supabaseAdminClient
+      .from('arc')
+      .select('id, summary, created_at, last_signal_at')
+      .eq('user_id', user_id)
+      .in('id', arc_ids);
+    const arcList = (arcRows ?? []) as ArcRow[];
+
+    // C1: Deterministic phase selection — ORDER BY phase_index DESC, created_at DESC; take first row per arc
+    const { data: phaseRows } = await supabaseAdminClient
+      .from('phase')
+      .select('arc_id, phase_index, summary, started_at, last_signal_at')
+      .in('arc_id', arc_ids)
+      .order('phase_index', { ascending: false })
+      .order('created_at', { ascending: false });
+    const phasesByArc = new Map<string, PhaseRow>();
+    for (const row of (phaseRows ?? []) as PhaseRow[]) {
+      if (!phasesByArc.has(row.arc_id)) phasesByArc.set(row.arc_id, row);
+    }
+
+    arcs = arcList.map((arc) => {
+      const phase = phasesByArc.get(arc.id);
+      return {
+        id: arc.id,
+        phase: phase?.phase_index ?? null,
+        summary: arc.summary ?? null,
+        started_at: phase?.started_at ?? arc.created_at ?? null,
+        last_signal_at: arc.last_signal_at ?? null,
+      };
+    });
+  }
+
+  // Patch 2: Richer pulse context (id, pulse_type, project_id, occurred_at)
+  let pulses: Array<{ id: string; pulse_type: string; project_id: string | null; occurred_at: string }> = [];
+  if (scope_type === 'global' && state_hash_for_pulses) {
+    const { data: pulseRows } = await supabaseAdminClient
+      .from('pulse')
+      .select('id, pulse_type, project_id, occurred_at')
+      .eq('user_id', user_id)
+      .eq('scope', 'global')
+      .eq('state_hash', state_hash_for_pulses)
+      .order('occurred_at', { ascending: false })
+      .limit(50);
+    pulses = (pulseRows ?? []).map((r: { id: string; pulse_type: string; project_id: string | null; occurred_at: string }) => ({
+      id: r.id,
+      pulse_type: r.pulse_type ?? '',
+      project_id: r.project_id ?? null,
+      occurred_at: r.occurred_at ?? new Date().toISOString(),
+    }));
+  }
+
+  const base = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  const secret = process.env.INDEX_ADMIN_SECRET;
+  if (!secret) {
+    if (isDevEnv()) {
+      // eslint-disable-next-line no-console
+      console.warn('[SemanticTrigger] INDEX_ADMIN_SECRET not set, skipping generate');
+    }
+    return;
+  }
+
+  const body: Record<string, unknown> = {
+    user_id,
+    scope_type,
+    scope_id: scope_id ?? undefined,
+    state_hash,
+    arcs: arcs.length > 0 ? arcs : arc_ids.map((id) => ({ id, phase: null, summary: null, started_at: null, last_signal_at: null })),
+    pulses,
+  };
+  if (statsParam) {
+    body.stats = { ...statsParam, pulse_count: pulses.length };
+  }
+
+  if (isDevEnv()) {
+    // eslint-disable-next-line no-console
+    console.log('[SemanticTrigger]', {
+      state_hash_prefix: state_hash.substring(0, 16),
+      arc_count: arcs.length || arc_ids.length,
+      pulse_count: pulses.length,
+    });
+  }
+
+  const res = await fetch(`${base}/api/admin/semantic/generate`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-index-admin-secret': secret,
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    throw new Error(`Semantic generate failed: ${res.status}`);
+  }
+}
+
 /**
  * Run a structure job
  * 
@@ -193,7 +343,7 @@ export async function runStructureJob(
       stateHash
     );
 
-    // Project-scoped snapshots: derive per-project payloads from signals and write snapshots when changed
+    // Project-scoped snapshots: derive per-project payloads from signals (needed for stats and loop)
     const projectIds = Array.from(
       new Set(
         sortedSignals
@@ -201,6 +351,36 @@ export async function runStructureJob(
           .filter((id): id is string => !!id)
       )
     );
+
+    // Semantic overlay: trigger generation for global scope if missing (fire-and-forget)
+    const activeArcIds = structuralPayload.active_arc_ids ?? [];
+    // C4: decision_count is decision-type signals only (excludes result and other kinds)
+    const decisionCount = sortedSignals.filter((s) => s.kind === 'decision').length;
+    // C2: Outcome count currently reflects global user outcomes; project-scoped counts may be added later.
+    const { count: outcomeCount } = await supabaseAdminClient
+      .from('project_outcome')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', payload.user_id);
+    triggerSemanticGenerate(supabaseAdminClient, {
+      user_id: payload.user_id,
+      scope_type: 'global',
+      scope_id: null,
+      state_hash: stateHash,
+      arc_ids: activeArcIds,
+      state_hash_for_pulses: stateHash,
+      stats: {
+        active_arc_count: activeArcIds.length,
+        pulse_count: 0,
+        outcome_count: outcomeCount ?? 0,
+        decision_count: decisionCount,
+        project_count: projectIds.length,
+      },
+    }).catch((err) => {
+      if (isDevEnv()) {
+        // eslint-disable-next-line no-console
+        console.warn('[StructureJob][SemanticTrigger]', { error: err instanceof Error ? err.message : String(err) });
+      }
+    });
 
     if (projectIds.length > 0) {
       if (isDevEnv()) {
@@ -274,6 +454,19 @@ export async function runStructureJob(
           projectPayload,
           projectId
         );
+
+        triggerSemanticGenerate(supabaseAdminClient, {
+          user_id: payload.user_id,
+          scope_type: 'project',
+          scope_id: projectId,
+          state_hash: projectStateHash,
+          arc_ids: projectPayload.active_arc_ids ?? [],
+        }).catch((err) => {
+          if (isDevEnv()) {
+            // eslint-disable-next-line no-console
+            console.warn('[StructureJob][SemanticTrigger][Project]', { project_id: projectId, error: err instanceof Error ? err.message : String(err) });
+          }
+        });
 
         if (isDevEnv()) {
           // eslint-disable-next-line no-console

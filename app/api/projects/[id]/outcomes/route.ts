@@ -101,6 +101,38 @@ export async function POST(
       );
     }
 
+    // Create a global result pulse for homepage Shifts/Timeline
+    try {
+      const { data: latestSnapshot } = await supabase
+        .from('snapshot_state')
+        .select('state_hash')
+        .eq('user_id', user.id)
+        .eq('scope', 'global')
+        .order('generated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const stateHash =
+        (latestSnapshot as { state_hash?: string } | null)?.state_hash ||
+        `result_only_${outcome.id}`;
+
+      const { error: pulseError } = await supabase.from('pulse').insert({
+        user_id: user.id,
+        scope: 'global',
+        pulse_type: 'result_recorded',
+        headline: String(outcome.text ?? '').trim().substring(0, 140) || null,
+        project_id: projectId,
+        occurred_at: outcome.occurred_at,
+        state_hash: stateHash,
+      });
+
+      if (pulseError) {
+        console.error('[ProjectOutcome] Failed to insert result pulse:', pulseError);
+      }
+    } catch (pulseErr) {
+      console.error('[ProjectOutcome] Unexpected error inserting result pulse:', pulseErr);
+    }
+
     // Fire-and-forget structure recompute for this project
     try {
       void dispatchStructureRecompute({

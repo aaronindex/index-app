@@ -31,6 +31,9 @@ type LandingData = {
     snapshotText: string | null;
     hasArcs: boolean;
     generatedAt: string | null;
+    active_arc_count: number;
+    project_count: number;
+    lastChangeAt: string | null;
   };
   shifts: ShiftItem[];
   timelineEvents: TimelineEvent[];
@@ -43,8 +46,20 @@ type LandingData = {
   } | null;
 };
 
-/** "Mar 3, 2026" for Shifts list */
-function formatShiftDate(iso: string): string {
+/** "Mar 3" for Shifts list line */
+function formatShortDate(iso: string): string {
+  try {
+    return new Date(iso).toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric',
+    });
+  } catch {
+    return '';
+  }
+}
+
+/** "Mar 3, 2026" for tooltips / full date */
+function formatFullDate(iso: string): string {
   try {
     return new Date(iso).toLocaleDateString(undefined, {
       month: 'short',
@@ -71,6 +86,26 @@ function formatUpdatedAgo(iso: string | null | undefined): string | null {
     if (diffHours < 24) return `Updated ${diffHours} hr ago`;
     if (diffDays < 7) return `Updated ${diffDays} days ago`;
     return `Updated ${date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`;
+  } catch {
+    return null;
+  }
+}
+
+/** "Last change: X ago" from most recent pulse */
+function formatLastChangeAgo(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  try {
+    const date = new Date(iso);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    if (diffMins < 1) return 'Last change: just now';
+    if (diffMins < 60) return `Last change: ${diffMins} min ago`;
+    if (diffHours < 24) return `Last change: ${diffHours} hr ago`;
+    if (diffDays < 7) return `Last change: ${diffDays} days ago`;
+    return `Last change: ${date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`;
   } catch {
     return null;
   }
@@ -132,11 +167,6 @@ function GlobalTimeline({ events }: { events: TimelineEvent[] }) {
         <div className="absolute top-1/2 left-0 right-0 h-px bg-[rgb(var(--ring)/0.12)]" />
         {withTime.map((item) => {
           const pos = span === 0 ? 0.5 : (item.ts - t0) / span;
-          const dateLabel = new Date(item.occurred_at).toLocaleDateString(undefined, {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric',
-          });
           return (
             <div
               key={item.id}
@@ -150,9 +180,9 @@ function GlobalTimeline({ events }: { events: TimelineEvent[] }) {
                   }`}
                 />
                 <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                  <div className="max-w-[260px] min-w-[220px] rounded-md border border-[rgb(var(--ring)/0.12)] bg-[rgb(var(--surface))] px-2 py-1 shadow-sm">
+                  <div className="max-w-[260px] min-w-[220px] rounded-md border border-[rgb(var(--ring)/0.12)] bg-[rgb(var(--surface))] px-2 py-1 shadow-sm font-sans">
                     <div className="text-[10px] font-medium text-[rgb(var(--text))]">
-                      {dateLabel}
+                      {formatFullDate(item.occurred_at)}
                     </div>
                     <div className="mt-1 text-[10px] text-[rgb(var(--muted))] whitespace-normal break-words">
                       {item.summary}
@@ -226,12 +256,16 @@ export default function MagicHomeScreen() {
   const hasArcs = data?.direction?.hasArcs ?? false;
   const directionText = data?.direction?.snapshotText ?? null;
   const directionGeneratedAt = data?.direction?.generatedAt ?? null;
+  const activeArcCount = data?.direction?.active_arc_count ?? 0;
+  const projectCount = data?.direction?.project_count ?? 0;
+  const lastChangeAt = data?.direction?.lastChangeAt ?? null;
   const shifts = data?.shifts ?? [];
   const timelineEvents = data?.timelineEvents ?? [];
   const weeklyDigest = data?.weeklyDigest ?? null;
   const hasConversations = data?.hasConversations ?? false;
   const hasSnapshot = !!directionGeneratedAt;
   const hasStructuralChange = shifts.length > 0;
+  const showDirectionStatusLine = activeArcCount > 0 || projectCount > 0;
 
   return (
     <div className="space-y-8">
@@ -262,46 +296,57 @@ export default function MagicHomeScreen() {
 
           <hr className="my-6 border-[rgb(var(--ring)/0.08)]" />
 
-          {/* 1. Direction (global snapshot) — plain text block, no card */}
+          {/* 1. Direction (global snapshot) — Updated, status line, optional last change, body */}
           <div>
             <h2 className="font-serif text-lg font-semibold text-[rgb(var(--text))] mb-3">
               Direction
             </h2>
-            {!data || !hasSnapshot ? (
-              <div className="text-sm text-[rgb(var(--muted))]">
-                <p>No direction yet.</p>
-                <p className="mt-1 text-xs">
-                  Direction appears once sources are distilled.
+            <div className="text-left">
+              {hasSnapshot && formatUpdatedAgo(directionGeneratedAt) && (
+                <p className="text-xs text-[rgb(var(--muted))] mb-1 font-sans">
+                  {formatUpdatedAgo(directionGeneratedAt)}
                 </p>
-              </div>
-            ) : (
-              <div className="text-sm text-[rgb(var(--text))] whitespace-pre-wrap">
-                {formatUpdatedAgo(directionGeneratedAt) && (
-                  <p className="text-xs text-[rgb(var(--muted))] mb-2">
-                    {formatUpdatedAgo(directionGeneratedAt)}
+              )}
+              {showDirectionStatusLine && (
+                <p className="text-xs text-[rgb(var(--muted))] mb-1 font-sans">
+                  {activeArcCount} arc(s) active across {projectCount} project(s)
+                </p>
+              )}
+              {lastChangeAt && formatLastChangeAgo(lastChangeAt) && (
+                <p className="text-xs text-[rgb(var(--muted))] mb-2 font-sans">
+                  {formatLastChangeAgo(lastChangeAt)}
+                </p>
+              )}
+              {!data || !hasSnapshot ? (
+                <div className="text-sm text-[rgb(var(--muted))] font-sans">
+                  <p>No direction yet.</p>
+                  <p className="mt-1 text-xs">
+                    Direction appears once sources are distilled.
                   </p>
-                )}
-                {directionText || 'Exploration ongoing.'}
-              </div>
-            )}
+                </div>
+              ) : (
+                <div className="text-sm text-[rgb(var(--text))] whitespace-pre-wrap font-sans">
+                  {directionText || 'Exploration ongoing.'}
+                </div>
+              )}
+            </div>
           </div>
 
           <hr className="my-6 border-[rgb(var(--ring)/0.08)]" />
 
-          {/* 2. Shifts — global pulses list (no "recent" in title) */}
+          {/* 2. Shifts — MMM D — typedHeadline */}
           <div>
             <h2 className="font-serif text-lg font-semibold text-[rgb(var(--text))] mb-3">
               Shifts
             </h2>
             {!data || shifts.length === 0 ? (
-              <p className="text-sm text-[rgb(var(--muted))]">No shifts yet.</p>
+              <p className="text-sm text-[rgb(var(--muted))] font-sans">No shifts yet.</p>
             ) : (
-              <ul className="space-y-1.5 text-sm text-[rgb(var(--text))]">
+              <ul className="space-y-1.5 text-sm text-[rgb(var(--text))] font-sans">
                 {shifts.map((s) => (
                   <li key={s.id}>
-                    <span className="text-[rgb(var(--muted))]">
-                      {formatShiftDate(s.occurred_at)} —
-                    </span>{' '}
+                    <span className="text-[rgb(var(--muted))]">{formatShortDate(s.occurred_at)}</span>
+                    {' — '}
                     {s.label}
                   </li>
                 ))}
@@ -311,7 +356,7 @@ export default function MagicHomeScreen() {
 
           <hr className="my-6 border-[rgb(var(--ring)/0.08)]" />
 
-          {/* 3. Timeline — always rendered */}
+          {/* 3. Timeline — tooltip: full date + same typedHeadline as Shifts */}
           <GlobalTimeline events={timelineEvents} />
 
           <hr className="my-6 border-[rgb(var(--ring)/0.08)]" />

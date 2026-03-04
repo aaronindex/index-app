@@ -7,17 +7,22 @@ import { getCurrentUser } from '@/lib/getUser';
 import { loadHomeView } from '@/lib/ui-data/home.load';
 import type { HomePulse } from '@/lib/ui-data/home.load';
 
-function formatPulseShiftLabel(p: HomePulse): string {
-  const headline = (p.headline || '').trim();
-  if (headline) return headline;
-
+/** Typed headline for Shifts/Timeline: semantic first, else strong verb form by pulse_type. Never "Structural threshold". */
+function getTypedHeadline(p: HomePulse, semanticHeadline?: string | null): string {
+  const semantic = (semanticHeadline || '').trim();
+  if (semantic) {
+    if (semantic.startsWith('Outcome recorded:')) return semantic;
+    return semantic;
+  }
+  const editorial = (p.headline || '').trim();
+  if (editorial) return editorial;
   switch (p.pulse_type) {
     case 'tension':
-      return 'Structural tension surfaced';
+      return 'Tension surfaced';
     case 'arc_shift':
-      return 'Arc shift';
+      return 'Arc shifted';
     case 'structural_threshold':
-      return 'Structural threshold';
+      return 'Threshold crossed';
     case 'result_recorded':
       return 'Result recorded';
     default:
@@ -111,27 +116,35 @@ export async function GET(request: NextRequest) {
 
     const payload = homeView.latestSnapshot?.state_payload as { active_arc_ids?: string[] } | null | undefined;
     const hasArcs = Array.isArray(payload?.active_arc_ids) && payload.active_arc_ids.length > 0;
+    const active_arc_count = Array.isArray(payload?.active_arc_ids) ? payload.active_arc_ids.length : 0;
+    const project_count = projectCountResult.count ?? 0;
 
     const directionText =
-      homeView.latestSnapshot?.snapshot_text?.trim() || null;
+      homeView.semanticDirection?.trim() ||
+      homeView.latestSnapshot?.snapshot_text?.trim() ||
+      null;
+
+    const semanticHeadlines = homeView.semanticPulseHeadlines ?? {};
 
     // Shifts source: de-duplicated pulses (newest first), capped to last ~5 items
     const deduped = dedupePulses(homeView.pulses);
     const shiftSource = deduped.slice(0, 5);
+    const lastChangeAt = shiftSource.length > 0 ? shiftSource[0]!.occurred_at : null;
+
     const shifts = shiftSource.map((p) => ({
       id: p.id,
       occurred_at: p.occurred_at,
-      label: formatPulseShiftLabel(p),
+      label: getTypedHeadline(p, semanticHeadlines[p.id]),
       pulse_type: p.pulse_type,
     }));
 
-    // Timeline: same events as Shifts, ordered by occurred_at asc for display
+    // Timeline: same events as Shifts, same typedHeadline for tooltips
     const timelineEvents = [...shiftSource]
       .sort((a, b) => new Date(a.occurred_at).getTime() - new Date(b.occurred_at).getTime())
       .map((p) => ({
         id: p.id,
         occurred_at: p.occurred_at,
-        summary: formatPulseShiftLabel(p),
+        summary: getTypedHeadline(p, semanticHeadlines[p.id]),
         pulse_type: p.pulse_type,
         isResult: p.pulse_type === 'result_recorded',
       }));
@@ -148,6 +161,9 @@ export async function GET(request: NextRequest) {
         snapshotText: directionText,
         hasArcs,
         generatedAt: homeView.latestSnapshot?.generated_at ?? null,
+        active_arc_count,
+        project_count,
+        lastChangeAt,
       },
       shifts,
       timelineEvents,
