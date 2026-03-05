@@ -296,7 +296,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({
+    const responsePayload: Record<string, unknown> = {
       success: true,
       insights: {
         decisions: insights.decisions.length,
@@ -307,7 +307,25 @@ export async function POST(request: NextRequest) {
       },
       created: savedItemsCount,
       details: createdInsights,
-    });
+    };
+
+    if (!hadPersistenceError && persistedCount > 0) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('first_reduce_acknowledged')
+        .eq('id', user.id)
+        .single();
+      if (!profile?.first_reduce_acknowledged) {
+        responsePayload.firstReduce = true;
+        responsePayload.counts = {
+          decisions: insights.decisions.length,
+          openLoops: insights.openLoops.length,
+          suggestedHighlights: insights.suggestedHighlights.length,
+        };
+      }
+    }
+
+    return NextResponse.json(responsePayload);
   } catch (error) {
     console.error('Extract insights error:', error);
     return NextResponse.json(

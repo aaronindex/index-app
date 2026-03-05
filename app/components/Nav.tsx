@@ -93,10 +93,10 @@ export default function Nav() {
   }, [isMobileMenuOpen]);
 
   const navLinks = [
-    { href: '/projects', label: 'Projects' },
+    { href: '/projects', label: 'Projects', dataOnboarding: 'nav-projects' as const },
     { href: '/unassigned', label: 'Unassigned' },
     { href: '/ask', label: 'Ask' },
-    { href: '/import', label: 'Import' },
+    { href: '/import', label: 'Import', dataOnboarding: 'nav-import' as const },
   ];
 
   // Show nothing while loading
@@ -159,6 +159,7 @@ export default function Nav() {
                     key={link.href}
                     href={link.href}
                     className="text-sm text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] transition-colors"
+                    {...(link.dataOnboarding ? { 'data-onboarding': link.dataOnboarding } : {})}
                   >
                     {link.label}
                   </Link>
@@ -239,6 +240,7 @@ export default function Nav() {
                   href={link.href}
                   onClick={() => setIsMobileMenuOpen(false)}
                   className="block px-4 py-3 text-base text-[rgb(var(--text))] hover:bg-[rgb(var(--surface2))] rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-[rgb(var(--ring)/0.2)]"
+                  {...(link.dataOnboarding ? { 'data-onboarding': link.dataOnboarding } : {})}
                 >
                   {link.label}
                 </Link>

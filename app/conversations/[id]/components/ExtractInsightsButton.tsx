@@ -4,6 +4,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { track } from '@/lib/analytics/track';
+import FirstStructuralMomentModal from './FirstStructuralMomentModal';
 
 interface ExtractInsightsButtonProps {
   conversationId: string;
@@ -25,24 +26,32 @@ export default function ExtractInsightsButton({ conversationId, projectId }: Ext
       suggestedHighlights: number;
     };
     created: number;
+    firstReduce?: boolean;
+    counts?: { decisions: number; openLoops: number; suggestedHighlights: number };
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showFirstStructuralModal, setShowFirstStructuralModal] = useState(false);
+  const [firstStructuralCounts, setFirstStructuralCounts] = useState<{
+    decisions: number;
+    openLoops: number;
+    suggestedHighlights: number;
+  } | null>(null);
 
-  // Close modal on Escape key
   useEffect(() => {
-    if (!showSuccessModal) return;
+    if (!showSuccessModal && !showFirstStructuralModal) return;
 
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setShowSuccessModal(false);
+        setShowFirstStructuralModal(false);
         router.refresh();
       }
     };
 
     document.addEventListener('keydown', handleEscape);
     return () => document.removeEventListener('keydown', handleEscape);
-  }, [showSuccessModal, router]);
+  }, [showSuccessModal, showFirstStructuralModal, router]);
 
   const handleExtract = async () => {
     if (extractInFlightRef.current) return;
@@ -99,7 +108,18 @@ export default function ExtractInsightsButton({ conversationId, projectId }: Ext
         };
         track('insights_extracted', eventParams);
         console.log('[Analytics] insights_extracted', eventParams);
-        setShowSuccessModal(true);
+
+        if (data.firstReduce && data.counts && typeof data.counts === 'object') {
+          const c = data.counts as { decisions: number; openLoops: number; suggestedHighlights: number };
+          setFirstStructuralCounts({
+            decisions: c.decisions ?? 0,
+            openLoops: c.openLoops ?? 0,
+            suggestedHighlights: c.suggestedHighlights ?? 0,
+          });
+          setShowFirstStructuralModal(true);
+        } else {
+          setShowSuccessModal(true);
+        }
       }
     } catch (err) {
       if (timeoutId != null) clearTimeout(timeoutId);
@@ -159,7 +179,24 @@ export default function ExtractInsightsButton({ conversationId, projectId }: Ext
         <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
       )}
 
-      {/* Success Modal */}
+      {/* First structural moment: shown once per account after first Reduce */}
+      {showFirstStructuralModal && (
+        <FirstStructuralMomentModal
+          counts={firstStructuralCounts}
+          onContinue={async () => {
+            try {
+              await fetch('/api/profile/first-reduce-acknowledged', { method: 'POST', credentials: 'same-origin' });
+            } catch {
+              // continue to close
+            }
+            setShowFirstStructuralModal(false);
+            setFirstStructuralCounts(null);
+            router.refresh();
+          }}
+        />
+      )}
+
+      {/* Success Modal (subsequent reduces) */}
       {showSuccessModal && result && result.success && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"

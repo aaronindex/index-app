@@ -69,11 +69,12 @@ export default function UpgradeModal({ isOpen, onClose, source }: UpgradeModalPr
         className="bg-[rgb(var(--bg))] rounded-lg p-6 max-w-md w-full border border-zinc-200 dark:border-zinc-800"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-xl font-semibold text-foreground mb-4">Upgrade to Pro</h2>
+        <h2 className="text-xl font-semibold text-foreground mb-4">Upgrade to INDEX Pro</h2>
 
         <ul className="space-y-2 mb-6 text-sm text-[rgb(var(--muted))]">
           <li>• Unlimited projects</li>
-          <li>• Full imports (JSON)</li>
+          <li>• Higher Ask INDEX limits</li>
+          <li>• Full import tools</li>
         </ul>
 
         <div className="flex gap-3">

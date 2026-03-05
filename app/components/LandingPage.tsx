@@ -79,6 +79,13 @@ export default function LandingPage() {
             )}
             {/* Grain overlay */}
             <div className="absolute inset-0 opacity-10 mix-blend-soft-light bg-[radial-gradient(circle,_rgba(255,255,255,0.12)_1px,transparent_0)] [background-size:4px_4px]" />
+            {/* Vignette: subtle fade at edges to soften bottom during video loop */}
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                background: 'radial-gradient(ellipse at center, rgba(0,0,0,0) 35%, rgba(0,0,0,0.6) 100%)',
+              }}
+            />
           </div>
 
           <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

@@ -33,6 +33,14 @@ export default function Footer() {
             >
               Terms
             </Link>
+            <span className="text-[rgb(var(--ring)/0.3)]">·</span>
+            <Link
+              href="/extension"
+              className="hover:text-[rgb(var(--text))] transition-colors focus:outline-none focus:ring-2 focus:ring-[rgb(var(--ring)/0.2)] rounded"
+              data-onboarding="extension-link"
+            >
+              Extension
+            </Link>
           </div>
           <div className="text-[rgb(var(--muted))]">
             © {currentYear} INDEX

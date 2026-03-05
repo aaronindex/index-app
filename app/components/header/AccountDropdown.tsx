@@ -5,6 +5,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getSupabaseBrowserClient } from '@/lib/supabaseClient';
+import { resetOnboarding } from '@/lib/onboarding/state';
 import type { User } from '@supabase/supabase-js';
 
 export default function AccountDropdown() {
@@ -130,6 +131,17 @@ export default function AccountDropdown() {
             >
               Data & Privacy
             </Link>
+            <button
+              type="button"
+              onClick={async () => {
+                setIsOpen(false);
+                await resetOnboarding();
+                router.push('/home?tour=restart');
+              }}
+              className="block w-full text-left px-4 py-2 text-sm text-[rgb(var(--text))] hover:bg-[rgb(var(--surface2))] transition-colors focus:outline-none focus:bg-[rgb(var(--surface2))]"
+            >
+              Restart Tour
+            </button>
           </div>
 
           <div className="border-t border-[rgb(var(--ring)/0.08)] py-1">

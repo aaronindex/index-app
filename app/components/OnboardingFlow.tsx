@@ -5,9 +5,8 @@ import { useState, useEffect } from 'react';
 import Card from './ui/Card';
 import Button from './ui/Button';
 
-const ONBOARDING_COMPLETED_KEY = 'index_onboarding_completed';
-
 interface OnboardingFlowProps {
+  /** Called when user completes or skips; parent persists via onboarding state module. */
   onComplete?: () => void;
 }
 
@@ -15,18 +14,10 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
 
-  // Check if onboarding was already completed
+  // Visibility: parent controls whether to mount this component based on onboarding state; we always show when mounted.
   useEffect(() => {
-    const completed = localStorage.getItem(ONBOARDING_COMPLETED_KEY);
-    if (completed === 'true') {
-      setIsVisible(false);
-      if (onComplete) {
-        onComplete();
-      }
-    } else {
-      setIsVisible(true);
-    }
-  }, [onComplete]);
+    setIsVisible(true);
+  }, []);
 
   const steps = [
     {
@@ -79,19 +70,8 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   const currentStepData = steps[currentStep];
 
   const markCompleted = () => {
-    try {
-      localStorage.setItem(ONBOARDING_COMPLETED_KEY, 'true');
-      // Force a synchronous write on mobile Safari by triggering a dummy read
-      if (typeof Storage !== 'undefined') {
-        localStorage.getItem(ONBOARDING_COMPLETED_KEY);
-      }
-    } catch (error) {
-      console.error('Error saving onboarding completion:', error);
-    }
     setIsVisible(false);
-    if (onComplete) {
-      onComplete();
-    }
+    onComplete?.();
   };
 
   const handleAction = () => {

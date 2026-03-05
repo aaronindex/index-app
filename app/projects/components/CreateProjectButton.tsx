@@ -1,16 +1,19 @@
 // app/projects/components/CreateProjectButton.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSupabaseBrowserClient } from '@/lib/supabaseClient';
 import { showError, showSuccess } from '@/app/components/ErrorNotification';
 import UpgradeModal from '@/app/components/billing/UpgradeModal';
+import ProjectLimitUpgradeModal from './ProjectLimitUpgradeModal';
 import { track } from '@/lib/analytics/track';
 
 export default function CreateProjectButton() {
   const router = useRouter();
+  const createButtonRef = useRef<HTMLButtonElement>(null);
   const [isOpen, setIsOpen] = useState(false);
+  const [showProjectLimitModal, setShowProjectLimitModal] = useState(false);
   const [showUpgrade, setShowUpgrade] = useState(false);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -42,7 +45,7 @@ export default function CreateProjectButton() {
     if (!limitData.allowed) {
       setLoading(false);
       setIsOpen(false);
-      setShowUpgrade(true);
+      setShowProjectLimitModal(true);
       return;
     }
 
@@ -108,6 +111,7 @@ export default function CreateProjectButton() {
   return (
     <>
       <button
+        ref={createButtonRef}
         onClick={() => setIsOpen(true)}
         className="px-4 py-2 bg-[rgb(var(--text))] text-[rgb(var(--bg))] rounded-lg hover:opacity-90 transition-opacity font-medium"
       >
@@ -190,6 +194,17 @@ export default function CreateProjectButton() {
         </div>
       )}
 
+      <ProjectLimitUpgradeModal
+        isOpen={showProjectLimitModal}
+        onClose={() => {
+          setShowProjectLimitModal(false);
+          setTimeout(() => createButtonRef.current?.focus(), 0);
+        }}
+        onUpgrade={() => {
+          setShowProjectLimitModal(false);
+          setShowUpgrade(true);
+        }}
+      />
       <UpgradeModal
         isOpen={showUpgrade}
         onClose={() => setShowUpgrade(false)}

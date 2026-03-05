@@ -111,7 +111,7 @@ export default function ExpandableWaitlist({ source = 'signed_out_lp' }: Expanda
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@domain.com"
-                  className="flex-1 px-3 py-2 text-sm border border-white/20 rounded-lg bg-white/10 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-white/40 backdrop-blur-sm"
+                  className="flex-1 min-w-0 max-w-[300px] px-3 py-2 text-sm border border-white/20 rounded-lg bg-white/10 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-white/40 backdrop-blur-sm"
                   disabled={loading}
                 />
                 <button

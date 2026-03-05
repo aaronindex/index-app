@@ -72,7 +72,7 @@ export default function PricingPage() {
             INDEX Pro — $30/month
           </h1>
           <p className="text-lg text-[rgb(var(--muted))]">
-            Try INDEX free. Upgrade when you hit the free limits.
+            Start free. Upgrade when INDEX becomes part of your workflow.
           </p>
         </div>
 
@@ -84,19 +84,19 @@ export default function PricingPage() {
             <ul className="space-y-3 text-sm text-[rgb(var(--muted))]">
               <li className="flex items-start">
                 <span className="mr-2">•</span>
-                <span>{FREE_MAX_ACTIVE_PROJECTS} active project</span>
+                <span>1 project</span>
               </li>
               <li className="flex items-start">
                 <span className="mr-2">•</span>
-                <span>Quick import only (paste a chat)</span>
+                <span>Quick import (paste a chat)</span>
               </li>
               <li className="flex items-start">
                 <span className="mr-2">•</span>
-                <span>Ask Index capped ({FREE_MAX_ASK_PER_24H} queries per 24h)</span>
+                <span>Ask INDEX — 15 queries per day</span>
               </li>
               <li className="flex items-start">
                 <span className="mr-2">•</span>
-                <span>{FREE_MAX_DIGEST_PER_30D} Weekly Logs in first 30 days (use it or lose it)</span>
+                <span>Weekly Logs (first 30 days)</span>
               </li>
             </ul>
           </div>
@@ -127,7 +127,7 @@ export default function PricingPage() {
             onClick={handleGetStarted}
             className="w-full sm:w-auto px-6 py-3 bg-foreground text-background rounded-lg hover:opacity-90 transition-opacity font-medium"
           >
-            Get started (free)
+            Start Free
           </button>
           <button
             onClick={handleUpgrade}

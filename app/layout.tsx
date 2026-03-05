@@ -10,6 +10,7 @@ import FeedbackModal from "./components/FeedbackModal";
 import Footer from "./components/Footer";
 import CookieNotice from "./components/CookieNotice";
 import AttributionCapture from "./components/AttributionCapture";
+import ExtensionNudgePill from "./components/ExtensionNudgePill";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -111,6 +112,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
             <FeedbackModal />
             <CookieNotice />
             <AttributionCapture />
+            <ExtensionNudgePill />
           </ErrorBoundary>
         </ThemeProvider>
       </body>

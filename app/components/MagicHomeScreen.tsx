@@ -5,7 +5,8 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import OnboardingFlow from './OnboardingFlow';
+import OnboardingController from './onboarding/OnboardingController';
+import ExtensionNudgeBanner from './ExtensionNudgeBanner';
 import PostImportModal from './PostImportModal';
 import { showError } from './ErrorNotification';
 import GenerateDigestButton from '../tools/components/GenerateDigestButton';
@@ -214,7 +215,6 @@ function GlobalTimeline({ events }: { events: TimelineEvent[] }) {
 export default function MagicHomeScreen({ initialData = null, initialShowFocusModal }: MagicHomeScreenProps = {}) {
   const [data, setData] = useState<LandingData | null>(initialData);
   const [error, setError] = useState<string | null>(null);
-  const [onboardingCompleted, setOnboardingCompleted] = useState<boolean | null>(null);
   const [postImportModalDismissed, setPostImportModalDismissed] = useState(false);
 
   const fetchHomeData = useCallback(async () => {
@@ -259,16 +259,6 @@ export default function MagicHomeScreen({ initialData = null, initialShowFocusMo
     }
   }, [initialData, fetchHomeData]);
 
-  useEffect(() => {
-    try {
-      const completed = localStorage.getItem('index_onboarding_completed');
-      setOnboardingCompleted(completed === 'true');
-    } catch {
-      setOnboardingCompleted(false);
-    }
-  }, []);
-
-  const showOnboarding = onboardingCompleted === false;
   const hasArcs = data?.direction?.hasArcs ?? false;
   const directionText = data?.direction?.snapshotText ?? null;
   const directionGeneratedAt = data?.direction?.generatedAt ?? null;
@@ -297,15 +287,11 @@ export default function MagicHomeScreen({ initialData = null, initialShowFocusMo
         </div>
       )}
 
-      {showOnboarding && (
-        <OnboardingFlow
-          onComplete={() => setOnboardingCompleted(true)}
-        />
-      )}
+      {/* Onboarding tour mount: show when onboarding not completed; parent persists via markOnboardingCompleted on complete. */}
+      <OnboardingController />
+      <ExtensionNudgeBanner />
 
-      {!showOnboarding && (
-        <>
-          {/* Page title — same hierarchy as other page titles */}
+      {/* Page title — same hierarchy as other page titles */}
           <h1 className="font-serif text-xl font-semibold text-[rgb(var(--text))] mb-2">
             Across your INDEX
           </h1>
@@ -313,7 +299,7 @@ export default function MagicHomeScreen({ initialData = null, initialShowFocusMo
           <hr className="my-6 border-[rgb(var(--ring)/0.08)]" />
 
           {/* 1. Direction (global snapshot) — Updated, status line, optional last change, body */}
-          <div>
+          <div data-onboarding="direction-panel">
             <h2 className="font-serif text-lg font-semibold text-[rgb(var(--text))] mb-3">
               Direction
             </h2>
@@ -427,8 +413,6 @@ export default function MagicHomeScreen({ initialData = null, initialShowFocusMo
               }
             }}
           />
-        </>
-      )}
     </div>
   );
 }

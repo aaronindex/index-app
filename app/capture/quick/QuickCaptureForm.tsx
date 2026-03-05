@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { getSupabaseBrowserClient } from '@/lib/supabaseClient';
+import { setExtensionCaptureUsed } from '@/lib/extension-nudge/state';
 
 const SESSION_KEY = 'INDEX_QUICK_CAPTURE_PAYLOAD';
 const MAX_TEXT_LENGTH = 200_000;
@@ -139,6 +140,7 @@ export default function QuickCaptureForm() {
       setSaved({
         projectId: container.kind === 'project' ? container.project_id : null,
       });
+      setExtensionCaptureUsed();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Save failed');
     } finally {
