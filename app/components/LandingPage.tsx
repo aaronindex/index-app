@@ -164,21 +164,21 @@ export default function LandingPage() {
               title="Import"
               body="Paste conversations from ChatGPT, Claude, or Cursor."
               imageSrc="/cubes-new1.png"
-              backgroundImageSrc="/cubes-background2.jpg"
+              backgroundImageSrc="/cubes-bg1.jpg"
               dark
             />
             <ValueCard
               title="Distill"
               body="Extract decisions, open loops, and next steps."
               imageSrc="/cubes-new2.png"
-              backgroundImageSrc="/cubes-background2.jpg"
+              backgroundImageSrc="/cubes-bg2.jpg"
               dark
             />
             <ValueCard
               title="Move"
               body="Carry forward what still matters."
               imageSrc="/cubes-new3.png"
-              backgroundImageSrc="/cubes-background2.jpg"
+              backgroundImageSrc="/cubes-bg3.jpg"
               dark
             />
           </div>
