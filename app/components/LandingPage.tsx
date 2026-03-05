@@ -77,15 +77,12 @@ export default function LandingPage() {
                 className="w-full h-full object-cover"
               />
             )}
-            {/* Mask overlay: radial + left-side darkening */}
-            <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-black/80 mix-blend-multiply" />
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(0,0,0,0.6),_transparent_60%)] mix-blend-multiply" />
             {/* Grain overlay */}
             <div className="absolute inset-0 opacity-10 mix-blend-soft-light bg-[radial-gradient(circle,_rgba(255,255,255,0.12)_1px,transparent_0)] [background-size:4px_4px]" />
           </div>
 
           <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-20 items-center gap-12 lg:gap-16">
+          <div className="grid grid-cols-1 items-center gap-12 lg:gap-16">
             {/* Left column: Copy + CTA (45%) */}
             <div className="text-center lg:text-left lg:col-span-9">
               <h1 className="font-serif text-4xl sm:text-5xl lg:text-5xl xl:text-6xl font-semibold tracking-tight mb-6 text-white leading-[1.1]">
@@ -153,27 +150,6 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* Right column: Macbook mock - no frame, enlarged (55%) */}
-            <div className="flex justify-center lg:justify-end order-first lg:order-last lg:col-span-11">
-              <div className="w-full max-w-2xl lg:max-w-4xl">
-                <img
-                  src="/marketing/hero-macbook.png"
-                  alt="INDEX screenshot"
-                  className="w-full h-auto"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.style.display = 'none';
-                    const placeholder = target.parentElement?.querySelector('.placeholder');
-                    if (placeholder) {
-                      (placeholder as HTMLElement).style.display = 'flex';
-                    }
-                  }}
-                />
-                <div className="placeholder hidden items-center justify-center aspect-video bg-white/5 rounded-lg">
-                  <p className="text-white text-sm opacity-40">Screenshot placeholder</p>
-                </div>
-              </div>
-            </div>
           </div>
           </div>
         </section>
@@ -185,21 +161,21 @@ export default function LandingPage() {
             <ValueCard
               title="Import"
               body="Paste conversations from ChatGPT, Claude, or Cursor."
-              imageSrc="/cubes1.png"
+              imageSrc="/cubes-new1.png"
               backgroundImageSrc="/cubes-background.jpg"
               dark
             />
             <ValueCard
               title="Distill"
               body="Extract decisions, open loops, and next steps."
-              imageSrc="/cubes2.png"
+              imageSrc="/cubes-new2.png"
               backgroundImageSrc="/cubes-background.jpg"
               dark
             />
             <ValueCard
               title="Move"
               body="Carry forward what still matters."
-              imageSrc="/cubes3.png"
+              imageSrc="/cubes-new3.png"
               backgroundImageSrc="/cubes-background.jpg"
               dark
             />
@@ -208,77 +184,77 @@ export default function LandingPage() {
         </section>
 
         {/* 3) HOW INDEX WORKS SECTION */}
-        <section className="w-full py-20 sm:py-28 relative">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Centered heading */}
-          <div className="text-center mb-12 lg:mb-16">
-            <h2 className="font-serif text-4xl sm:text-5xl font-semibold tracking-tight text-[#121211] dark:text-[#FAF8F6]">
-              How INDEX works
-            </h2>
-          </div>
-          
-          <div className="grid grid-cols-1 lg:grid-cols-5 items-start gap-12 lg:gap-16">
-            {/* Left column: Steps (40%) */}
-            <div className="text-center lg:text-left lg:col-span-2">
-              <div className="space-y-6">
-                <div>
-                  <div className="inline-block text-xs font-semibold tracking-wider uppercase opacity-60 mb-2 text-[#121211] dark:text-[#FAF8F6]">
-                    Think
+        <section className="w-full py-20 sm:py-28 relative bg-[#050505]">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            {/* Centered heading */}
+            <div className="text-center mb-12 lg:mb-16">
+              <h2 className="font-serif text-4xl sm:text-5xl font-semibold tracking-tight text-white">
+                How INDEX works
+              </h2>
+            </div>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-5 items-start gap-12 lg:gap-16">
+              {/* Left column: Steps (40%) */}
+              <div className="text-center lg:text-left lg:col-span-2">
+                <div className="space-y-6">
+                  <div>
+                    <div className="inline-block text-xs font-semibold tracking-wider uppercase mb-2 text-white/60">
+                      Think
+                    </div>
+                    <p className="text-base text-white/80">
+                      In ChatGPT, Claude, or Cursor.
+                    </p>
                   </div>
-                  <p className="text-base opacity-75 text-[#121211] dark:text-[#FAF8F6]">
-                    In ChatGPT, Claude, or Cursor.
-                  </p>
-                </div>
-                <div>
-                  <div className="inline-block text-xs font-semibold tracking-wider uppercase opacity-60 mb-2 text-[#121211] dark:text-[#FAF8F6]">
-                    Capture
+                  <div>
+                    <div className="inline-block text-xs font-semibold tracking-wider uppercase mb-2 text-white/60">
+                      Capture
+                    </div>
+                    <p className="text-base text-white/80">
+                      Bring conversations into INDEX.
+                    </p>
                   </div>
-                  <p className="text-base opacity-75 text-[#121211] dark:text-[#FAF8F6]">
-                    Bring conversations into INDEX.
-                  </p>
-                </div>
-                <div>
-                  <div className="inline-block text-xs font-semibold tracking-wider uppercase opacity-60 mb-2 text-[#121211] dark:text-[#FAF8F6]">
-                    Reduce
+                  <div>
+                    <div className="inline-block text-xs font-semibold tracking-wider uppercase mb-2 text-white/60">
+                      Reduce
+                    </div>
+                    <p className="text-base text-white/80">
+                      Distill decisions, open loops, and highlights.
+                    </p>
                   </div>
-                  <p className="text-base opacity-75 text-[#121211] dark:text-[#FAF8F6]">
-                    Distill decisions, open loops, and highlights.
-                  </p>
-                </div>
-                <div>
-                  <div className="inline-block text-xs font-semibold tracking-wider uppercase opacity-60 mb-2 text-[#121211] dark:text-[#FAF8F6]">
-                    Continue
+                  <div>
+                    <div className="inline-block text-xs font-semibold tracking-wider uppercase mb-2 text-white/60">
+                      Continue
+                    </div>
+                    <p className="text-base text-white/80">
+                      Move forward with what remains.
+                    </p>
                   </div>
-                  <p className="text-base opacity-75 text-[#121211] dark:text-[#FAF8F6]">
-                    Move forward with what remains.
-                  </p>
                 </div>
               </div>
-            </div>
 
-            {/* Right column: Display mock - no frame, enlarged (60%) */}
-            <div className="flex justify-center lg:justify-start order-first lg:order-last lg:col-span-3">
-              <div className="w-full max-w-2xl lg:max-w-4xl">
-                <img
-                  src="/hero-macbook-new.jpg"
-                  alt="INDEX Project Read view"
-                  className="w-full h-auto"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.style.display = 'none';
-                    const placeholder = target.parentElement?.querySelector('.placeholder');
-                    if (placeholder) {
-                      (placeholder as HTMLElement).style.display = 'flex';
-                    }
-                  }}
-                />
-                <div className="placeholder hidden items-center justify-center aspect-video bg-gray-100 rounded-lg">
-                  <p className="text-gray-400 text-sm opacity-40">Display placeholder</p>
+              {/* Right column: Display mock - no frame, enlarged (60%) */}
+              <div className="flex justify-center lg:justify-start order-first lg:order-last lg:col-span-3">
+                <div className="w-full max-w-2xl lg:max-w-4xl">
+                  <img
+                    src="/hero-macbook-new.jpg"
+                    alt="INDEX Project Read view"
+                    className="w-full h-auto"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = 'none';
+                      const placeholder = target.parentElement?.querySelector('.placeholder');
+                      if (placeholder) {
+                        (placeholder as HTMLElement).style.display = 'flex';
+                      }
+                    }}
+                  />
+                  <div className="placeholder hidden items-center justify-center aspect-video bg-white/5 rounded-lg">
+                    <p className="text-white text-sm opacity-40">Display placeholder</p>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
         </section>
 
         {/* 4) PRIVATE BY DESIGN SECTION */}

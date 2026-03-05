@@ -26,12 +26,12 @@ export default function TheLedgerForThinking() {
               <br />
               A thread leads to five more.
             </p>
-            <p>
+            <p className="mb-4">
               By the end of the day there are dozens of conversations across ChatGPT, Claude, and Cursor. Some contain
               real breakthroughs. Most are fragments of thinking that felt important at the time.
             </p>
             <p>The problem is not generating ideas.</p>
-            <p>
+            <p className="mb-4">
               The problem is <strong>remembering what actually mattered.</strong>
             </p>
             <p>
@@ -46,7 +46,7 @@ export default function TheLedgerForThinking() {
             <h2 className="font-serif text-2xl font-semibold text-[rgb(var(--text))] mb-4">
               A ledger for thinking
             </h2>
-            <p>
+            <p className="mb-4">
               Most tools help you generate ideas.
               <br />
               INDEX helps you <strong>see where those ideas are going.</strong>
@@ -56,7 +56,7 @@ export default function TheLedgerForThinking() {
               Thinking happens wherever it already happens — in conversations, notes, documents, or long walks. INDEX
               exists <strong>after</strong> thinking.
             </p>
-            <p>You capture moments of thinking and reduce them to the signals that still matter:</p>
+            <p className="mb-4">You capture moments of thinking and reduce them to the signals that still matter:</p>
             <ul>
               <li>decisions</li>
               <li>results</li>
@@ -76,14 +76,14 @@ export default function TheLedgerForThinking() {
               The core loop
             </h2>
             <p>The system is intentionally simple:</p>
-            <p>Think anywhere → capture → reduce → continue thinking.</p>
+            <p className="mb-4">Think anywhere → capture → reduce → continue thinking.</p>
             <p>
               You import conversations or fragments of thinking.
               <br />
               You reduce them to the pieces that carry weight.
             </p>
-            <p>Everything else fades.</p>
-            <p>From those signals, INDEX reveals the shape of your thinking:</p>
+            <p className="mb-4">Everything else fades.</p>
+            <p className="mb-4">From those signals, INDEX reveals the shape of your thinking:</p>
             <ul>
               <li>Direction shows the current structural posture.</li>
               <li>Shifts mark meaningful changes.</li>
@@ -98,8 +98,8 @@ export default function TheLedgerForThinking() {
               Why this matters
             </h2>
             <p>AI dramatically increases the volume of thinking we can generate.</p>
-            <p>But without structure, that thinking dissolves into noise.</p>
-            <p>
+            <p className="mb-4">But without structure, that thinking dissolves into noise.</p>
+            <p className="mb-4">
               INDEX exists to create <strong>continuity</strong> — a quiet record of what actually happened in your
               thinking over time.
             </p>
