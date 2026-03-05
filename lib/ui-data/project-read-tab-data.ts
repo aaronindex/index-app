@@ -74,8 +74,14 @@ export async function getProjectReadTabServerData(
     updatedAt: string;
   }> = [];
 
+  const convTitle = (conv: unknown): string | null => {
+    if (conv == null) return null;
+    const c = Array.isArray(conv) ? conv[0] : conv;
+    return (c as { title?: string })?.title ?? null;
+  };
+
   if (decisions) {
-    decisions.forEach((d: { id: string; title: string | null; created_at: string; is_pinned: boolean; conversation_id: string | null; conversations: { title: string } | null }) => {
+    for (const d of decisions) {
       items.push({
         type: 'decision',
         id: d.id,
@@ -83,15 +89,15 @@ export async function getProjectReadTabServerData(
         isBlocker: false,
         isOpenLoop: false,
         conversationId: d.conversation_id ?? null,
-        conversationTitle: (d.conversations as { title?: string } | null)?.title ?? null,
+        conversationTitle: convTitle(d.conversations),
         priority: d.is_pinned ? 1 : 4,
         updatedAt: d.created_at,
       });
-    });
+    }
   }
 
   if (tasks) {
-    tasks.forEach((t: { id: string; title: string | null; description: string | null; updated_at: string; created_at: string; is_pinned: boolean; conversation_id: string | null; conversations: { title: string } | null; source_query: string | null }) => {
+    for (const t of tasks) {
       const isBlocker = (t.description ?? '').includes('[Blocker]');
       const isOpenLoop = (t.description ?? '').includes('[Open Loop]');
       let priority = 4;
@@ -105,11 +111,11 @@ export async function getProjectReadTabServerData(
         isBlocker,
         isOpenLoop,
         conversationId: t.conversation_id ?? null,
-        conversationTitle: (t.conversations as { title?: string } | null)?.title ?? null,
+        conversationTitle: convTitle(t.conversations),
         priority,
         updatedAt: t.updated_at || t.created_at,
       });
-    });
+    }
   }
 
   items.sort((a, b) => {
