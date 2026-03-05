@@ -62,6 +62,7 @@ export default function ReadTab({
   snapshotGeneratedAt,
   activeArcs,
   projectSnapshots,
+  projectTimelineEvents = [],
   latestSnapshotOutcomeText,
   sourceCount,
 }: ReadTabProps) {
