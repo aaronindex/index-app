@@ -92,8 +92,20 @@ export async function loadHomeView(params: {
     semanticDirection = overlay.direction;
     semanticPulseHeadlines = overlay.pulseHeadlines;
 
-    // DEV-ONLY: if direction still empty, log direction row count for debugging (no raw text)
+    // DEV-ONLY: overlay diagnostics (no payload content; counts and ids only)
     if (typeof process !== 'undefined' && (process.env.NODE_ENV === 'development' || process.env.APP_ENV === 'development')) {
+      const directionExists = !!overlay.direction?.trim();
+      const directionLength = overlay.direction?.length ?? 0;
+      const pulseHeadlineCount = Object.keys(overlay.pulseHeadlines).length;
+      const arcTitleCount = Object.keys(overlay.arcTitles).length;
+      // eslint-disable-next-line no-console
+      console.log('[HomeLoad][Overlay]', {
+        state_hash_prefix: latestStateHash.substring(0, 16),
+        directionExists,
+        directionLength,
+        pulseHeadlineCount,
+        arcTitleCount,
+      });
       if (!semanticDirection) {
         const { count } = await supabaseClient
           .from('semantic_labels')

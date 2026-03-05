@@ -177,12 +177,24 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
-  const { user_id, scope_type, scope_id, state_hash, arcs, pulses } = body;
+  let { user_id, scope_type, scope_id, state_hash, arcs, pulses } = body;
   if (!user_id || !scope_type || !state_hash || !Array.isArray(arcs) || !Array.isArray(pulses)) {
     return NextResponse.json(
       { error: 'Missing required fields: user_id, scope_type, state_hash, arcs, pulses' },
       { status: 400 }
     );
+  }
+
+  // Normalize scope_id: global => SQL NULL; project => require string
+  if (scope_type === 'global') {
+    scope_id = null;
+  } else if (scope_type === 'project') {
+    if (!scope_id || typeof scope_id !== 'string') {
+      return NextResponse.json(
+        { error: 'scope_id required when scope_type is project' },
+        { status: 400 }
+      );
+    }
   }
 
   if (isDevEnv()) {

@@ -29,7 +29,12 @@ type GetOverlayParams = {
  * Missing entries mean use placeholder; overlay never alters state_hash inputs.
  */
 export async function getSemanticOverlay(params: GetOverlayParams): Promise<SemanticOverlay> {
-  const { supabaseClient, user_id, scope_type, scope_id, state_hash, arc_ids = [], pulse_id_state_hash_pairs = [] } = params;
+  let { supabaseClient, user_id, scope_type, scope_id, state_hash, arc_ids = [], pulse_id_state_hash_pairs = [] } = params;
+
+  // Normalize: global always uses SQL NULL for scope_id; project requires scope_id string
+  if (scope_type === 'global') {
+    scope_id = null;
+  }
 
   const result: SemanticOverlay = {
     direction: null,
@@ -43,7 +48,7 @@ export async function getSemanticOverlay(params: GetOverlayParams): Promise<Sema
     .eq('user_id', user_id)
     .eq('scope_type', scope_type);
 
-  // NULL-safe scope_id: global or missing => IS NULL; else EQ
+  // scope_id: global/missing => IS NULL (Supabase .is('scope_id', null)); else EQ
   if (scope_id == null || scope_id === undefined) {
     q = q.is('scope_id', null);
   } else {

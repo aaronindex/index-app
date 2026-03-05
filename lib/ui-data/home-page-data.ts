@@ -140,27 +140,35 @@ export async function getHomePageData(
   const shiftSource = deduped.slice(0, 5);
   const lastChangeAt = shiftSource.length > 0 ? shiftSource[0]!.occurred_at : null;
 
-  // Shifts list (textual): dedupe mechanical duplicates by label + state_hash + calendar day.
-  // Keep the earliest occurrence per (label, state_hash, day) and preserve overall ordering.
+  // Shifts list (textual): dedupe by headline + day; generic headlines by (headline + day) only.
+  // Normalize headline: trim + collapse whitespace. Keep earliest occurrence per key; preserve order.
   const pulseById = new Map(homeView.pulses.map((p) => [p.id, p]));
-  const rawShifts = shiftSource.map((p) => ({
-    id: p.id,
-    occurred_at: p.occurred_at,
-    label: getTypedHeadline(p, semanticHeadlines[p.id]),
-    pulse_type: p.pulse_type,
-  }));
+  const rawShifts = shiftSource.map((p) => {
+    const label = getTypedHeadline(p, semanticHeadlines[p.id]);
+    const normalized = label.trim().replace(/\s+/g, ' ').toLowerCase();
+    return {
+      id: p.id,
+      occurred_at: p.occurred_at,
+      label,
+      pulse_type: p.pulse_type,
+      normalized,
+    };
+  });
+  const GENERIC_HEADLINES = new Set(['structure updated', 'threshold crossed']);
   const seenKeys = new Set<string>();
-  const dedupedShifts: typeof rawShifts = [];
+  const dedupedShifts: Array<{ id: string; occurred_at: string; label: string; pulse_type: string }> = [];
   // Walk from oldest to newest so we keep the earliest occurrence for each key.
   for (let i = rawShifts.length - 1; i >= 0; i -= 1) {
     const s = rawShifts[i]!;
     const pulse = pulseById.get(s.id) as HomePulse | undefined;
     const stateHash = pulse?.state_hash || '';
     const day = (s.occurred_at || '').slice(0, 10);
-    const key = `${s.label}|${stateHash}|${day}`;
+    const key = GENERIC_HEADLINES.has(s.normalized)
+      ? `${s.normalized}|${day}`
+      : `${s.normalized}|${stateHash}|${day}`;
     if (!seenKeys.has(key)) {
       seenKeys.add(key);
-      dedupedShifts.push(s);
+      dedupedShifts.push({ id: s.id, occurred_at: s.occurred_at, label: s.label, pulse_type: s.pulse_type });
     }
   }
   dedupedShifts.reverse();

@@ -30,13 +30,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
-  const { user_id, scope_type, scope_id } = body;
+  let { user_id, scope_type, scope_id } = body;
   if (!user_id || !scope_type) {
     return NextResponse.json({ error: 'Missing required fields: user_id, scope_type' }, { status: 400 });
   }
 
-  if (scope_type === 'project' && !scope_id) {
-    return NextResponse.json({ error: 'scope_id required when scope_type is project' }, { status: 400 });
+  // Normalize scope_id: global => SQL NULL; project => require string
+  if (scope_type === 'global') {
+    scope_id = undefined;
+  } else if (scope_type === 'project') {
+    if (!scope_id || typeof scope_id !== 'string') {
+      return NextResponse.json({ error: 'scope_id required when scope_type is project' }, { status: 400 });
+    }
   }
 
   const supabase = getServiceClient();
