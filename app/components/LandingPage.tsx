@@ -157,28 +157,28 @@ export default function LandingPage() {
         </section>
 
         {/* 2) VALUE CARDS SECTION */}
-        <section className="w-full py-20 sm:py-28 bg-[#1e1e1e]">
+        <section className="w-full py-20 sm:py-28 bg-black">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-12">
             <ValueCard
               title="Import"
               body="Paste conversations from ChatGPT, Claude, or Cursor."
               imageSrc="/cubes-new1.png"
-              backgroundImageSrc="/cubes-background.jpg"
+              backgroundImageSrc="/cubes-background2.jpg"
               dark
             />
             <ValueCard
               title="Distill"
               body="Extract decisions, open loops, and next steps."
               imageSrc="/cubes-new2.png"
-              backgroundImageSrc="/cubes-background.jpg"
+              backgroundImageSrc="/cubes-background2.jpg"
               dark
             />
             <ValueCard
               title="Move"
               body="Carry forward what still matters."
               imageSrc="/cubes-new3.png"
-              backgroundImageSrc="/cubes-background.jpg"
+              backgroundImageSrc="/cubes-background2.jpg"
               dark
             />
           </div>
@@ -186,7 +186,7 @@ export default function LandingPage() {
         </section>
 
         {/* 3) HOW INDEX WORKS SECTION */}
-        <section className="w-full py-20 sm:py-28 relative bg-[#050505]">
+        <section className="w-full py-20 sm:py-28 relative bg-[#121211]">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             {/* Centered heading */}
             <div className="text-center mb-12 lg:mb-16">

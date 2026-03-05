@@ -72,7 +72,16 @@ export default function ValueCard({
   // Dark / background-image variant (used on homepage cards)
   if (backgroundImageSrc || dark) {
     return (
-      <div className={`relative rounded-2xl overflow-hidden ${className}`}>
+      <div
+        className={`relative rounded-2xl overflow-hidden ${className}`}
+        style={
+          dark
+            ? {
+                boxShadow: '0 0 36px rgba(255,255,255,0.12)',
+              }
+            : undefined
+        }
+      >
         {backgroundImageSrc && (
           <div
             className="absolute inset-0"
