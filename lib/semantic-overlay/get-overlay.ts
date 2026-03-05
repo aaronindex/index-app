@@ -61,6 +61,13 @@ export async function getSemanticOverlay(params: GetOverlayParams): Promise<Sema
     return result;
   }
 
+  const rowCount = (rows ?? []).length;
+  if (scope_type === 'global' && typeof process !== 'undefined' && (process.env.NODE_ENV === 'development' || process.env.APP_ENV === 'development')) {
+    const directionCount = (rows ?? []).filter((r: { object_type: string; object_id: string }) => r.object_type === 'direction' && r.object_id === SEMANTIC_DIRECTION_OBJECT_ID).length;
+    // eslint-disable-next-line no-console
+    console.log('[getSemanticOverlay]', { scope: 'global', total_rows: rowCount, direction_rows: directionCount, state_hash_prefix: state_hash.substring(0, 16) });
+  }
+
   const pairSet = new Set(pulse_id_state_hash_pairs.map(({ pulse_id, state_hash: h }) => `${pulse_id}:${h}`));
 
   // Direction: only object_id = 'current', same state_hash; deterministic by generated_at desc
