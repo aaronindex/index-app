@@ -138,28 +138,23 @@ export async function getHomePageData(
     homeView.latestSnapshot?.snapshot_text?.trim() ||
     null;
 
-  // Safety net: if Direction is still empty but we know overlay exists (debug tools show direction rows),
-  // query semantic_labels directly for the latest global snapshot state_hash.
+  // Safety net: if Direction is still empty but we know overlay exists (debug tools / DB show direction rows),
+  // query semantic_labels directly for the latest global direction row (any state_hash) and use that text.
   if (!directionText) {
-    const latestStateHash = homeView.latestSnapshot?.state_hash ?? null;
-    if (latestStateHash) {
-      const { data: rows } = await serviceClient
-        .from('semantic_labels')
-        .select('object_type, object_id, body, title')
-        .eq('user_id', user_id)
-        .eq('scope_type', 'global')
-        .is('scope_id', null)
-        .eq('object_type', 'direction')
-        .eq('object_id', 'current')
-        .eq('state_hash', latestStateHash);
-      const directionRow = (rows ?? []).find(
-        (r: { body: string | null; title: string | null }) =>
-          !!(r.body ?? r.title)?.trim()
-      ) as { body: string | null; title: string | null } | undefined;
-      const text = directionRow ? (directionRow.body ?? directionRow.title ?? '').trim() : '';
-      if (text) {
-        directionText = text;
-      }
+    const { data: latestDirectionRows } = await serviceClient
+      .from('semantic_labels')
+      .select('body, title, generated_at')
+      .eq('user_id', user_id)
+      .eq('scope_type', 'global')
+      .is('scope_id', null)
+      .eq('object_type', 'direction')
+      .eq('object_id', 'current')
+      .order('generated_at', { ascending: false })
+      .limit(1);
+    const row = (latestDirectionRows ?? [])[0] as { body: string | null; title: string | null } | undefined;
+    const text = row ? (row.body ?? row.title ?? '').trim() : '';
+    if (text) {
+      directionText = text;
     }
   }
 
