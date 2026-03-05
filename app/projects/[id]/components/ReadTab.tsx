@@ -29,6 +29,13 @@ interface ReadTabProps {
   }>;
   latestSnapshotOutcomeText?: string | null;
   sourceCount?: number | null;
+  /** When provided, used as initial state and client fetch is skipped (avoids flicker) */
+  serverReadData?: {
+    hasConversations: boolean;
+    stillUnfolding: StillUnfoldingItem[];
+    recentDecisions: RecentDecision[];
+    nextTasks: NextTask[];
+  } | null;
 }
 
 interface StillUnfoldingItem {
@@ -65,20 +72,28 @@ export default function ReadTab({
   projectTimelineEvents = [],
   latestSnapshotOutcomeText,
   sourceCount,
+  serverReadData = null,
 }: ReadTabProps) {
   const router = useRouter();
-  const [stillUnfolding, setStillUnfolding] = useState<StillUnfoldingItem[]>([]);
-  const [recentDecisions, setRecentDecisions] = useState<RecentDecision[]>([]);
-  const [nextTasks, setNextTasks] = useState<NextTask[]>([]);
-  const [hasConversations, setHasConversations] = useState<boolean | null>(null);
+  const [stillUnfolding, setStillUnfolding] = useState<StillUnfoldingItem[]>(
+    serverReadData?.stillUnfolding ?? []
+  );
+  const [recentDecisions, setRecentDecisions] = useState<RecentDecision[]>(
+    serverReadData?.recentDecisions ?? []
+  );
+  const [nextTasks, setNextTasks] = useState<NextTask[]>(serverReadData?.nextTasks ?? []);
+  const [hasConversations, setHasConversations] = useState<boolean | null>(
+    serverReadData != null ? serverReadData.hasConversations : null
+  );
   const [showOutcomeModal, setShowOutcomeModal] = useState(false);
   const [outcomeText, setOutcomeText] = useState('');
   const [outcomeSaving, setOutcomeSaving] = useState(false);
   const [outcomeSavedAndClosing, setOutcomeSavedAndClosing] = useState(false);
   const [outcomeError, setOutcomeError] = useState<string | null>(null);
 
-  // Check if project has conversations
+  // Only fetch when server did not provide read data (avoids flicker)
   useEffect(() => {
+    if (serverReadData != null) return;
     async function checkConversations() {
       try {
         const response = await fetch(`/api/projects/${projectId}/has-conversations`);
@@ -94,39 +109,33 @@ export default function ReadTab({
       }
     }
     checkConversations();
-  }, [projectId]);
+  }, [projectId, serverReadData]);
 
-  // Fetch all Read data
   useEffect(() => {
+    if (serverReadData != null) return;
     async function fetchReadData() {
       try {
-        // Fetch still unfolding (active tensions)
         const stillOpenResponse = await fetch(`/api/projects/${projectId}/still-open`);
         if (stillOpenResponse.ok) {
           const stillOpenData = await stillOpenResponse.json();
           setStillUnfolding(stillOpenData.items || []);
         }
-
-        // Fetch recent decisions (limit 5)
         const decisionsResponse = await fetch(`/api/projects/${projectId}/read-data?type=decisions&limit=5`);
         if (decisionsResponse.ok) {
           const decisionsData = await decisionsResponse.json();
           setRecentDecisions(decisionsData.items || []);
         }
-
-        // Fetch next tasks (limit 5)
         const tasksResponse = await fetch(`/api/projects/${projectId}/read-data?type=tasks&limit=5`);
         if (tasksResponse.ok) {
           const tasksData = await tasksResponse.json();
           setNextTasks(tasksData.items || []);
         }
-
       } catch (error) {
         console.error('Error fetching read data:', error);
       }
     }
     fetchReadData();
-  }, [projectId]);
+  }, [projectId, serverReadData]);
 
   // Show empty state if no conversations
   if (hasConversations === false) {

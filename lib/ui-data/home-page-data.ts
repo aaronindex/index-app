@@ -1,0 +1,206 @@
+// lib/ui-data/home-page-data.ts
+// Server-side builder for home page payload. Used by API route and by home page for SSR.
+
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { loadHomeView } from './home.load';
+import type { HomePulse } from './home.load';
+
+export type HomePageData = {
+  hasConversations: boolean;
+  hasProjects: boolean;
+  showFocusModal: boolean;
+  direction: {
+    snapshotText: string | null;
+    hasArcs: boolean;
+    generatedAt: string | null;
+    active_arc_count: number;
+    project_count: number;
+    lastChangeAt: string | null;
+  };
+  shifts: Array<{ id: string; occurred_at: string; label: string; pulse_type: string }>;
+  timelineEvents: Array<{
+    id: string;
+    occurred_at: string;
+    summary: string;
+    pulse_type: string;
+    isResult: boolean;
+  }>;
+  weeklyDigest: {
+    id: string;
+    week_start: string;
+    week_end: string;
+    body: string | null;
+    summary: string | null;
+  } | null;
+  weekly_digest_enabled: boolean;
+};
+
+function getTypedHeadline(p: HomePulse, semanticHeadline?: string | null): string {
+  const semantic = (semanticHeadline || '').trim();
+  if (semantic) return semantic;
+  const editorial = (p.headline || '').trim();
+  if (editorial) return editorial;
+  switch (p.pulse_type) {
+    case 'tension':
+      return 'Tension surfaced';
+    case 'arc_shift':
+      return 'Arc shifted';
+    case 'structural_threshold':
+      return 'Structure updated';
+    case 'result_recorded':
+      return 'Result recorded';
+    default:
+      return 'Structure updated';
+  }
+}
+
+function dedupePulses(pulses: HomePulse[]): HomePulse[] {
+  const result: HomePulse[] = [];
+  for (const pulse of pulses) {
+    const occurred = pulse.occurred_at || '';
+    const day = occurred.slice(0, 10);
+    if (!day) {
+      result.push(pulse);
+      continue;
+    }
+    const last = result[result.length - 1];
+    if (last) {
+      const lastDay = (last.occurred_at || '').slice(0, 10);
+      const sameProject = (last.project_id || null) === (pulse.project_id || null);
+      if (last.pulse_type === pulse.pulse_type && lastDay === day && sameProject) continue;
+    }
+    result.push(pulse);
+  }
+  return result;
+}
+
+function formatDigestBody(d: {
+  summary?: string | null;
+  top_themes?: unknown;
+  open_loops?: unknown;
+}): string {
+  const parts: string[] = [];
+  if (d.summary && String(d.summary).trim()) parts.push(String(d.summary).trim());
+  const themes = Array.isArray(d.top_themes) ? d.top_themes : [];
+  if (themes.length > 0) {
+    const themeLines = themes.map((t: unknown) => (typeof t === 'string' ? t : String(t)).trim()).filter(Boolean);
+    if (themeLines.length > 0) parts.push(themeLines.map((line) => `• ${line}`).join('\n'));
+  }
+  const loops = Array.isArray(d.open_loops) ? d.open_loops : [];
+  if (loops.length > 0) {
+    const loopLines = loops.map((l: unknown) => (typeof l === 'string' ? l : String(l)).trim()).filter(Boolean);
+    if (loopLines.length > 0) parts.push(loopLines.map((line) => `• ${line}`).join('\n'));
+  }
+  if (parts.length === 0) return '';
+  return parts.join('\n\n');
+}
+
+/**
+ * Build home page payload server-side. Use for SSR (home page) and for API route.
+ * focusModalDismissed: true when cookie index_focus_modal_dismissed is set (server reads cookie and passes here).
+ */
+export async function getHomePageData(
+  supabase: SupabaseClient,
+  user_id: string,
+  focusModalDismissed: boolean = false
+): Promise<HomePageData> {
+  const [homeView, conversationCountResult, projectCountResult, digestResult, profileResult] = await Promise.all([
+    loadHomeView({ supabaseClient: supabase, user_id }),
+    supabase.from('conversations').select('*', { count: 'exact', head: true }).eq('user_id', user_id),
+    supabase.from('projects').select('*', { count: 'exact', head: true }).eq('user_id', user_id),
+    supabase
+      .from('weekly_digests')
+      .select('id, week_start, week_end, summary, top_themes, open_loops')
+      .eq('user_id', user_id)
+      .order('week_start', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    supabase.from('profiles').select('weekly_digest_enabled').eq('id', user_id).maybeSingle(),
+  ]);
+
+  const hasConversations = (conversationCountResult.count ?? 0) > 0;
+  const hasProjects = (projectCountResult.count ?? 0) > 0;
+  const latestDigest = digestResult.data ?? null;
+  const weeklyDigestText = latestDigest ? formatDigestBody(latestDigest) : null;
+  const showFocusModal =
+    hasConversations && !weeklyDigestText && !focusModalDismissed;
+
+  const payload = homeView.latestSnapshot?.state_payload as { active_arc_ids?: string[] } | null | undefined;
+  const hasArcs = Array.isArray(payload?.active_arc_ids) && payload.active_arc_ids.length > 0;
+  const active_arc_count = Array.isArray(payload?.active_arc_ids) ? payload.active_arc_ids.length : 0;
+  const project_count = projectCountResult.count ?? 0;
+
+  const directionText =
+    homeView.semanticDirection?.trim() ||
+    homeView.latestSnapshot?.snapshot_text?.trim() ||
+    null;
+
+  const semanticHeadlines = homeView.semanticPulseHeadlines ?? {};
+  const deduped = dedupePulses(homeView.pulses);
+  const shiftSource = deduped.slice(0, 5);
+  const lastChangeAt = shiftSource.length > 0 ? shiftSource[0]!.occurred_at : null;
+
+  // Shifts list (textual): dedupe mechanical duplicates by label + state_hash + calendar day.
+  // Keep the earliest occurrence per (label, state_hash, day) and preserve overall ordering.
+  const pulseById = new Map(homeView.pulses.map((p) => [p.id, p]));
+  const rawShifts = shiftSource.map((p) => ({
+    id: p.id,
+    occurred_at: p.occurred_at,
+    label: getTypedHeadline(p, semanticHeadlines[p.id]),
+    pulse_type: p.pulse_type,
+  }));
+  const seenKeys = new Set<string>();
+  const dedupedShifts: typeof rawShifts = [];
+  // Walk from oldest to newest so we keep the earliest occurrence for each key.
+  for (let i = rawShifts.length - 1; i >= 0; i -= 1) {
+    const s = rawShifts[i]!;
+    const pulse = pulseById.get(s.id) as HomePulse | undefined;
+    const stateHash = pulse?.state_hash || '';
+    const day = (s.occurred_at || '').slice(0, 10);
+    const key = `${s.label}|${stateHash}|${day}`;
+    if (!seenKeys.has(key)) {
+      seenKeys.add(key);
+      dedupedShifts.push(s);
+    }
+  }
+  dedupedShifts.reverse();
+  const shifts = dedupedShifts;
+
+  const timelineEvents = [...shiftSource]
+    .sort((a, b) => new Date(a.occurred_at).getTime() - new Date(b.occurred_at).getTime())
+    .map((p) => ({
+      id: p.id,
+      occurred_at: p.occurred_at,
+      summary: getTypedHeadline(p, semanticHeadlines[p.id]),
+      pulse_type: p.pulse_type,
+      isResult: p.pulse_type === 'result_recorded',
+    }));
+
+  const profile = profileResult.data;
+
+  return {
+    hasConversations,
+    hasProjects,
+    showFocusModal,
+    direction: {
+      snapshotText: directionText,
+      hasArcs,
+      generatedAt: homeView.latestSnapshot?.generated_at ?? null,
+      active_arc_count,
+      project_count,
+      lastChangeAt,
+    },
+    shifts,
+    timelineEvents,
+    weeklyDigest: latestDigest
+      ? {
+          id: latestDigest.id,
+          week_start: latestDigest.week_start,
+          week_end: latestDigest.week_end,
+          body: weeklyDigestText,
+          summary: latestDigest.summary,
+        }
+      : null,
+    weekly_digest_enabled: profile?.weekly_digest_enabled ?? true,
+  };
+}

@@ -46,6 +46,13 @@ type LandingData = {
   } | null;
 };
 
+type MagicHomeScreenProps = {
+  /** Server-rendered data; when set, no client fetch on mount (avoids flicker) */
+  initialData?: LandingData | null;
+  /** Server-computed: show focus modal (conversations exist, no digest yet, not dismissed). When set, modal does not depend on client fetch. */
+  initialShowFocusModal?: boolean;
+};
+
 /** "Mar 3" for Shifts list line */
 function formatShortDate(iso: string): string {
   try {
@@ -204,8 +211,8 @@ function GlobalTimeline({ events }: { events: TimelineEvent[] }) {
   );
 }
 
-export default function MagicHomeScreen() {
-  const [data, setData] = useState<LandingData | null>(null);
+export default function MagicHomeScreen({ initialData = null, initialShowFocusModal }: MagicHomeScreenProps = {}) {
+  const [data, setData] = useState<LandingData | null>(initialData);
   const [error, setError] = useState<string | null>(null);
   const [onboardingCompleted, setOnboardingCompleted] = useState<boolean | null>(null);
   const [postImportModalDismissed, setPostImportModalDismissed] = useState(false);
@@ -245,9 +252,12 @@ export default function MagicHomeScreen() {
     }).catch(() => {});
   }, []);
 
+  // Only fetch on mount when server did not provide initial data (avoids flicker)
   useEffect(() => {
-    fetchHomeData();
-  }, [fetchHomeData]);
+    if (initialData == null) {
+      fetchHomeData();
+    }
+  }, [initialData, fetchHomeData]);
 
   useEffect(() => {
     try {
@@ -403,11 +413,19 @@ export default function MagicHomeScreen() {
 
           <PostImportModal
             isOpen={
-              hasConversations &&
-              !weeklyDigest?.body &&
+              (initialShowFocusModal !== undefined
+                ? initialShowFocusModal
+                : Boolean(hasConversations && !weeklyDigest?.body)) &&
               !postImportModalDismissed
             }
-            onClose={() => setPostImportModalDismissed(true)}
+            onClose={async () => {
+              setPostImportModalDismissed(true);
+              try {
+                await fetch('/api/ui/dismiss-focus-modal', { method: 'POST', credentials: 'same-origin' });
+              } catch {
+                // Cookie set on next full load; modal already hidden
+              }
+            }}
           />
         </>
       )}

@@ -12,6 +12,7 @@ import TasksTab from './components/TasksTab';
 import ProjectStartChatButton from './components/ProjectStartChatButton';
 import ProjectOverflowMenu from './components/ProjectOverflowMenu';
 import { loadProjectView } from '@/lib/ui-data';
+import { getProjectReadTabServerData } from '@/lib/ui-data/project-read-tab-data';
 
 // Force dynamic rendering to ensure fresh data
 export const dynamic = 'force-dynamic';
@@ -248,6 +249,12 @@ export default async function ProjectDetailPage({
         })
       : null;
 
+  // Read tab server data (still unfolding, decisions, tasks) to avoid client fetch flicker
+  const readTabServerData =
+    activeTab === 'read'
+      ? await getProjectReadTabServerData(supabase, user.id, id, conversationIds)
+      : null;
+
   return (
     <main className="min-h-screen bg-[rgb(var(--bg))]">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -325,6 +332,7 @@ export default async function ProjectDetailPage({
                 projectTimelineEvents={projectViewData?.projectTimelineEvents ?? []}
                 latestSnapshotOutcomeText={projectViewData?.latestSnapshotOutcomeText ?? null}
                 sourceCount={sourceCount}
+                serverReadData={readTabServerData}
               />
             )}
             {activeTab === 'chats' && (
