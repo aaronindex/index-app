@@ -528,7 +528,10 @@ function ProjectEventTimeline(props: { events: ProjectTimelineEvent[] }) {
       <h2 className="font-serif text-lg font-semibold text-[rgb(var(--text))] mb-3">
         Timeline
       </h2>
-      <div className="relative h-12">
+      <p className="mt-1 text-sm text-[rgb(var(--muted))]">
+        Dots reflect structural changes. Spacing shows time between them.
+      </p>
+      <div className="relative h-12 mt-2">
         <div className="absolute top-1/2 left-0 right-0 h-px bg-[rgb(var(--ring)/0.12)]" />
         {events.map((item) => {
           const pos = span === 0 ? 0.5 : (item.ts - t0) / span;

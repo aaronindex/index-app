@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getAppBaseUrl } from '@/lib/url';
+import { SEMANTIC_DIRECTION_OBJECT_ID } from '@/lib/semantic-overlay/constants';
 
 function getServiceClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -174,6 +175,7 @@ export async function POST(request: NextRequest) {
       wrote,
       state_hash_prefix: state_hash.substring(0, 16),
       counts,
+      direction_object_id: SEMANTIC_DIRECTION_OBJECT_ID,
     });
   }
 
@@ -279,5 +281,6 @@ export async function POST(request: NextRequest) {
     wrote,
     state_hash_prefix: state_hash.substring(0, 16),
     counts,
+    direction_object_id: SEMANTIC_DIRECTION_OBJECT_ID,
   });
 }

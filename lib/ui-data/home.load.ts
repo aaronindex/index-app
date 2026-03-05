@@ -91,6 +91,27 @@ export async function loadHomeView(params: {
     });
     semanticDirection = overlay.direction;
     semanticPulseHeadlines = overlay.pulseHeadlines;
+
+    // DEV-ONLY: if direction still empty, log direction row count for debugging (no raw text)
+    if (typeof process !== 'undefined' && (process.env.NODE_ENV === 'development' || process.env.APP_ENV === 'development')) {
+      if (!semanticDirection) {
+        const { count } = await supabaseClient
+          .from('semantic_labels')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user_id)
+          .eq('scope_type', 'global')
+          .is('scope_id', null)
+          .eq('object_type', 'direction')
+          .eq('object_id', 'current')
+          .eq('state_hash', latestStateHash);
+        // eslint-disable-next-line no-console
+        console.log('[HomeLoad][Direction]', {
+          semanticDirectionEmpty: true,
+          direction_row_count: count ?? 0,
+          state_hash_prefix: latestStateHash.substring(0, 16),
+        });
+      }
+    }
   }
 
   return {

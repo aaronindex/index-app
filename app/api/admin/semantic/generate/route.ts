@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { openaiRequest } from '@/lib/ai/request';
+import { SEMANTIC_DIRECTION_OBJECT_ID } from '@/lib/semantic-overlay/constants';
 
 const PROMPT_VERSION = 'v1';
 const MODEL = 'gpt-4o-mini';
@@ -78,6 +79,17 @@ Do not speculate.
 Tone: calm, factual, observational.
 Like a field note written by a systems observer.
 
+Arc titles must be concrete and content-bearing:
+- Prefer "Semantic overlay rollout" over "Initial phase of activity"
+- Prefer "Homepage direction + timeline clarity" over "Exploration ongoing"
+- Avoid generic stage-y phrases: do not use "initial", "phase", "activity", "progress", "ongoing", "work", "effort" as standalone signals
+- If arc context includes project/product proper nouns (INDEX, v2, semantic labels, direction, shifts, timeline, import/reduce), include them
+- Titles should reflect what is being stabilized or decided, not that something is happening
+
+Pulse headlines should name the structural event in plain language:
+- e.g. "Direction logic aligned to semantic overlay", "Result recorded and structure updated"
+- Avoid "Structure updated" unless there is no better detail available
+
 Return JSON only.`;
 
 function buildUserPrompt(body: GenerateBody): string {
@@ -112,23 +124,20 @@ function buildUserPrompt(body: GenerateBody): string {
 Rules:
 
 Arc titles
-- 3–7 words
-- descriptive
-- no numbering
-- do not include the word "Arc"
-- no metaphors
+- 3–7 words, concrete and content-bearing
+- No generic placeholders: avoid "Initial phase of activity", "Exploration ongoing"
+- No numbering; do not include the word "Arc"; no metaphors
+- Reflect what is being stabilized or decided; include product/context nouns (INDEX, v2, direction, timeline, etc.) when relevant
 
 Pulse headlines
-- 4–10 words
-- describe the structural change
-- must not output "Structural threshold"
+- 4–10 words; name the structural event in plain language
+- e.g. "Direction logic aligned to semantic overlay", "Result recorded and structure updated"
+- Do not output "Structural threshold"; avoid "Structure updated" unless no better detail exists
 
 Direction
 - 2–4 sentences
-- observational
-- no advice
-- no questions
-- describe overall structural posture
+- Observational; no advice; no questions
+- Describe overall structural posture
 
 Input data:
 
@@ -285,13 +294,13 @@ export async function POST(request: NextRequest) {
       console.log('[SemanticGenerate][NoDirection]', { state_hash_prefix: state_hash.substring(0, 16) });
     }
   } else {
-    // C3: Direction semantics are keyed to state_hash and stored under object_id "current"
+    // C3: Direction semantics are keyed to state_hash and stored under object_id from constants
     rows.push({
       user_id,
       scope_type,
       scope_id: scopeIdVal,
       object_type: 'direction',
-      object_id: 'current',
+      object_id: SEMANTIC_DIRECTION_OBJECT_ID,
       state_hash,
       title: null,
       body: direction,

@@ -400,12 +400,15 @@ export async function loadProjectView(params: {
     };
   });
 
-  const resultEvents = outcomesChrono.map((o) => ({
-    id: o.id,
-    occurred_at: o.occurred_at,
-    kind: 'result' as const,
-    label: `Result recorded: ${o.text.length > 60 ? o.text.slice(0, 57) + '…' : o.text}`,
-  }));
+  const resultEvents = outcomesChrono.map((o) => {
+    const summary = o.text.length > 60 ? o.text.slice(0, 57) + '…' : o.text;
+    return {
+      id: o.id,
+      occurred_at: o.occurred_at,
+      kind: 'result' as const,
+      label: `Result: ${summary}`,
+    };
+  });
 
   projectTimelineEvents = [...pulseEvents, ...resultEvents].sort(
     (a, b) => new Date(a.occurred_at).getTime() - new Date(b.occurred_at).getTime()
