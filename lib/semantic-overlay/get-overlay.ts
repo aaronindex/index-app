@@ -77,6 +77,31 @@ export async function getSemanticOverlay(params: GetOverlayParams): Promise<Sema
     if (text) result.direction = text;
   }
 
+  // Fallback: if global and no direction for exact state_hash, use latest global direction (any state_hash).
+  // Handles the case where a new snapshot was created after the backfill (state_hash advanced).
+  if (
+    scope_type === 'global' &&
+    !result.direction &&
+    (rows ?? []).length > 0
+  ) {
+    const anyDirectionRows = (rows ?? []).filter(
+      (row: { object_type: string; object_id: string }) =>
+        row.object_type === 'direction' && row.object_id === SEMANTIC_DIRECTION_OBJECT_ID
+    ) as Array<{ body: string | null; title: string | null; generated_at: string }>;
+    if (anyDirectionRows.length > 0) {
+      anyDirectionRows.sort((a, b) => new Date(b.generated_at).getTime() - new Date(a.generated_at).getTime());
+      const fallback = anyDirectionRows[0]!;
+      const text = (fallback.body ?? fallback.title ?? '').trim();
+      if (text) {
+        result.direction = text;
+        if (typeof process !== 'undefined' && (process.env.NODE_ENV === 'development' || process.env.APP_ENV === 'development')) {
+          // eslint-disable-next-line no-console
+          console.log('[getSemanticOverlay][DirectionFallback]', { state_hash_prefix: state_hash.substring(0, 16), used_latest: true });
+        }
+      }
+    }
+  }
+
   for (const row of rows ?? []) {
     const r = row as { object_type: string; object_id: string; state_hash: string; title: string | null; body: string | null };
     if (r.object_type === 'arc' && r.state_hash === state_hash && arc_ids.includes(r.object_id) && r.title?.trim()) {
