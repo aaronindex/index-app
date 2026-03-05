@@ -19,7 +19,7 @@ export default function TheLedgerForThinking() {
             <p>
               Most of my thinking now happens in conversations with AI.
             </p>
-            <p>
+            <p className="mb-4">
               A question leads to an idea.
               <br />
               An idea leads to a long thread.
@@ -34,7 +34,7 @@ export default function TheLedgerForThinking() {
             <p className="mb-4">
               The problem is <strong>remembering what actually mattered.</strong>
             </p>
-            <p>
+            <p className="mb-4">
               AI makes it incredibly easy to think.
               <br />
               It also makes it incredibly easy to lose the thread.
@@ -56,13 +56,13 @@ export default function TheLedgerForThinking() {
               Thinking happens wherever it already happens — in conversations, notes, documents, or long walks. INDEX
               exists <strong>after</strong> thinking.
             </p>
-            <p className="mb-4">You capture moments of thinking and reduce them to the signals that still matter:</p>
-            <ul>
+            <p>You capture moments of thinking and reduce them to the signals that still matter:</p>
+            <ul className="mb-4">
               <li>decisions</li>
               <li>results</li>
               <li>highlights</li>
             </ul>
-            <p>
+            <p className="mb-4">
               Over time those signals accumulate. Structure begins to appear. INDEX reflects that structure back to you.
             </p>
             <p>Direction is not invented.</p>
@@ -83,8 +83,8 @@ export default function TheLedgerForThinking() {
               You reduce them to the pieces that carry weight.
             </p>
             <p className="mb-4">Everything else fades.</p>
-            <p className="mb-4">From those signals, INDEX reveals the shape of your thinking:</p>
-            <ul>
+            <p>From those signals, INDEX reveals the shape of your thinking:</p>
+            <ul className="mb-4">
               <li>Direction shows the current structural posture.</li>
               <li>Shifts mark meaningful changes.</li>
               <li>Timeline shows the tempo of change over time.</li>

@@ -86,7 +86,9 @@ export default function LandingPage() {
             {/* Left column: Copy + CTA (45%) */}
             <div className="text-center lg:text-left lg:col-span-9">
               <h1 className="font-serif text-4xl sm:text-5xl lg:text-5xl xl:text-6xl font-semibold tracking-tight mb-6 text-white leading-[1.1]">
-                INDEX isn&apos;t memory — it&apos;s direction.
+                INDEX isn&apos;t memory —
+                <br />
+                it&apos;s direction.
               </h1>
               <p className="text-lg sm:text-xl lg:text-xl opacity-80 max-w-xl mx-auto lg:mx-0 mb-6 text-white leading-tight">
                 Built for people who think with AI — and move forward.
@@ -155,7 +157,7 @@ export default function LandingPage() {
         </section>
 
         {/* 2) VALUE CARDS SECTION */}
-        <section className="w-full py-20 sm:py-28 bg-white">
+        <section className="w-full py-20 sm:py-28 bg-[#1e1e1e]">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-12">
             <ValueCard
@@ -258,12 +260,12 @@ export default function LandingPage() {
         </section>
 
         {/* 4) PRIVATE BY DESIGN SECTION */}
-        <section className="w-full py-20 sm:py-28 bg-white">
+        <section className="w-full py-20 sm:py-28 bg-[#1e1e1e]">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="font-serif text-4xl sm:text-5xl font-semibold tracking-tight mb-10 text-[#121211] dark:text-[#FAF8F6]">
+          <h2 className="font-serif text-4xl sm:text-5xl font-semibold tracking-tight mb-10 text-white">
             Private by design.
           </h2>
-          <div className="space-y-4 text-lg opacity-75 text-[#121211] dark:text-[#FAF8F6] max-w-2xl mx-auto">
+          <div className="space-y-4 text-lg text-white/80 max-w-2xl mx-auto">
             <p>Your data is never used for training.</p>
             <p>Export everything as JSON.</p>
             <p>Delete your account anytime.</p>

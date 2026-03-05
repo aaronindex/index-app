@@ -75,8 +75,13 @@ export default function ValueCard({
       <div className={`relative rounded-2xl overflow-hidden ${className}`}>
         {backgroundImageSrc && (
           <div
-            className="absolute inset-0 bg-cover"
-            style={{ backgroundImage: `url('${backgroundImageSrc}')`, backgroundPosition: 'bottom center' }}
+            className="absolute inset-0"
+            style={{
+              backgroundImage: `url('${backgroundImageSrc}')`,
+              backgroundPosition: 'bottom center',
+              backgroundSize: 'contain',
+              backgroundRepeat: 'no-repeat',
+            }}
           />
         )}
         {dark && (
