@@ -105,9 +105,10 @@ export async function getHomePageData(
   user_id: string,
   focusModalDismissed: boolean = false
 ): Promise<HomePageData> {
+  // Use service client for structural state + overlay (bypasses RLS), but keep session client for user-facing counts.
   const serviceClient = getSupabaseServiceClient();
   const [homeView, conversationCountResult, projectCountResult, digestResult, profileResult] = await Promise.all([
-    loadHomeView({ supabaseClient: supabase, user_id, overlayClient: serviceClient }),
+    loadHomeView({ supabaseClient: serviceClient, user_id, overlayClient: serviceClient }),
     supabase.from('conversations').select('*', { count: 'exact', head: true }).eq('user_id', user_id),
     supabase.from('projects').select('*', { count: 'exact', head: true }).eq('user_id', user_id),
     supabase
