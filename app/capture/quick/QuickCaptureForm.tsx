@@ -178,10 +178,13 @@ export default function QuickCaptureForm() {
       ) : (
         <div className="rounded-lg border border-[rgb(var(--ring)/0.12)] bg-[rgb(var(--surface))] p-3">
           <p className="text-xs text-[rgb(var(--muted))] mb-1">Captured text</p>
-          <p className="text-sm text-[rgb(var(--text))] whitespace-pre-wrap line-clamp-4">
-            {payload.text.slice(0, 300)}
-            {payload.text.length > 300 ? '…' : ''}
-          </p>
+          <textarea
+            readOnly
+            rows={4}
+            value={payload.text}
+            className="w-full text-sm text-[rgb(var(--text))] whitespace-pre-wrap resize-none overflow-y-auto bg-transparent border-0 p-0 focus:outline-none focus:ring-0 cursor-default"
+            aria-label="Captured text (read-only)"
+          />
         </div>
       )}
 
