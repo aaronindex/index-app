@@ -33,12 +33,12 @@ const CHAT_DESTINATIONS = {
   },
 };
 
-// User-facing Resume focus choices
+// User-facing Continue Thinking focus choices
 const RESUME_FOCUS_OPTIONS = [
+  { label: 'Full context', internalIntent: 'summarize_state_propose_path' },
   { label: 'Next actions', internalIntent: 'generate_next_actions' },
   { label: 'Decisions', internalIntent: 'decide_between_options' },
   { label: "What's blocking me", internalIntent: 'resolve_blocking_uncertainty' },
-  { label: 'Full context', internalIntent: 'summarize_state_propose_path' },
 ] as const;
 
 export default function StartChatModal({
@@ -52,7 +52,7 @@ export default function StartChatModal({
   projectName,
 }: StartChatModalProps) {
   const [copied, setCopied] = useState(false);
-  const [selectedFocus, setSelectedFocus] = useState<string>('generate_next_actions');
+  const [selectedFocus, setSelectedFocus] = useState<string>('summarize_state_propose_path');
   const [targetTool, setTargetTool] = useState<'chatgpt' | 'claude' | 'cursor' | 'other'>('chatgpt');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -70,7 +70,7 @@ export default function StartChatModal({
       setGeneratedPrompt(null);
       setIsExpanded(false);
       setError(null);
-      setSelectedFocus('generate_next_actions'); // Reset to default
+      setSelectedFocus('summarize_state_propose_path'); // Reset to default (Full context)
     }
   }, [isOpen]);
 
@@ -262,22 +262,30 @@ export default function StartChatModal({
         >
           {/* Optional tonal gradient header strip */}
           <div className="bg-gradient-to-br from-[rgb(var(--surface2))] to-[rgb(var(--surface))] -m-6 mb-4 p-6 rounded-t-2xl">
-            <div className="flex items-center justify-between">
-              <h2 className="font-serif text-xl font-semibold text-[rgb(var(--text))]">Resume</h2>
-              <button
-                onClick={onClose}
-                className="text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] transition-colors"
-              >
-                ✕
-              </button>
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <h2 className="font-serif text-xl font-semibold text-[rgb(var(--text))]">
+                  Continue Thinking
+                </h2>
+                <button
+                  onClick={onClose}
+                  className="text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
+              <p className="text-xs text-[rgb(var(--muted))]">
+                Generate a prompt using the structure captured in INDEX. Paste it into an AI tool to continue thinking.
+              </p>
             </div>
           </div>
 
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-[rgb(var(--text))] mb-3">
-                Resume with focus
+              <label className="block text-sm font-medium text-[rgb(var(--text))] mb-1">
+                Focus (optional)
               </label>
+              <p className="text-xs text-[rgb(var(--muted))] mb-2">Default: Full context</p>
               <div className="space-y-2">
                 {RESUME_FOCUS_OPTIONS.map((option) => (
                   <label
@@ -348,14 +356,21 @@ export default function StartChatModal({
         >
           {/* Optional tonal gradient header strip */}
           <div className="bg-gradient-to-br from-[rgb(var(--surface2))] to-[rgb(var(--surface))] -m-6 mb-4 p-6 rounded-t-2xl">
-            <div className="flex items-center justify-between">
-              <h2 className="font-serif text-xl font-semibold text-[rgb(var(--text))]">Resume</h2>
-              <button
-                onClick={onClose}
-                className="text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] transition-colors"
-              >
-                ✕
-              </button>
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <h2 className="font-serif text-xl font-semibold text-[rgb(var(--text))]">
+                  Continue Thinking
+                </h2>
+                <button
+                  onClick={onClose}
+                  className="text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
+              <p className="text-xs text-[rgb(var(--muted))]">
+                Generate a prompt using the structure captured in INDEX. Paste it into an AI tool to continue thinking.
+              </p>
             </div>
           </div>
 

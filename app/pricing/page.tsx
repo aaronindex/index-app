@@ -96,7 +96,7 @@ export default function PricingPage() {
               </li>
               <li className="flex items-start">
                 <span className="mr-2">•</span>
-                <span>{FREE_MAX_DIGEST_PER_30D} Weekly Digests in first 30 days (use it or lose it)</span>
+                <span>{FREE_MAX_DIGEST_PER_30D} Weekly Logs in first 30 days (use it or lose it)</span>
               </li>
             </ul>
           </div>

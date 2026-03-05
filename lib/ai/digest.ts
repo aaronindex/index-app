@@ -118,41 +118,46 @@ ${decisions.map((d) => `- "${d.title}"${d.content ? `: ${d.content.substring(0, 
     : '';
 
   // Build full prompt
-  let prompt = `You are analyzing a week of AI conversations from ${weekStart.toLocaleDateString()} to ${weekEnd.toLocaleDateString()}.
+  let prompt = `You are generating a Weekly Log for the period ${weekStart.toLocaleDateString()} to ${weekEnd.toLocaleDateString()}.
 
 THINKING STANCE:
 ${THINKING_STANCE}
 
+You are given structural activity for this week:
 Conversations this week:
 ${conversationContext}${tasksContext}${decisionsContext}${changeCountsText}
 
-Generate a weekly digest as a cognitive ledger:
+Use this calm, factual, observational tone:
+- Describe what happened without judging it.
+- You may use light narrative connective tissue.
+- Do not give advice, do not coach, do not speculate about motives.
 
-1. **Summary** (max 3-4 sentences, prefer 3-4):
-   - MUST start with a declarative line: "You decided..." or "You committed to..." if any decisions exist.
-   - Include: open-loop count + one-line "what now".
-   - BAN phrases: "this week involved", "primarily focused on", "indicates", "suggests", "action-oriented approach", "momentum", "ensure clarity", "ongoing work related to".
-   - No backstory. No meta-analysis. No restating the same point twice.
+Use these inputs in plain language:
+- decisions recorded (titles + short content)
+- results recorded or implied in decisions
+- structural shifts in work or focus
+- tasks and highlights that show movement
+- counts of conversations, highlights, tasks, and decisions
 
-2. **What Changed** (1-3 sentences max, ledger format):
-   - Format: "2 conversations reduced → 1 decision, 5 tasks created."
-   - If deltas unavailable: "1 decision captured. 5 tasks remain open."
-   - Do NOT invent deltas. Use existing counts only.
+STRUCTURE YOUR THINKING INTO FOUR SECTIONS:
 
-3. **Top Themes** (3-5 themes): Major themes with weights (0-1 scale) and brief descriptions. Focus on patterns that matter, not exploration.
+1) Week Overview
+- 1 short paragraph (2–3 sentences) describing what this week was about.
+- Focus on concrete movement the user can see in the data.
 
-4. **Open Loops** (unresolved items):
-   - Format snippet as imperative: "Decide whether to replace blinds" or "Identify blind model from photo".
-   - NO "we can" or "Next step we can...". Use: "Next:" or plain imperative.
-   - Include priority (high/medium/low) only if deterministically derivable.
+2) Structural Changes
+- Short bullet list of specific structural changes (e.g., tasks opened/closed, new lines of work started, areas that went quiet).
+- Base bullets only on the information and counts provided. Do not invent events or numbers.
 
-5. **Recommended Next Steps** (3-5 actions):
-   - Action: imperative, <= 60 chars.
-   - Reason: optional one line (<= 100 chars) with specific payoff, e.g., "So you can buy the correct cord lock."
-   - BAN generic filler: "will help in selecting appropriate...", "will advance the resolution...", "maintain forward momentum".
-   - If payoff unavailable, omit reason entirely.
+3) Decisions and Results
+- Start with a short line summarizing how many decisions/results were captured.
+- Optionally add 1–3 bullets naming the most important decisions or results in plain language.
 
-${tasks && tasks.length > 0 ? 'Note: Include any open or in-progress tasks in the summary, open loops, and recommended next steps.' : ''}
+4) Open Tension
+- Bullet list of open questions, undecided paths, or tensions that remain active.
+- If there is truly nothing unresolved, say "None recorded." for this section.
+
+Keep the overall output short. Prefer concise sentences and compact bullets.
 
 Return your response as JSON with this structure:
 {

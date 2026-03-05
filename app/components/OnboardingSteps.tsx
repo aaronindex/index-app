@@ -36,8 +36,8 @@ const STEPS = [
   },
   {
     id: 'digest',
-    title: 'Generate your first Weekly Digest',
-    description: 'Get a summary of what changed this week',
+    title: 'Generate your first Weekly Log',
+    description: 'Get a log of what changed this week',
   },
 ];
 

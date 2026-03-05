@@ -4,6 +4,13 @@
 
 Thinking that accumulates.
 
+## Supporting Line
+
+Think anywhere.  
+INDEX shows where your thinking is going.
+
+---
+
 This is not instructional.
 Not motivational.
 Not coaching.

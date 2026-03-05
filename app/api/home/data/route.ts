@@ -1,5 +1,5 @@
 // app/api/home/data/route.ts
-// Landing page data: Direction (global snapshot), Shifts (pulses), Timeline (pulses), Weekly Digest.
+// Landing page data: Direction (global snapshot), Shifts (pulses), Timeline (pulses), Weekly Log.
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabaseServer';

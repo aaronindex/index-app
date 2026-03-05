@@ -46,10 +46,14 @@ const PROMPT_BUDGET = 7000; // Character limit for prompt
 // Map internal intent to continuation instruction text
 function getIntentInstruction(intent: string): string {
   const INTENT_INSTRUCTIONS: Record<string, string> = {
-    generate_next_actions: 'Generate concrete, immediately executable next steps that move this project forward.',
-    decide_between_options: 'Identify decisions that need to be made and present clear options with tradeoffs.',
-    resolve_blocking_uncertainty: 'Identify what is blocking progress and what must be clarified to move forward.',
-    summarize_state_propose_path: 'Summarize the current state and propose a coherent path forward.',
+    summarize_state_propose_path:
+      "Continue thinking from this structural state. Do not re-summarize unless necessary. Build directly on what's already here.",
+    generate_next_actions:
+      'Continue thinking from this structural state. Identify the next meaningful actions implied by the current state. Keep them minimal and specific.',
+    decide_between_options:
+      'Continue thinking from this structural state. Clarify or resolve the open decisions. If a decision cannot be made, state what information is missing.',
+    resolve_blocking_uncertainty:
+      'Continue thinking from this structural state. Identify constraints or blockers preventing progress. Keep it factual and specific.',
   };
   return INTENT_INSTRUCTIONS[intent] || `Proceed with: ${intent}`;
 }
@@ -397,7 +401,8 @@ export async function compileTaskStartChatPacket(
     prompt += `Source Highlight:\n${highlightContent.substring(0, 300)}\n\n`;
   }
 
-  prompt += `INTENT: Resolve/Plan/Debug this task\n\n`;
+  prompt += `INTENT: Continue Thinking from this task\n\n`;
+  prompt += `Continue thinking from this structural state. Do not re-summarize unless necessary. Build directly on what's already here.\n\n`;
   prompt += `Please help me:\n`;
   prompt += `- Understand what needs to be done\n`;
   prompt += `- Identify blockers or dependencies\n`;

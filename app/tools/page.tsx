@@ -9,13 +9,13 @@ export default function ToolsPage() {
         <h1 className="font-serif text-3xl font-semibold text-[rgb(var(--text))] mb-8">Tools</h1>
         
         <div className="space-y-6">
-          {/* Weekly Digest */}
+          {/* Weekly Log */}
           <div className="border border-zinc-200 dark:border-zinc-800 rounded-lg p-6 bg-white dark:bg-zinc-950">
             <div className="flex items-start justify-between mb-4">
               <div>
-                <h2 className="text-xl font-semibold text-foreground mb-2">Weekly Digest</h2>
+                <h2 className="text-xl font-semibold text-foreground mb-2">Weekly Log</h2>
                 <p className="text-zinc-600 dark:text-zinc-400 text-sm">
-                  Generate an AI-powered summary of your conversations and open loops for any week.
+                  Generate an AI-powered log of your conversations and open loops for any week.
                 </p>
               </div>
               <Link

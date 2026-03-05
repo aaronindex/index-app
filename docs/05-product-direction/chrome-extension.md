@@ -1,5 +1,22 @@
 # 📘 INDEX v2 — Chrome Extension Specification
 
+
+## Capture Philosophy
+
+Capture records moments of thinking while they happen.
+
+The extension is intentionally minimal.
+
+Users do not classify, summarize, or organize during capture.
+
+The only decision required is:
+
+"This matters."
+
+All structural interpretation happens later inside INDEX.
+
+---
+
 ## 1. Purpose
 
 The Chrome Extension enables **real-time capture of thinking** without interrupting cognitive flow.

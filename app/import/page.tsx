@@ -245,7 +245,9 @@ export default function ImportPage() {
           <div className="mb-4">
             <h2 className="text-2xl font-semibold text-[rgb(var(--text))] mb-2">Quick Import</h2>
             <p className="text-[rgb(var(--muted))]">
-              Paste a conversation from ChatGPT, Claude, or Cursor. INDEX will help you reduce it to what still matters.
+              Paste a conversation from ChatGPT, Claude, or Cursor.
+              <br />
+              Reduce it to what still matters.
             </p>
           </div>
 
@@ -253,9 +255,9 @@ export default function ImportPage() {
             <Card className="p-6">
               <div className="space-y-4">
                 <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-                  <p className="text-green-800 dark:text-green-400 font-medium">Conversation imported successfully!</p>
+                  <p className="text-green-800 dark:text-green-400 font-medium">Conversation imported.</p>
                   <p className="text-sm text-green-700 dark:text-green-500 mt-1">
-                    {quickSuccess.messageCount} messages imported
+                    {quickSuccess.messageCount} message{quickSuccess.messageCount === 1 ? '' : 's'} captured
                   </p>
                 </div>
                 <div className="flex gap-3">
@@ -268,7 +270,7 @@ export default function ImportPage() {
                     }}
                     className="px-4 py-2 bg-[rgb(var(--text))] text-[rgb(var(--bg))] rounded-lg hover:opacity-90 transition-opacity font-medium"
                   >
-                    Open Conversation
+                    Open Source
                   </button>
                   <button
                     onClick={() => {

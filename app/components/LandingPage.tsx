@@ -16,6 +16,7 @@ import CookieNotice from './CookieNotice';
 export default function LandingPage() {
   const { setTheme, theme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const [reduceMotion, setReduceMotion] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -54,22 +55,56 @@ export default function LandingPage() {
   return (
     <>
       <main className="min-h-screen bg-[#FAF8F6] dark:bg-[#121211]">
-      {/* 1) HERO SECTION */}
-      <section className="w-full py-20 sm:py-28 relative overflow-hidden bg-[#121211]">
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* 1) HERO SECTION */}
+        <section className="w-full py-20 sm:py-28 relative overflow-hidden bg-[#121211]">
+          {/* Background video / poster + overlays */}
+          <div className="absolute inset-0 pointer-events-none">
+            {!reduceMotion ? (
+              <video
+                className="w-full h-full object-cover"
+                src="/index-hero-video.mp4"
+                poster="/index-hero-video.jpg"
+                autoPlay
+                muted
+                loop
+                playsInline
+                preload="metadata"
+              />
+            ) : (
+              <img
+                src="/index-hero-video.jpg"
+                alt="INDEX hero background"
+                className="w-full h-full object-cover"
+              />
+            )}
+            {/* Mask overlay: radial + left-side darkening */}
+            <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-black/80 mix-blend-multiply" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(0,0,0,0.6),_transparent_60%)] mix-blend-multiply" />
+            {/* Grain overlay */}
+            <div className="absolute inset-0 opacity-10 mix-blend-soft-light bg-[radial-gradient(circle,_rgba(255,255,255,0.12)_1px,transparent_0)] [background-size:4px_4px]" />
+          </div>
+
+          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-20 items-center gap-12 lg:gap-16">
             {/* Left column: Copy + CTA (45%) */}
             <div className="text-center lg:text-left lg:col-span-9">
               <h1 className="font-serif text-4xl sm:text-5xl lg:text-5xl xl:text-6xl font-semibold tracking-tight mb-6 text-white leading-[1.1]">
-                INDEX isn't memory — it's direction.
+                INDEX isn&apos;t memory — it&apos;s direction.
               </h1>
-              <p className="text-lg sm:text-xl lg:text-xl opacity-80 max-w-xl mx-auto lg:mx-0 mb-8 text-white leading-tight lg:whitespace-nowrap">
+              <p className="text-lg sm:text-xl lg:text-xl opacity-80 max-w-xl mx-auto lg:mx-0 mb-6 text-white leading-tight">
                 Built for people who think with AI — and move forward.
               </p>
-              
-              {/* Bulletless list */}
-              <div className="space-y-2.5 text-base sm:text-lg opacity-75 mb-10 text-white max-w-xl mx-auto lg:mx-0">
-                <p>Distill decisions, open loops, and next steps from AI conversations.</p>
+
+              {/* AI anchor line + supporting line */}
+              <div className="space-y-3 text-base sm:text-lg opacity-80 mb-10 text-white max-w-xl mx-auto lg:mx-0">
+                <p className="font-medium">
+                  AI makes it easy to generate ideas.
+                  <br />
+                  INDEX helps you see where those ideas are going.
+                </p>
+                <p className="text-sm sm:text-base opacity-90">
+                  Capture conversations. Distill what matters. Move forward.
+                </p>
               </div>
 
               {/* Invite code input or direct CTA */}
@@ -140,34 +175,40 @@ export default function LandingPage() {
               </div>
             </div>
           </div>
-        </div>
-      </section>
+          </div>
+        </section>
 
-      {/* 2) VALUE CARDS SECTION */}
-      <section className="w-full py-20 sm:py-28 bg-white">
+        {/* 2) VALUE CARDS SECTION */}
+        <section className="w-full py-20 sm:py-28 bg-white">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-12">
             <ValueCard
               title="Import"
-              body="Paste or upload conversations from ChatGPT, Claude, and Cursor."
-              imageSrc="/import-icon-cubes.png"
+              body="Paste conversations from ChatGPT, Claude, or Cursor."
+              imageSrc="/cubes1.png"
+              backgroundImageSrc="/cubes-background.jpg"
+              dark
             />
             <ValueCard
-              title="Organize"
-              body="Assign to projects. Distill highlights, tasks, decisions."
-              imageSrc="/organize-icon-cubes.png"
+              title="Distill"
+              body="Extract decisions, open loops, and next steps."
+              imageSrc="/cubes2.png"
+              backgroundImageSrc="/cubes-background.jpg"
+              dark
             />
             <ValueCard
               title="Move"
-              body="Carry what remains."
-              imageSrc="/move-icon-cubes.png"
+              body="Carry forward what still matters."
+              imageSrc="/cubes3.png"
+              backgroundImageSrc="/cubes-background.jpg"
+              dark
             />
           </div>
         </div>
-      </section>
+        </section>
 
-      {/* 3) HOW INDEX WORKS SECTION */}
-      <section className="w-full py-20 sm:py-28 relative">
+        {/* 3) HOW INDEX WORKS SECTION */}
+        <section className="w-full py-20 sm:py-28 relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Centered heading */}
           <div className="text-center mb-12 lg:mb-16">
@@ -184,25 +225,33 @@ export default function LandingPage() {
                   <div className="inline-block text-xs font-semibold tracking-wider uppercase opacity-60 mb-2 text-[#121211] dark:text-[#FAF8F6]">
                     Think
                   </div>
-                  <p className="text-base opacity-75 text-[#121211] dark:text-[#FAF8F6]">In ChatGPT, Claude, Cursor</p>
+                  <p className="text-base opacity-75 text-[#121211] dark:text-[#FAF8F6]">
+                    In ChatGPT, Claude, or Cursor.
+                  </p>
                 </div>
                 <div>
                   <div className="inline-block text-xs font-semibold tracking-wider uppercase opacity-60 mb-2 text-[#121211] dark:text-[#FAF8F6]">
-                    Import
+                    Capture
                   </div>
-                  <p className="text-base opacity-75 text-[#121211] dark:text-[#FAF8F6]">Bring conversations into INDEX</p>
+                  <p className="text-base opacity-75 text-[#121211] dark:text-[#FAF8F6]">
+                    Bring conversations into INDEX.
+                  </p>
                 </div>
                 <div>
                   <div className="inline-block text-xs font-semibold tracking-wider uppercase opacity-60 mb-2 text-[#121211] dark:text-[#FAF8F6]">
-                    Organize
+                    Reduce
                   </div>
-                  <p className="text-base opacity-75 text-[#121211] dark:text-[#FAF8F6]">Distill decisions, open loops, and next steps</p>
+                  <p className="text-base opacity-75 text-[#121211] dark:text-[#FAF8F6]">
+                    Distill decisions, open loops, and highlights.
+                  </p>
                 </div>
                 <div>
                   <div className="inline-block text-xs font-semibold tracking-wider uppercase opacity-60 mb-2 text-[#121211] dark:text-[#FAF8F6]">
-                    Move
+                    Continue
                   </div>
-                  <p className="text-base opacity-75 text-[#121211] dark:text-[#FAF8F6]">Carry what remains</p>
+                  <p className="text-base opacity-75 text-[#121211] dark:text-[#FAF8F6]">
+                    Move forward with what remains.
+                  </p>
                 </div>
               </div>
             </div>
@@ -211,8 +260,8 @@ export default function LandingPage() {
             <div className="flex justify-center lg:justify-start order-first lg:order-last lg:col-span-3">
               <div className="w-full max-w-2xl lg:max-w-4xl">
                 <img
-                  src="/marketing/section-display.png"
-                  alt="INDEX display"
+                  src="/hero-macbook-new.jpg"
+                  alt="INDEX Project Read view"
                   className="w-full h-auto"
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
@@ -230,29 +279,32 @@ export default function LandingPage() {
             </div>
           </div>
         </div>
-      </section>
+        </section>
 
-      {/* 4) PRIVATE BY DESIGN SECTION */}
-      <section className="w-full py-20 sm:py-28 bg-white">
+        {/* 4) PRIVATE BY DESIGN SECTION */}
+        <section className="w-full py-20 sm:py-28 bg-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="font-serif text-4xl sm:text-5xl font-semibold tracking-tight mb-10 text-[#121211] dark:text-[#FAF8F6]">
             Private by design.
           </h2>
           <div className="space-y-4 text-lg opacity-75 text-[#121211] dark:text-[#FAF8F6] max-w-2xl mx-auto">
-            <p>Your data is not used for training.</p>
+            <p>Your data is never used for training.</p>
             <p>Export everything as JSON.</p>
             <p>Delete your account anytime.</p>
             <p>Redactions prevent sensitive text from resurfacing.</p>
           </div>
         </div>
-      </section>
+        </section>
 
-      {/* 5) CLOSING CTA SECTION */}
-      <section className="w-full py-20 sm:py-28 bg-[#121211]">
+        {/* 5) CLOSING CTA SECTION */}
+        <section className="w-full py-20 sm:py-28 bg-[#121211]">
         <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight mb-8 text-white">
-            Start with one conversation. Move forward with what matters.
+            Start with one conversation.
           </h2>
+          <p className="text-lg sm:text-xl opacity-75 text-white mb-8">
+            Carry forward what matters.
+          </p>
           {ALPHA_MODE ? (
             <>
               <div className="mb-6">
@@ -280,7 +332,7 @@ export default function LandingPage() {
             </>
           )}
         </div>
-      </section>
+        </section>
 
       </main>
       <CookieNotice />

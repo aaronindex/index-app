@@ -1,5 +1,5 @@
 // app/components/MagicHomeScreen.tsx
-// Logged-in landing: Direction, Shifts, Timeline, Weekly Digest. Matches Project Read styling.
+// Logged-in landing: Direction, Shifts, Timeline, Weekly Log. Matches Project Read styling.
 
 'use client';
 
@@ -337,7 +337,7 @@ export default function MagicHomeScreen({ initialData = null, initialShowFocusMo
                 <div className="text-sm text-[rgb(var(--muted))] font-sans">
                   <p>No direction yet.</p>
                   <p className="mt-1 text-xs">
-                    Direction appears after a reduction produces structure.
+                    Direction appears as decisions accumulate.
                   </p>
                 </div>
               ) : (
@@ -377,10 +377,10 @@ export default function MagicHomeScreen({ initialData = null, initialShowFocusMo
 
           <hr className="my-6 border-[rgb(var(--ring)/0.08)]" />
 
-          {/* 4. Weekly Digest — single container; button disabled until there is something to digest */}
+          {/* 4. Weekly Log — single container; button disabled until there is something to log */}
           <div>
             <h2 className="font-serif text-lg font-semibold text-[rgb(var(--text))] mb-3">
-              Weekly Digest
+              Weekly Log
             </h2>
             {weeklyDigest?.body ? (
               <div>

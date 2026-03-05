@@ -180,6 +180,9 @@ export default function UnassignedConversationsClient({
           <p className="text-[rgb(var(--muted))]">
             Conversations that haven't been assigned to a project yet.
           </p>
+          <p className="mt-1 text-sm text-[rgb(var(--muted))]">
+            Captured items are inert until assigned to a project.
+          </p>
         </div>
 
         {error && (

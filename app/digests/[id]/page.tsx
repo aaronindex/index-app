@@ -15,7 +15,7 @@ export async function generateMetadata({
   const user = await getCurrentUser();
   if (!user) {
     return {
-      title: 'Weekly Digest | INDEX',
+      title: 'Weekly Log | INDEX',
     };
   }
 
@@ -29,7 +29,7 @@ export async function generateMetadata({
 
   if (!digest) {
     return {
-      title: 'Weekly Digest | INDEX',
+      title: 'Weekly Log | INDEX',
     };
   }
 
@@ -37,8 +37,8 @@ export async function generateMetadata({
   const endDate = new Date(digest.week_end).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
   return {
-    title: `Weekly Digest (${startDate} - ${endDate}) | INDEX`,
-    description: `Weekly intelligence summary for ${startDate} - ${endDate}`,
+    title: `Weekly Log (${startDate} - ${endDate}) | INDEX`,
+    description: `Weekly structural log for ${startDate} - ${endDate}`,
   };
 }
 
@@ -78,7 +78,7 @@ export default async function DigestDetailPage({
             ← Back to Digests
           </Link>
           <h1 className="font-serif text-3xl font-semibold text-[rgb(var(--text))] mb-2">
-            Weekly Digest: {new Date(digest.week_start).toLocaleDateString()} - {new Date(digest.week_end).toLocaleDateString()}
+            Weekly Log: {new Date(digest.week_start).toLocaleDateString()} - {new Date(digest.week_end).toLocaleDateString()}
           </h1>
           <p className="text-[rgb(var(--muted))]">
             Created: {new Date(digest.created_at).toLocaleDateString()}

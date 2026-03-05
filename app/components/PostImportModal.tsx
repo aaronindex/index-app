@@ -42,10 +42,10 @@ export default function PostImportModal({ isOpen, onClose }: PostImportModalProp
       >
         <div className="text-center mb-8">
           <h2 className="font-serif text-2xl font-semibold text-[rgb(var(--text))] mb-4">
-            Your conversations are in. Time to focus on what matters.
+            Your conversations are in. Structure forms as signals accumulate.
           </h2>
           <p className="text-[rgb(var(--text))] text-lg mb-6">
-            Here's how to move forward:
+            Here’s how INDEX works:
           </p>
         </div>
 
@@ -55,9 +55,9 @@ export default function PostImportModal({ isOpen, onClose }: PostImportModalProp
               1
             </div>
             <div>
-              <p className="font-medium text-[rgb(var(--text))] mb-1">Focus your thinking</p>
+              <p className="font-medium text-[rgb(var(--text))] mb-1">Capture moments of thinking</p>
               <p className="text-sm text-[rgb(var(--muted))]">
-                Group related conversations into a project so INDEX can track what still deserves attention.
+                Conversations, notes, and fragments of thinking can all be imported. INDEX records these moments so they don’t disappear.
               </p>
             </div>
           </div>
@@ -67,9 +67,19 @@ export default function PostImportModal({ isOpen, onClose }: PostImportModalProp
               2
             </div>
             <div>
-              <p className="font-medium text-[rgb(var(--text))] mb-1">Reduce the noise</p>
+              <p className="font-medium text-[rgb(var(--text))] mb-1">Reduce to structural signals</p>
               <p className="text-sm text-[rgb(var(--muted))]">
-                Open a conversation and extract insights to surface decisions, tasks, and highlights — and let the rest fade.
+                Open a conversation and reduce it to the moments that carry weight:
+              </p>
+              <p className="text-sm text-[rgb(var(--muted))] mt-1">
+                • decisions
+                <br />
+                • results
+                <br />
+                • meaningful signals
+              </p>
+              <p className="text-sm text-[rgb(var(--muted))] mt-1">
+                Everything else fades.
               </p>
             </div>
           </div>
@@ -79,9 +89,9 @@ export default function PostImportModal({ isOpen, onClose }: PostImportModalProp
               3
             </div>
             <div>
-              <p className="font-medium text-[rgb(var(--text))] mb-1">Carry something forward</p>
+              <p className="font-medium text-[rgb(var(--text))] mb-1">Direction emerges over time</p>
               <p className="text-sm text-[rgb(var(--muted))]">
-                Choose what to carry forward. INDEX surfaces what still matters so you can act without re-thinking everything.
+                As decisions accumulate, INDEX reveals structural direction. Shifts mark meaningful change.
               </p>
             </div>
           </div>
@@ -90,7 +100,7 @@ export default function PostImportModal({ isOpen, onClose }: PostImportModalProp
         <div className="flex flex-col items-center gap-3">
           <Link href="/unassigned" onClick={onClose}>
             <Button variant="primary">
-              Extract insights from your first conversation
+              Reduce your first conversation
             </Button>
           </Link>
           <button

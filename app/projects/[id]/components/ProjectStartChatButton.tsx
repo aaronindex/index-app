@@ -18,7 +18,7 @@ export default function ProjectStartChatButton({ projectId, projectName }: Proje
         onClick={() => setIsModalOpen(true)}
         className="w-full sm:w-auto px-4 py-2 text-sm font-medium bg-[rgb(var(--text))] text-[rgb(var(--bg))] rounded-lg hover:opacity-90 transition-opacity"
       >
-        Resume
+        Continue Thinking
       </button>
       <StartChatModal
         isOpen={isModalOpen}
@@ -26,7 +26,7 @@ export default function ProjectStartChatButton({ projectId, projectName }: Proje
         contextBlock={{
           project: projectName || undefined,
           source: 'decision',
-          summary: 'Resume',
+          summary: 'Continue Thinking',
           suggestedExploration: '',
           fullContext: '',
         }}

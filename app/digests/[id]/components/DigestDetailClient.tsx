@@ -66,68 +66,72 @@ export default function DigestDetailClient({ digest }: DigestDetailClientProps) 
 
   return (
     <div className="space-y-6">
-      {/* Summary */}
+      {/* Week Overview */}
       <div className="border border-zinc-200 dark:border-zinc-800 rounded-lg p-6 bg-white dark:bg-zinc-950">
-        <h2 className="text-xl font-semibold text-foreground mb-4">Summary</h2>
+        <h2 className="text-xl font-semibold text-foreground mb-4">Week Overview</h2>
         <div className="prose prose-zinc dark:prose-invert max-w-none">
           <p className="text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap">
-            {digest.summary}
+            {digest.summary && String(digest.summary).trim() ? digest.summary : 'None recorded.'}
           </p>
         </div>
       </div>
 
-      {/* What Changed */}
-      {whatChanged && (
-        <div className="border border-zinc-200 dark:border-zinc-800 rounded-lg p-6 bg-white dark:bg-zinc-950">
-          <h2 className="text-xl font-semibold text-foreground mb-4">What Changed This Week</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-            {whatChanged.conversations > 0 && (
-              <div className="text-center p-3 bg-zinc-50 dark:bg-zinc-900 rounded-lg">
-                <div className="text-2xl font-bold text-foreground">{whatChanged.conversations}</div>
-                <div className="text-xs text-zinc-600 dark:text-zinc-400 mt-1">
-                  Conversation{whatChanged.conversations !== 1 ? 's' : ''}
+      {/* Structural Changes */}
+      <div className="border border-zinc-200 dark:border-zinc-800 rounded-lg p-6 bg-white dark:bg-zinc-950">
+        <h2 className="text-xl font-semibold text-foreground mb-4">Structural Changes</h2>
+        {whatChanged && (whatChanged.conversations > 0 || whatChanged.highlights > 0 || whatChanged.tasks > 0 || whatChanged.decisions > 0) ? (
+          <>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+              {whatChanged.conversations > 0 && (
+                <div className="text-center p-3 bg-zinc-50 dark:bg-zinc-900 rounded-lg">
+                  <div className="text-2xl font-bold text-foreground">{whatChanged.conversations}</div>
+                  <div className="text-xs text-zinc-600 dark:text-zinc-400 mt-1">
+                    Conversation{whatChanged.conversations !== 1 ? 's' : ''}
+                  </div>
                 </div>
-              </div>
-            )}
-            {whatChanged.highlights > 0 && (
-              <div className="text-center p-3 bg-zinc-50 dark:bg-zinc-900 rounded-lg">
-                <div className="text-2xl font-bold text-foreground">{whatChanged.highlights}</div>
-                <div className="text-xs text-zinc-600 dark:text-zinc-400 mt-1">
-                  Highlight{whatChanged.highlights !== 1 ? 's' : ''}
+              )}
+              {whatChanged.highlights > 0 && (
+                <div className="text-center p-3 bg-zinc-50 dark:bg-zinc-900 rounded-lg">
+                  <div className="text-2xl font-bold text-foreground">{whatChanged.highlights}</div>
+                  <div className="text-xs text-zinc-600 dark:text-zinc-400 mt-1">
+                    Highlight{whatChanged.highlights !== 1 ? 's' : ''}
+                  </div>
                 </div>
-              </div>
-            )}
-            {whatChanged.tasks > 0 && (
-              <div className="text-center p-3 bg-zinc-50 dark:bg-zinc-900 rounded-lg">
-                <div className="text-2xl font-bold text-foreground">{whatChanged.tasks}</div>
-                <div className="text-xs text-zinc-600 dark:text-zinc-400 mt-1">
-                  Task{whatChanged.tasks !== 1 ? 's' : ''}
+              )}
+              {whatChanged.tasks > 0 && (
+                <div className="text-center p-3 bg-zinc-50 dark:bg-zinc-900 rounded-lg">
+                  <div className="text-2xl font-bold text-foreground">{whatChanged.tasks}</div>
+                  <div className="text-xs text-zinc-600 dark:text-zinc-400 mt-1">
+                    Task{whatChanged.tasks !== 1 ? 's' : ''}
+                  </div>
                 </div>
-              </div>
-            )}
-            {whatChanged.decisions > 0 && (
-              <div className="text-center p-3 bg-zinc-50 dark:bg-zinc-900 rounded-lg">
-                <div className="text-2xl font-bold text-foreground">{whatChanged.decisions}</div>
-                <div className="text-xs text-zinc-600 dark:text-zinc-400 mt-1">
-                  Decision{whatChanged.decisions !== 1 ? 's' : ''}
+              )}
+              {whatChanged.decisions > 0 && (
+                <div className="text-center p-3 bg-zinc-50 dark:bg-zinc-900 rounded-lg">
+                  <div className="text-2xl font-bold text-foreground">{whatChanged.decisions}</div>
+                  <div className="text-xs text-zinc-600 dark:text-zinc-400 mt-1">
+                    Decision{whatChanged.decisions !== 1 ? 's' : ''}
+                  </div>
                 </div>
-              </div>
+              )}
+            </div>
+            {whatChanged.narrative && (
+              <p className="text-zinc-700 dark:text-zinc-300 text-sm">
+                {whatChanged.narrative}
+              </p>
             )}
-          </div>
-          {whatChanged.narrative && (
-            <p className="text-zinc-700 dark:text-zinc-300 text-sm">
-              {whatChanged.narrative}
-            </p>
-          )}
-        </div>
-      )}
+          </>
+        ) : (
+          <p className="text-zinc-700 dark:text-zinc-300 text-sm">None recorded.</p>
+        )}
+      </div>
 
       {/* Themes hidden from UI - kept as internal signal layer only */}
 
-      {/* Open Loops */}
-      {openLoops.length > 0 && (
-        <div className="border border-zinc-200 dark:border-zinc-800 rounded-lg p-6 bg-white dark:bg-zinc-950">
-          <h2 className="text-xl font-semibold text-foreground mb-4">Open Loops</h2>
+      {/* Open Tension */}
+      <div className="border border-zinc-200 dark:border-zinc-800 rounded-lg p-6 bg-white dark:bg-zinc-950">
+        <h2 className="text-xl font-semibold text-foreground mb-4">Open Tension</h2>
+        {openLoops.length > 0 ? (
           <div className="space-y-3">
             {openLoops.map((loop: any, idx: number) => {
               const displayTitle = getLoopDisplayTitle(loop);
@@ -166,13 +170,15 @@ export default function DigestDetailClient({ digest }: DigestDetailClientProps) 
               );
             })}
           </div>
-        </div>
-      )}
+        ) : (
+          <p className="text-zinc-700 dark:text-zinc-300 text-sm">None recorded.</p>
+        )}
+      </div>
 
-      {/* Recommended Next Steps */}
-      {recommendedNextSteps.length > 0 && (
-        <div className="border border-zinc-200 dark:border-zinc-800 rounded-lg p-6 bg-white dark:bg-zinc-950">
-          <h2 className="text-xl font-semibold text-foreground mb-4">Recommended Next Steps</h2>
+      {/* Decisions and Results */}
+      <div className="border border-zinc-200 dark:border-zinc-800 rounded-lg p-6 bg-white dark:bg-zinc-950">
+        <h2 className="text-xl font-semibold text-foreground mb-4">Decisions and Results</h2>
+        {recommendedNextSteps.length > 0 ? (
           <div className="space-y-3">
             {recommendedNextSteps.map((step: any, idx: number) => {
               const normalizedReason = normalizeStepReason(step.reason);
@@ -200,8 +206,10 @@ export default function DigestDetailClient({ digest }: DigestDetailClientProps) 
               );
             })}
           </div>
-        </div>
-      )}
+        ) : (
+          <p className="text-zinc-700 dark:text-zinc-300 text-sm">None recorded.</p>
+        )}
+      </div>
 
       {/* Actions */}
       <div className="flex gap-3 items-center">

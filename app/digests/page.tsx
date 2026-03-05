@@ -6,8 +6,8 @@ import type { Metadata } from 'next';
 import DigestList from './components/DigestList';
 
 export const metadata: Metadata = {
-  title: "Weekly Digests | INDEX",
-  description: "AI-generated summaries of your weekly conversations and insights",
+  title: "Weekly Logs | INDEX",
+  description: "AI-generated weekly logs of your conversations and insights",
 };
 
 export default async function DigestsPage() {
@@ -35,7 +35,7 @@ export default async function DigestsPage() {
           >
             ← Back to Home
           </Link>
-          <h1 className="font-serif text-3xl font-semibold text-[rgb(var(--text))] mb-2">Weekly Digests</h1>
+          <h1 className="font-serif text-3xl font-semibold text-[rgb(var(--text))] mb-2">Weekly Logs</h1>
           <p className="text-[rgb(var(--muted))]">
             AI-generated summaries of your weekly conversations and insights
           </p>

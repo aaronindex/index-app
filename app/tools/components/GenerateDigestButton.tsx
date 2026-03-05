@@ -136,14 +136,14 @@ export default function GenerateDigestButton({ disabled = false, variant = 'prim
         disabled={disabled}
         className={buttonClass}
       >
-        Generate Weekly Digest
+        Generate Weekly Log
       </button>
     );
   }
 
   return (
     <div className="border border-[rgb(var(--ring)/0.08)] rounded-lg p-4">
-      <h3 className="font-serif text-base font-semibold text-[rgb(var(--text))] mb-3">Generate Weekly Digest</h3>
+      <h3 className="font-serif text-base font-semibold text-[rgb(var(--text))] mb-3">Generate Weekly Log</h3>
       <div className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-[rgb(var(--text))] mb-1.5">Week Start</label>
@@ -177,7 +177,7 @@ export default function GenerateDigestButton({ disabled = false, variant = 'prim
             className="w-4 h-4 rounded border-[rgb(var(--ring)/0.2)] text-[rgb(var(--text))] focus:ring-2 focus:ring-[rgb(var(--ring)/0.2)]"
           />
           <label htmlFor="email-opt-in" className="text-sm text-[rgb(var(--muted))]">
-            Email me weekly digests
+            Email me Weekly Logs
           </label>
         </div>
         <div className="flex gap-2">

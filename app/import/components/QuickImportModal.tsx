@@ -296,9 +296,9 @@ export default function QuickImportModal({ isOpen, onClose }: QuickImportModalPr
       {success ? (
         <div className="space-y-4">
           <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-            <p className="text-green-800 dark:text-green-400 font-medium">Conversation imported successfully!</p>
+            <p className="text-green-800 dark:text-green-400 font-medium">Conversation imported.</p>
             <p className="text-sm text-green-700 dark:text-green-500 mt-1">
-              {success.messageCount} messages imported
+              {success.messageCount} message{success.messageCount === 1 ? '' : 's'} captured
             </p>
           </div>
           <div className="flex gap-3">
@@ -308,7 +308,7 @@ export default function QuickImportModal({ isOpen, onClose }: QuickImportModalPr
                 handleClose();
               }}
             >
-              Open Conversation
+              Open Source
             </Button>
             <Button variant="secondary" onClick={handleClose}>
               Close
