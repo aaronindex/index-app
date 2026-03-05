@@ -77,7 +77,7 @@ export default function ValueCard({
         style={
           dark
             ? {
-                boxShadow: '0 0 36px rgba(255,255,255,0.12)',
+                boxShadow: 'rgba(255, 255, 255, 0.5) 0px 0px 18px',
               }
             : undefined
         }
@@ -92,9 +92,6 @@ export default function ValueCard({
               backgroundRepeat: 'no-repeat',
             }}
           />
-        )}
-        {dark && (
-          <div className="absolute inset-0 bg-gradient-to-b from-black/75 via-black/55 to-black/85" />
         )}
         <div className="relative p-10 sm:p-12 text-center flex flex-col justify-between">
           {content}

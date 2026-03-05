@@ -108,16 +108,16 @@ Think anywhere → Capture → Reduce → Structure → Direction → Continue T
 
 ## Logged-Out LP
 
-- [ ] Update hero copy
-- [ ] Align messaging with v2 positioning
+- [x] Update hero copy
+- [x] Align messaging with v2 positioning
 
 ---
 
 ## Logged-In LP
 
-- [ ] Direction empty state
-- [ ] Shifts empty state
-- [ ] Timeline empty state
+- [x] Direction empty state
+- [x] Shifts empty state
+- [x] Timeline empty state
 
 ---
 
@@ -131,7 +131,7 @@ Think anywhere → Capture → Reduce → Structure → Direction → Continue T
 
 # 6. Infrastructure
 
-- [ ] Magic link redirect → /home
+- [x] Magic link redirect → /home
 - [ ] Authentication edge cases
 - [ ] State hash regeneration validation
 - [ ] Snapshot regeneration validation
@@ -156,7 +156,7 @@ Perform full user loop:
 
 # 8. Launch Content
 
-- [ ] Founder Note (v2)
+- [x] Founder Note (v2)
 - [ ] Launch post
 - [ ] Initial outreach
 
