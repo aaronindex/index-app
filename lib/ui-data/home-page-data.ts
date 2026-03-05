@@ -133,10 +133,35 @@ export async function getHomePageData(
   const active_arc_count = Array.isArray(payload?.active_arc_ids) ? payload.active_arc_ids.length : 0;
   const project_count = projectCountResult.count ?? 0;
 
-  const directionText =
+  let directionText =
     homeView.semanticDirection?.trim() ||
     homeView.latestSnapshot?.snapshot_text?.trim() ||
     null;
+
+  // Safety net: if Direction is still empty but we know overlay exists (debug tools show direction rows),
+  // query semantic_labels directly for the latest global snapshot state_hash.
+  if (!directionText) {
+    const latestStateHash = homeView.latestSnapshot?.state_hash ?? null;
+    if (latestStateHash) {
+      const { data: rows } = await serviceClient
+        .from('semantic_labels')
+        .select('object_type, object_id, body, title')
+        .eq('user_id', user_id)
+        .eq('scope_type', 'global')
+        .is('scope_id', null)
+        .eq('object_type', 'direction')
+        .eq('object_id', 'current')
+        .eq('state_hash', latestStateHash);
+      const directionRow = (rows ?? []).find(
+        (r: { body: string | null; title: string | null }) =>
+          !!(r.body ?? r.title)?.trim()
+      ) as { body: string | null; title: string | null } | undefined;
+      const text = directionRow ? (directionRow.body ?? directionRow.title ?? '').trim() : '';
+      if (text) {
+        directionText = text;
+      }
+    }
+  }
 
   const semanticHeadlines = homeView.semanticPulseHeadlines ?? {};
   const deduped = dedupePulses(homeView.pulses);
