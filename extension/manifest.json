@@ -4,6 +4,10 @@
   "manifest_version": 3,
   "description": "Send selected text to INDEX capture page.",
   "permissions": ["activeTab", "scripting"],
+  "host_permissions": [
+    "https://index-dev-rho.vercel.app/*",
+    "https://indexapp.co/*"
+  ],
   "action": {
     "default_title": "Send selection to INDEX"
   },

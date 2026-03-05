@@ -5,8 +5,8 @@ const SITE_URL = 'https://YOUR_DOMAIN';
 const CAPTURE_PATH = '/capture/quick';
 const CAPTURE_URL = `${SITE_URL}${CAPTURE_PATH}`;
 
-const SEND_RETRIES = 5;
-const SEND_DELAY_MS = 250;
+const SEND_RETRIES = 15;
+const SEND_DELAY_MS = 400;
 const LISTENER_TIMEOUT_MS = 2 * 60 * 1000;
 
 chrome.action.onClicked.addListener(async (tab) => {

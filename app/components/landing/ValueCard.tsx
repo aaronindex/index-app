@@ -84,11 +84,11 @@ export default function ValueCard({
       >
         {backgroundImageSrc && (
           <div
-            className="absolute inset-0"
+            className="absolute inset-0 rounded-2xl"
             style={{
               backgroundImage: `url('${backgroundImageSrc}')`,
               backgroundPosition: 'bottom center',
-              backgroundSize: 'contain',
+              backgroundSize: 'cover',
               backgroundRepeat: 'no-repeat',
             }}
           />

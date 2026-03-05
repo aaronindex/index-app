@@ -41,8 +41,13 @@ To install: unzip the desired zip, then in Chrome go to `chrome://extensions` �
 
 - **activeTab** — access to the current tab when the user clicks the icon (selection, URL, title).
 - **scripting** — run a small script in the current tab to read selection and in the capture tab to send the payload.
+- **host_permissions** — must include your INDEX site origin so the extension can inject the payload into the capture tab. The default manifest includes `index-dev-rho.vercel.app` and `indexapp.co`. If your INDEX URL is different, add it to `host_permissions` in `manifest.json` (e.g. `"https://your-index-domain.com/*"`).
 
 No network, storage, or notifications. No auth or tokens; the capture page uses cookies.
+
+## What you should see
+
+After selecting text and clicking the extension, the new tab should show the **quick capture** page (`/capture/quick`) with a **"Captured text"** box containing a preview of your selection (first 300 characters) and the **Save** button enabled. If you see "No content received yet" and Save stays disabled, the payload did not reach the page—check that `SITE_URL` in `background.js` matches your INDEX URL and that your INDEX origin is listed in `host_permissions`.
 
 ## Icons (optional)
 
