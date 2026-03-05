@@ -38,12 +38,16 @@ const PULSE_TYPES_FOR_LANDING = ['arc_shift', 'structural_threshold', 'tension',
 /**
  * Load home view data for Direction, Shifts, and Timeline.
  * Fetches latest global snapshot (with snapshot_text), previous payload, and recent pulses.
+ * When overlayClient is provided (e.g. service-role), overlay is read with it to avoid RLS blocking.
  */
 export async function loadHomeView(params: {
   supabaseClient: SupabaseClient;
   user_id: string;
+  /** If set, used for getSemanticOverlay so overlay read bypasses RLS (server-side only). */
+  overlayClient?: SupabaseClient;
 }): Promise<HomeViewData> {
-  const { supabaseClient, user_id } = params;
+  const { supabaseClient, user_id, overlayClient } = params;
+  const overlaySupabase = overlayClient ?? supabaseClient;
 
   const { data: snapshots } = await supabaseClient
     .from('snapshot_state')
@@ -82,7 +86,7 @@ export async function loadHomeView(params: {
 
   if (latestStateHash) {
     const overlay = await getSemanticOverlay({
-      supabaseClient,
+      supabaseClient: overlaySupabase,
       user_id,
       scope_type: 'global',
       scope_id: null,
@@ -107,7 +111,7 @@ export async function loadHomeView(params: {
         arcTitleCount,
       });
       if (!semanticDirection) {
-        const { count } = await supabaseClient
+        const { count } = await overlaySupabase
           .from('semantic_labels')
           .select('*', { count: 'exact', head: true })
           .eq('user_id', user_id)

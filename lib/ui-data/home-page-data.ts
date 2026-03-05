@@ -2,6 +2,7 @@
 // Server-side builder for home page payload. Used by API route and by home page for SSR.
 
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { getSupabaseServiceClient } from '@/lib/supabaseService';
 import { loadHomeView } from './home.load';
 import type { HomePulse } from './home.load';
 
@@ -104,8 +105,9 @@ export async function getHomePageData(
   user_id: string,
   focusModalDismissed: boolean = false
 ): Promise<HomePageData> {
+  const serviceClient = getSupabaseServiceClient();
   const [homeView, conversationCountResult, projectCountResult, digestResult, profileResult] = await Promise.all([
-    loadHomeView({ supabaseClient: supabase, user_id }),
+    loadHomeView({ supabaseClient: supabase, user_id, overlayClient: serviceClient }),
     supabase.from('conversations').select('*', { count: 'exact', head: true }).eq('user_id', user_id),
     supabase.from('projects').select('*', { count: 'exact', head: true }).eq('user_id', user_id),
     supabase
