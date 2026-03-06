@@ -6,7 +6,7 @@ import Link from 'next/link';
 import DeleteHighlightButton from './DeleteHighlightButton';
 import Card from '@/app/components/ui/Card';
 import SectionHeader from '@/app/components/ui/SectionHeader';
-import SignalBodyPreview from '@/app/components/ui/SignalBodyPreview';
+import SignalContextToggle from '@/app/components/ui/SignalContextToggle';
 
 type Status = 'priority' | 'open' | 'complete' | 'dormant';
 
@@ -95,9 +95,7 @@ export default function HighlightsTab({ highlights, projectName }: HighlightsTab
                     <StatusPill status={highlight.status} />
                   </div>
                 </div>
-                <div className="mt-0.5 mb-2" onClick={(e) => e.preventDefault()}>
-                  <SignalBodyPreview text={highlight.content} />
-                </div>
+                <SignalContextToggle context={highlight.content} />
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-4 text-[11px] text-[rgb(var(--muted))] opacity-80 min-w-0">
                     <span className="truncate">From: {highlight.conversation_title || 'Untitled Chat'}</span>

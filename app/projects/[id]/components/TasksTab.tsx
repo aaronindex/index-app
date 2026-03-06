@@ -12,7 +12,7 @@ import ToggleInactiveButton from './ToggleInactiveButton';
 import Card from '@/app/components/ui/Card';
 import CreateTaskButton from './CreateTaskButton';
 import SectionHeader from '@/app/components/ui/SectionHeader';
-import SignalBodyPreview from '@/app/components/ui/SignalBodyPreview';
+import SignalContextToggle from '@/app/components/ui/SignalContextToggle';
 
 interface Task {
   id: string;
@@ -163,14 +163,7 @@ export default function TasksTab({ tasks, projectId }: TasksTabProps) {
               )}
             </div>
           </div>
-          {cleanDescription && (
-            <div className="mb-2">
-              <SignalBodyPreview
-                text={cleanDescription}
-                className="[&_p]:text-[rgb(var(--text))]"
-              />
-            </div>
-          )}
+          <SignalContextToggle context={cleanDescription ?? null} />
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-4 text-[11px] text-[rgb(var(--muted))] opacity-80 min-w-0">
               {task.conversation_id && task.conversation_title ? (

@@ -12,7 +12,7 @@ import ActiveFilterPills from './ActiveFilterPills';
 import ToggleInactiveButton from './ToggleInactiveButton';
 import Card from '@/app/components/ui/Card';
 import SectionHeader from '@/app/components/ui/SectionHeader';
-import SignalBodyPreview from '@/app/components/ui/SignalBodyPreview';
+import SignalContextToggle from '@/app/components/ui/SignalContextToggle';
 
 interface Decision {
   id: string;
@@ -110,9 +110,7 @@ export default function DecisionsTab({ decisions, projectId }: DecisionsTabProps
                     </span>
                   )}
                 </div>
-                {decision.content && (
-                  <SignalBodyPreview text={decision.content} className="mb-2" />
-                )}
+                <SignalContextToggle context={decision.content} />
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-4 text-[11px] text-[rgb(var(--muted))] opacity-80 min-w-0">
                     {decision.conversation_id && decision.conversation_title ? (
