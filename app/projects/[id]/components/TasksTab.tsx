@@ -141,7 +141,7 @@ export default function TasksTab({ tasks, projectId }: TasksTabProps) {
         className={`group ${task.is_inactive ? 'opacity-60' : ''}`}
       >
         <div className="p-3">
-          <div className="flex items-start justify-between mb-1">
+          <div className="flex items-start justify-between mb-0.5">
             <div className="flex-1 min-w-0">
               <p className="text-[0.7em] uppercase tracking-wider text-[rgb(var(--muted))] opacity-80 leading-tight mb-0.5">
                 Task
@@ -172,7 +172,7 @@ export default function TasksTab({ tasks, projectId }: TasksTabProps) {
             </div>
           )}
           <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-4 text-xs text-[rgb(var(--muted))] opacity-90 min-w-0">
+            <div className="flex items-center gap-4 text-[11px] text-[rgb(var(--muted))] opacity-80 min-w-0">
               {task.conversation_id && task.conversation_title ? (
                 <Link
                   href={`/conversations/${task.conversation_id}`}

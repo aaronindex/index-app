@@ -80,7 +80,7 @@ export default function HighlightsTab({ highlights, projectName }: HighlightsTab
                 href={`/conversations/${highlight.conversation_id}`}
                 className="block p-3"
               >
-                <div className="flex items-start justify-between mb-1">
+                <div className="flex items-start justify-between mb-0.5">
                   <div className="flex-1 min-w-0">
                     <p className="text-[0.7em] uppercase tracking-wider text-[rgb(var(--muted))] opacity-80 leading-tight mb-0.5">
                       Insight
@@ -95,14 +95,11 @@ export default function HighlightsTab({ highlights, projectName }: HighlightsTab
                     <StatusPill status={highlight.status} />
                   </div>
                 </div>
-                <div className="mb-2" onClick={(e) => e.preventDefault()}>
-                  <SignalBodyPreview
-                    text={highlight.content}
-                    className="[&_p]:text-[rgb(var(--text))]"
-                  />
+                <div className="mt-0.5 mb-2" onClick={(e) => e.preventDefault()}>
+                  <SignalBodyPreview text={highlight.content} />
                 </div>
                 <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-4 text-xs text-[rgb(var(--muted))] opacity-90 min-w-0">
+                  <div className="flex items-center gap-4 text-[11px] text-[rgb(var(--muted))] opacity-80 min-w-0">
                     <span className="truncate">From: {highlight.conversation_title || 'Untitled Chat'}</span>
                     <span>Created: {formatDate(highlight.created_at)}</span>
                     {/* TODO: Add AI provenance label for highlights created via Extract Insights

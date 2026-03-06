@@ -32,7 +32,7 @@ export default function SignalBodyPreview({
 
   return (
     <div className={className}>
-      <p className="text-sm text-[rgb(var(--muted))] whitespace-pre-wrap break-words">
+      <p className="text-xs text-[rgb(var(--muted))] opacity-90 whitespace-pre-wrap break-words leading-relaxed">
         {preview}
       </p>
       {shouldTruncate && (

@@ -95,7 +95,7 @@ export default function DecisionsTab({ decisions, projectId }: DecisionsTabProps
               className={`group ${decision.is_inactive ? 'opacity-60' : ''}`}
             >
               <div className="p-3">
-                <div className="flex items-center gap-2 mb-1">
+                <div className="flex items-center gap-2 mb-0.5">
                   <div className="flex-1 min-w-0">
                     <p className="text-[0.7em] uppercase tracking-wider text-[rgb(var(--muted))] opacity-80 leading-tight mb-0.5">
                       Decision
@@ -114,7 +114,7 @@ export default function DecisionsTab({ decisions, projectId }: DecisionsTabProps
                   <SignalBodyPreview text={decision.content} className="mb-2" />
                 )}
                 <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-4 text-xs text-[rgb(var(--muted))] opacity-90 min-w-0">
+                  <div className="flex items-center gap-4 text-[11px] text-[rgb(var(--muted))] opacity-80 min-w-0">
                     {decision.conversation_id && decision.conversation_title ? (
                       <Link
                         href={`/conversations/${decision.conversation_id}`}
