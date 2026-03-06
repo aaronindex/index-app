@@ -89,13 +89,45 @@ export async function createCapture(opts: {
     }
   }
 
+  // Derive a human-readable title for the capture, preferring page title metadata when present.
+  let conversationTitle: string | null = null;
+  try {
+    const metaTitle =
+      metadata &&
+      typeof metadata === 'object' &&
+      typeof (metadata as any).title === 'string'
+        ? ((metadata as any).title as string).trim()
+        : metadata &&
+          typeof metadata === 'object' &&
+          typeof (metadata as any).page_title === 'string'
+        ? ((metadata as any).page_title as string).trim()
+        : null;
+
+    if (metaTitle) {
+      conversationTitle = metaTitle;
+    } else {
+      const trimmed = content.trim();
+      if (trimmed) {
+        const firstLine = trimmed.split('\n')[0];
+        const sentenceMatch = /[.!?]/.exec(firstLine);
+        const endIndex = sentenceMatch ? sentenceMatch.index + 1 : firstLine.length;
+        const firstSentence = firstLine.slice(0, endIndex).trim();
+        conversationTitle = (firstSentence || '').slice(0, 140) || 'Captured source';
+      } else {
+        conversationTitle = 'Captured source';
+      }
+    }
+  } catch {
+    conversationTitle = 'Captured source';
+  }
+
   // Create conversation as canonical capture source
   const { data: conversation, error: convError } = await supabase
     .from('conversations')
     .insert({
       user_id: userId,
       import_id: null,
-      title: null,
+      title: conversationTitle,
       source: 'capture',
       started_at: start_at,
       ended_at: end_at,

@@ -148,7 +148,7 @@ export default function ReadTab({
           <p className="text-sm text-[rgb(var(--muted))] mb-6">
             Once a source is imported, INDEX distills it into structure.
             <br />
-            Arcs, decisions, and open loops will appear here as the project takes shape.
+            Arcs, decisions, and tasks will appear here as the project takes shape.
           </p>
           <button
             onClick={() => router.push(`/import?project=${projectId}`)}

@@ -15,7 +15,7 @@ export default function ToolsPage() {
               <div>
                 <h2 className="text-xl font-semibold text-foreground mb-2">Weekly Log</h2>
                 <p className="text-zinc-600 dark:text-zinc-400 text-sm">
-                  Generate an AI-powered log of your conversations and open loops for any week.
+                  Generate an AI-powered log of your conversations and tasks for any week.
                 </p>
               </div>
               <Link

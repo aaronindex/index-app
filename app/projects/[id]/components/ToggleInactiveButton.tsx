@@ -70,7 +70,7 @@ export default function ToggleInactiveButton({ type, id, isInactive, onToggle }:
         isInactive
           ? 'Mark as active'
           : type === 'decision' || type === 'task'
-            ? 'Mark as resolved'
+            ? 'Resolve decision or task'
             : 'Mark as inactive'
       }
     >
@@ -79,7 +79,7 @@ export default function ToggleInactiveButton({ type, id, isInactive, onToggle }:
         : isInactive
           ? 'Mark active'
           : type === 'decision' || type === 'task'
-            ? 'Mark resolved'
+            ? 'Resolve'
             : 'Mark inactive'}
     </button>
   );

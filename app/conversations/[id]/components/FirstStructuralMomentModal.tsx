@@ -42,7 +42,7 @@ export default function FirstStructuralMomentModal({
           <p className="text-sm text-[rgb(var(--text))] mb-4 whitespace-pre-wrap">
             {counts.decisions} decision{counts.decisions !== 1 ? 's' : ''}
             {'\n'}
-            {counts.openLoops} open loop{counts.openLoops !== 1 ? 's' : ''}
+            {counts.openLoops} task{counts.openLoops !== 1 ? 's' : ''}
             {'\n'}
             {counts.suggestedHighlights} highlight{counts.suggestedHighlights !== 1 ? 's' : ''}
           </p>

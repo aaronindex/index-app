@@ -1,7 +1,7 @@
 // app/conversations/[id]/components/ExtractInsightsButton.tsx
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { track } from '@/lib/analytics/track';
 import { getOnboardingStep, setOnboardingStep } from '@/lib/onboarding/state';
@@ -12,24 +12,34 @@ interface ExtractInsightsButtonProps {
   projectId: string | null;
 }
 
+type ExtractedDetail =
+  | { type: 'decision'; id: string; title?: string | null; content?: string | null }
+  | { type: 'commitment'; id: string; title?: string | null; content?: string | null }
+  | { type: 'blocker'; id: string; title?: string | null; content?: string | null }
+  | { type: 'open_loop'; id: string; title?: string | null; content?: string | null }
+  | { type: 'highlight'; id: string; title?: string | null; content?: string | null };
+
+type ExtractionResult = {
+  success: boolean;
+  insights: {
+    decisions: number;
+    commitments: number;
+    blockers: number;
+    openLoops: number;
+    suggestedHighlights: number;
+  };
+  created: number;
+  firstReduce?: boolean;
+  counts?: { decisions: number; openLoops: number; suggestedHighlights: number };
+  details?: ExtractedDetail[];
+};
+
 export default function ExtractInsightsButton({ conversationId, projectId }: ExtractInsightsButtonProps) {
   const router = useRouter();
   const extractInFlightRef = useRef(false);
   const extractTimeoutRef = useRef(false);
   const [extracting, setExtracting] = useState(false);
-  const [result, setResult] = useState<{
-    success: boolean;
-    insights: {
-      decisions: number;
-      commitments: number;
-      blockers: number;
-      openLoops: number;
-      suggestedHighlights: number;
-    };
-    created: number;
-    firstReduce?: boolean;
-    counts?: { decisions: number; openLoops: number; suggestedHighlights: number };
-  } | null>(null);
+  const [result, setResult] = useState<ExtractionResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showFirstStructuralModal, setShowFirstStructuralModal] = useState(false);
@@ -93,14 +103,15 @@ export default function ExtractInsightsButton({ conversationId, projectId }: Ext
         return;
       }
 
-      setResult(data as typeof result);
+      const typedResult = data as unknown as ExtractionResult;
+      setResult(typedResult);
 
-      if (data.success && data.insights && typeof data.insights === 'object') {
-        const insights = data.insights as Record<string, number>;
+      if (typedResult.success && typedResult.insights && typeof typedResult.insights === 'object') {
+        const insights = typedResult.insights as Record<string, number>;
         const eventParams = {
           conversation_id: conversationId,
           project_id: projectId || null,
-          total_insights: typeof data.created === 'number' ? data.created : 0,
+          total_insights: typeof typedResult.created === 'number' ? typedResult.created : 0,
           decisions_count: insights.decisions ?? 0,
           commitments_count: insights.commitments ?? 0,
           blockers_count: insights.blockers ?? 0,
@@ -109,9 +120,12 @@ export default function ExtractInsightsButton({ conversationId, projectId }: Ext
         };
         track('insights_extracted', eventParams);
         console.log('[Analytics] insights_extracted', eventParams);
+        if (typedResult.details && typedResult.details.length > 0) {
+          console.log('[DistillPreview] extracted_details', typedResult.details);
+        }
 
-        if (data.firstReduce && data.counts && typeof data.counts === 'object') {
-          const c = data.counts as { decisions: number; openLoops: number; suggestedHighlights: number };
+        if (typedResult.firstReduce && typedResult.counts && typeof typedResult.counts === 'object') {
+          const c = typedResult.counts as { decisions: number; openLoops: number; suggestedHighlights: number };
           setFirstStructuralCounts({
             decisions: c.decisions ?? 0,
             openLoops: c.openLoops ?? 0,
@@ -160,6 +174,25 @@ export default function ExtractInsightsButton({ conversationId, projectId }: Ext
     );
   }
 
+  const preview = useMemo(() => {
+    if (!result || !result.success || !result.details || result.details.length === 0) {
+      return null;
+    }
+    const decisions = result.details.filter((d) => d.type === 'decision');
+    const tasks = result.details.filter(
+      (d) => d.type === 'commitment' || d.type === 'blocker' || d.type === 'open_loop'
+    );
+    const insights = result.details.filter((d) => d.type === 'highlight');
+
+    const firstDecision = decisions[0];
+    const firstTask = tasks[0];
+    const firstInsight = insights[0];
+
+    if (!firstDecision && !firstTask && !firstInsight) return null;
+
+    return { firstDecision, firstTask, firstInsight };
+  }, [result]);
+
   return (
     <div className="space-y-2">
       <div className="relative group">
@@ -170,16 +203,57 @@ export default function ExtractInsightsButton({ conversationId, projectId }: Ext
           aria-label="Distill signals from this conversation"
           data-onboarding="distill-signals"
         >
-          {extracting ? 'Distilling...' : 'Distill signals'}
+          {extracting ? 'Distilling…' : result && result.success ? 'Signals extracted' : 'Distill signals'}
         </button>
         <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-xs rounded-lg opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
-          Extract decisions, tasks, loops, and highlights
+          Extract decisions, tasks, and highlights
           <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-zinc-900 dark:border-t-zinc-100"></div>
         </div>
       </div>
 
       {error && (
         <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
+      )}
+
+      {/* Lightweight on-page preview: shows first decision / task / insight titles from this distillation */}
+      {preview && (
+        <div className="mt-2 rounded-lg border border-[rgb(var(--ring)/0.12)] bg-[rgb(var(--surface))] px-3 py-2.5">
+          <p className="text-[0.7rem] font-semibold tracking-wider uppercase text-[rgb(var(--muted))] mb-1">
+            Signals extracted
+          </p>
+          <div className="space-y-1.5 text-xs text-[rgb(var(--text))]">
+            {preview.firstDecision && (
+              <div>
+                <span className="text-[0.7rem] font-semibold uppercase tracking-wider text-[rgb(var(--muted))] mr-1">
+                  Decision
+                </span>
+                <span className="font-medium">
+                  {preview.firstDecision.title || preview.firstDecision.content || 'Untitled decision'}
+                </span>
+              </div>
+            )}
+            {preview.firstTask && (
+              <div>
+                <span className="text-[0.7rem] font-semibold uppercase tracking-wider text-[rgb(var(--muted))] mr-1">
+                  Task
+                </span>
+                <span className="font-medium">
+                  {preview.firstTask.title || preview.firstTask.content || 'Untitled task'}
+                </span>
+              </div>
+            )}
+            {preview.firstInsight && (
+              <div>
+                <span className="text-[0.7rem] font-semibold uppercase tracking-wider text-[rgb(var(--muted))] mr-1">
+                  Insight
+                </span>
+                <span className="font-medium">
+                  {preview.firstInsight.title || preview.firstInsight.content || 'Untitled insight'}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
       {/* First structural moment: shown once per account after first distillation */}

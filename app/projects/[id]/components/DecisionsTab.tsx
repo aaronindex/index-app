@@ -83,7 +83,7 @@ export default function DecisionsTab({ decisions, projectId }: DecisionsTabProps
           {filteredDecisions.map((decision) => (
             <Card
               key={decision.id}
-              className={decision.is_inactive ? 'opacity-60' : ''}
+              className={`group ${decision.is_inactive ? 'opacity-60' : ''}`}
             >
               <div className="p-3">
                 <div className="flex items-center gap-2 mb-1">
@@ -122,19 +122,35 @@ export default function DecisionsTab({ decisions, projectId }: DecisionsTabProps
                     {/* TODO: Add AI provenance label for decisions created via Extract Insights
                         Requires schema change to track source (e.g., add source_query or extract_run_id to decisions table) */}
                   </div>
-                  <div className="flex items-center gap-2 shrink-0 text-xs text-[rgb(var(--muted))] opacity-90" onClick={(e) => e.stopPropagation()}>
-                    <ToggleInactiveButton
-                      type="decision"
-                      id={decision.id}
-                      isInactive={decision.is_inactive || false}
-                    />
-                    <InvalidateDecisionButton decisionId={decision.id} />
-                    <SupersedeDecisionButton
-                      decisionId={decision.id}
-                      decisionTitle={decision.title}
-                      otherDecisions={decisions.filter((d) => d.id !== decision.id).map((d) => ({ id: d.id, title: d.title }))}
-                    />
-                    <DeleteDecisionButton decisionId={decision.id} decisionTitle={decision.title} />
+                  <div
+                    className="flex items-center gap-2 shrink-0 text-xs text-[rgb(var(--muted))] opacity-90"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="opacity-80 group-hover:opacity-100 transition-opacity">
+                        <ToggleInactiveButton
+                          type="decision"
+                          id={decision.id}
+                          isInactive={decision.is_inactive || false}
+                        />
+                      </span>
+                      <span className="opacity-80 group-hover:opacity-100 transition-opacity">
+                        <SupersedeDecisionButton
+                          decisionId={decision.id}
+                          decisionTitle={decision.title}
+                          otherDecisions={decisions
+                            .filter((d) => d.id !== decision.id)
+                            .map((d) => ({ id: d.id, title: d.title }))}
+                        />
+                      </span>
+                      <span className="opacity-70 group-hover:opacity-100 transition-opacity">
+                        <InvalidateDecisionButton decisionId={decision.id} />
+                      </span>
+                    </div>
+                    <span className="mx-1 h-4 w-px bg-[rgb(var(--ring)/0.4)]" />
+                    <span className="opacity-80 group-hover:opacity-100 transition-opacity">
+                      <DeleteDecisionButton decisionId={decision.id} decisionTitle={decision.title} />
+                    </span>
                   </div>
                 </div>
               </div>

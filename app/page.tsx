@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: "INDEX — Direction for your AI thinking",
-  description: "Distill decisions, open loops, and next steps from AI conversations.",
+  description: "Distill decisions, tasks, and next steps from AI conversations.",
 };
 
 export default async function Home() {

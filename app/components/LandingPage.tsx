@@ -176,7 +176,7 @@ export default function LandingPage() {
             />
             <ValueCard
               title="Distill"
-              body="Extract decisions, open loops, and next steps."
+              body="Extract decisions, tasks, and next steps."
               imageSrc="/cubes-new2.png"
               backgroundImageSrc="/cubes-bg2.jpg"
               dark
@@ -227,7 +227,7 @@ export default function LandingPage() {
                       Distill signals
                     </div>
                     <p className="text-base text-white/80">
-                      Extract decisions, open loops, and highlights.
+                      Extract decisions, tasks, and highlights.
                     </p>
                   </div>
                   <div>

@@ -31,7 +31,7 @@ export function renderWelcomeEmail(): string {
               </p>
               <p style="margin: 0 0 24px 0; font-size: 16px; line-height: 1.6; color: #121211;">
                 Conversations, notes, and ideas happen everywhere.<br>
-                INDEX is where they are distilled into arcs, decisions, and open loops.
+                INDEX is where they are distilled into arcs, decisions, and tasks.
               </p>
               <p style="margin: 0 0 24px 0; font-size: 16px; line-height: 1.6; color: #121211;">
                 Start small.

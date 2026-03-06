@@ -292,7 +292,7 @@ export default function AskPage() {
             Find what still matters across your projects.
           </p>
           <p className="text-sm text-[rgb(var(--muted))]">
-            Search your past thinking to surface decisions, open loops, and unresolved questions.
+            Search your past thinking to surface decisions, tasks, and unresolved questions.
           </p>
         </div>
 

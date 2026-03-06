@@ -242,7 +242,7 @@ export default function OverviewTab({ projectId, projectName, projectDescription
                   Nothing surfaced yet.
                 </h3>
                 <p className="text-sm text-[rgb(var(--muted))] mb-2">
-                  As you work, INDEX will surface the decisions and open loops that matter most.
+                  As you work, INDEX will surface the decisions and tasks that matter most.
                   This overview becomes useful after reduction — not before.
                 </p>
                 <p className="text-xs text-[rgb(var(--muted))] italic mt-4">
@@ -255,7 +255,7 @@ export default function OverviewTab({ projectId, projectName, projectDescription
                   Nothing needs attention right now.
                 </h3>
                 <p className="text-sm text-[rgb(var(--muted))]">
-                  This project has no unresolved decisions or open loops.
+                  This project has no unresolved decisions or tasks.
                   If something changes, it will appear here.
                 </p>
               </>
