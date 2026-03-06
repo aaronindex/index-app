@@ -55,6 +55,7 @@ export async function POST(request: NextRequest) {
         start_offset: start_offset ?? null,
         end_offset: end_offset ?? null,
         label: label?.trim() || null,
+        origin: 'user',
       })
       .select()
       .single();

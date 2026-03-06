@@ -71,6 +71,7 @@ export async function POST(request: NextRequest) {
             status: 'open',
             source_query: sourceQuery || null,
             source_ask_index_run_id: ask_index_run_id || null,
+            origin: 'user',
           })
           .select()
           .single();
@@ -98,6 +99,8 @@ export async function POST(request: NextRequest) {
             title: prompt,
             content: answerContext ? `From: ${sourceQuery}\n\n${answerContext.substring(0, 1000)}` : null,
             source_ask_index_run_id: ask_index_run_id || null,
+            status: 'active',
+            origin: 'user',
           })
           .select()
           .single();
@@ -163,6 +166,7 @@ export async function POST(request: NextRequest) {
             content: prompt,
             label: prompt.substring(0, 100),
             source_ask_index_run_id: ask_index_run_id || null,
+            origin: 'user',
           })
           .select()
           .single();

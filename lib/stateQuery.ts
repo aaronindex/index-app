@@ -76,7 +76,7 @@ export async function queryState(
     .from('decisions')
     .select('id, title, created_at, project_id, conversation_id')
     .eq('user_id', userId)
-    .eq('is_inactive', false)
+    .eq('status', 'active')
     .gte('created_at', windowStart.toISOString())
     .order('created_at', { ascending: false })
     .limit(5);

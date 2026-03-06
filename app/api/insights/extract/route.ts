@@ -105,6 +105,8 @@ export async function POST(request: NextRequest) {
           conversation_id: conversationId,
           title: decision.title,
           content: decision.content + (decision.context ? `\n\nContext: ${decision.context}` : ''),
+          status: 'active',
+          origin: 'system',
         })
         .select()
         .single();
@@ -149,6 +151,8 @@ export async function POST(request: NextRequest) {
           description: `[Commitment] ${commitment.content}${commitment.context ? `\n\nContext: ${commitment.context}` : ''}`,
           status: 'open',
           source_query: 'AI Insight Extraction',
+          origin: 'system',
+          attributes: { commitment: true },
         })
         .select()
         .single();
@@ -175,6 +179,8 @@ export async function POST(request: NextRequest) {
           description: `[Blocker] ${blocker.content}${blocker.context ? `\n\nContext: ${blocker.context}` : ''}`,
           status: 'open',
           source_query: 'AI Insight Extraction',
+          origin: 'system',
+          attributes: { blocker: true },
         })
         .select()
         .single();
@@ -201,6 +207,8 @@ export async function POST(request: NextRequest) {
           description: `[Open Loop] ${openLoop.content}${openLoop.context ? `\n\nContext: ${openLoop.context}` : ''}`,
           status: 'open',
           source_query: 'AI Insight Extraction',
+          origin: 'system',
+          attributes: { loop: true },
         })
         .select()
         .single();
@@ -230,6 +238,7 @@ export async function POST(request: NextRequest) {
             message_id: targetMessage.id,
             content: highlight.content,
             label: highlight.title,
+            origin: 'system',
           })
           .select()
           .single();

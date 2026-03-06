@@ -1,5 +1,5 @@
 // app/conversations/[id]/components/ReduceOnboardingModal.tsx
-// One-time modal that explains what "Reduce" does on first conversation view
+// One-time modal that explains what "Distill signals" does on first conversation view
 
 'use client';
 
@@ -72,7 +72,7 @@ export default function ReduceOnboardingModal({ projectId }: ReduceOnboardingMod
       >
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-serif text-xl font-semibold text-[rgb(var(--text))]">
-            Reduce
+            Distill signals
           </h2>
           <button
             onClick={handleDismiss}
@@ -85,10 +85,10 @@ export default function ReduceOnboardingModal({ projectId }: ReduceOnboardingMod
 
         <div className="mb-6">
           <p className="text-[rgb(var(--text))] mb-3">
-            Reduce this conversation to what still matters.
+            Distill signals from this conversation.
           </p>
           <p className="text-sm text-[rgb(var(--muted))]">
-            Click Reduce to carry forward decisions, tasks, and highlights — and let the rest go.
+            Click Distill signals to carry forward decisions, tasks, and highlights — and let the rest go.
           </p>
         </div>
 

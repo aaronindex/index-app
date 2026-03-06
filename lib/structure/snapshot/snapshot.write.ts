@@ -58,10 +58,8 @@ async function generateSnapshotText(params: {
 
   const arcCount = activeArcIds.length;
   if (arcCount === 0) {
-    lines.push('No distinct arcs yet. Structure is still forming.');
+    lines.push('No distinct patterns yet. Structure is still forming.');
   } else {
-    const countLabel =
-      arcCount === 1 ? 'One arc active' : `${arcCount} arcs active`;
     if (arcSummaries.length > 0) {
       const joined =
         arcSummaries.length > 2
@@ -69,39 +67,14 @@ async function generateSnapshotText(params: {
               arcSummaries.length > 2 ? ', …' : ''
             }`
           : arcSummaries.join(', ');
-      lines.push(`${countLabel}: ${joined}.`);
+      lines.push(`Current focus: ${joined}.`);
     } else {
-      lines.push(`${countLabel}.`);
+      lines.push(
+        arcCount === 1
+          ? 'Current activity remains concentrated in one area.'
+          : 'Work is taking shape across a few areas.'
+      );
     }
-  }
-
-  const decisionBucket =
-    typeof payload.decision_density_bucket === 'number'
-      ? payload.decision_density_bucket
-      : null;
-  const resultBucket =
-    typeof payload.result_density_bucket === 'number'
-      ? payload.result_density_bucket
-      : null;
-
-  if (decisionBucket !== null || resultBucket !== null) {
-    const parts: string[] = [];
-    if (decisionBucket !== null) {
-      parts.push(`Decision density index ${decisionBucket}`);
-    }
-    if (resultBucket !== null) {
-      parts.push(`Result density index ${resultBucket}`);
-    }
-    if (parts.length > 0) {
-      lines.push(parts.join('; ') + '.');
-    }
-  }
-
-  const pulseTypes = Array.isArray(payload.pulse_types)
-    ? payload.pulse_types
-    : [];
-  if (pulseTypes.length > 0) {
-    lines.push('Recent structural activity detected.');
   }
 
   const text = lines.join('\n').trim();

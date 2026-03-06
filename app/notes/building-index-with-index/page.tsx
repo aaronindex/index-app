@@ -134,7 +134,7 @@ export default function BuildingIndexWithIndex() {
               The second surprise was how calming it felt to close loops. Watching open questions turn into decisions, and vague intentions turn into named tasks, removed a low-level tension I hadn't realized I was carrying.
             </p>
             <p className="text-[rgb(var(--text))] leading-relaxed mb-4">
-              The third surprise was how rarely I needed to search once things were reduced. When decisions and tasks were explicit, the system didn't need to be interrogated. It simply reflected reality back.
+              The third surprise was how rarely I needed to search once things were distilled. When decisions and tasks were explicit, the system didn't need to be interrogated. It simply reflected reality back.
             </p>
             <p className="text-[rgb(var(--text))] leading-relaxed">
               INDEX didn't make me faster.

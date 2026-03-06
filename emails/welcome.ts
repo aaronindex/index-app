@@ -40,7 +40,7 @@ export function renderWelcomeEmail(): string {
                 Import one conversation that still matters.
               </p>
               <p style="margin: 0 0 24px 0; font-size: 16px; line-height: 1.6; color: #121211;">
-                Then reduce it.
+                Then distill signals from it.
               </p>
               <p style="margin: 0 0 24px 0; font-size: 16px; line-height: 1.6; color: #121211;">
                 You'll begin to see the shape of the work: what's active, what's unresolved, and where things are moving.

@@ -166,6 +166,12 @@ export default async function ConversationPage({
                 >
                   {conversation.title || 'Untitled Conversation'}
                 </h1>
+                <p className="text-sm text-[rgb(var(--muted))] mt-1">
+                  Distill signals from this source.
+                </p>
+                <p className="text-xs text-[rgb(var(--muted))] mt-0.5">
+                  Extract decisions, tasks, loops, and highlights.
+                </p>
               </div>
             </div>
 
@@ -251,7 +257,7 @@ export default async function ConversationPage({
         </div>
       </div>
       
-      {/* One-time Reduce onboarding modal */}
+      {/* One-time distill onboarding modal */}
       <ReduceOnboardingModal projectId={project?.id || null} />
     </main>
   );

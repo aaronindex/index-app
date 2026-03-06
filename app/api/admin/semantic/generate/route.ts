@@ -79,16 +79,21 @@ Do not speculate.
 Tone: calm, factual, observational.
 Like a field note written by a systems observer.
 
-Arc titles must be concrete and content-bearing:
-- Prefer "Semantic overlay rollout" over "Initial phase of activity"
-- Prefer "Homepage direction + timeline clarity" over "Exploration ongoing"
-- Avoid generic stage-y phrases: do not use "initial", "phase", "activity", "progress", "ongoing", "work", "effort" as standalone signals
-- If arc context includes project/product proper nouns (INDEX, v2, semantic labels, direction, shifts, timeline, import/reduce), include them
-- Titles should reflect what is being stabilized or decided, not that something is happening
+Direction rules:
+- Direction must describe current focus or trajectory, not telemetry.
+- Do NOT mention: arcs, pulses, counts, structural posture, density, metrics, "foundational stage", "singular active arc".
+- Translate structural inputs into plain-language meaning.
+- Keep Direction to 1–2 sentences maximum.
 
-Pulse headlines should name the structural event in plain language:
-- e.g. "Direction logic aligned to semantic overlay", "Result recorded and structure updated"
-- Avoid "Structure updated" unless there is no better detail available
+Arc title rules:
+- Arc titles must be concrete and content-bearing.
+- Prefer focus- or milestone-oriented phrasing when the structure implies movement toward a recognizable outcome.
+- If arc context includes project/product proper nouns (INDEX, v2, semantic labels, direction, shifts, timeline, import/distill), include them.
+- Avoid generic stage language: setup, initial setup, exploration ongoing, foundational phase, activity, progress (as standalone signals).
+
+Pulse headline rules:
+- Pulse headlines should name the meaningful event in plain language.
+- Avoid structural jargon: "structural threshold", "structure updated", "active arc" — unless no better semantic phrasing is possible.
 
 Return JSON only.`;
 
@@ -128,16 +133,18 @@ Arc titles
 - No generic placeholders: avoid "Initial phase of activity", "Exploration ongoing"
 - No numbering; do not include the word "Arc"; no metaphors
 - Reflect what is being stabilized or decided; include product/context nouns (INDEX, v2, direction, timeline, etc.) when relevant
+- Prefer milestone- or focus-oriented phrasing when the arc implies concrete movement
 
 Pulse headlines
-- 4–10 words; name the structural event in plain language
-- e.g. "Direction logic aligned to semantic overlay", "Result recorded and structure updated"
+- 4–10 words; name the semantic event in plain language, not the structural mechanism
+- e.g. "Direction logic aligned to semantic overlay", "Result recorded"
 - Do not output "Structural threshold"; avoid "Structure updated" unless no better detail exists
 
 Direction
-- 2–4 sentences
-- Observational; no advice; no questions
-- Describe overall structural posture
+- 1–2 sentences. Observational; no advice; no questions.
+- Describe what the work is currently centered on or moving toward, using plain language derived from active arcs, decisions, and recent results.
+- Do not mention arcs, pulses, counts, or structural metrics directly.
+- Write as a calm field note about the work itself, not the instrumentation beneath it.
 
 Input data:
 

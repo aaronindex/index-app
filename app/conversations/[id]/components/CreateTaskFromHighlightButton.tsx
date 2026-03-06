@@ -80,7 +80,7 @@ export default function CreateTaskFromHighlightButton({
         const { trackEvent } = await import('@/lib/analytics');
         trackEvent('task_created', { task_id: task.id, has_project: !!projectId, from_highlight: true });
       }
-      router.push(`/projects/${projectId}?tab=tasks`);
+      router.push(`/projects/${projectId}?tab=signals`);
     } catch (err) {
       if (timeoutId != null) clearTimeout(timeoutId);
       const isAbort = err instanceof Error && err.name === 'AbortError';

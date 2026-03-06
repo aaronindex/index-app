@@ -393,7 +393,7 @@ export default function ReadTab({
             Open Decisions
           </h2>
           <Link
-            href={`/projects/${projectId}/decisions?tab=decisions`}
+            href={`/projects/${projectId}?tab=signals`}
             className="text-xs text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] transition-colors"
           >
             View all decisions
@@ -404,7 +404,7 @@ export default function ReadTab({
             {openDecisions.map((item) => (
               <li key={`decision-${item.id}`}>
                 <Link
-                  href={`/projects/${projectId}/decisions?tab=decisions#${item.id}`}
+                  href={`/projects/${projectId}?tab=signals#${item.id}`}
                   className="block text-sm text-[rgb(var(--text))] hover:text-[rgb(var(--muted))] transition-colors"
                 >
                   <span className="flex items-center gap-2">
@@ -438,7 +438,7 @@ export default function ReadTab({
             Open Tasks
           </h2>
           <Link
-            href={`/projects/${projectId}/tasks?tab=tasks`}
+            href={`/projects/${projectId}?tab=signals`}
             className="text-xs text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] transition-colors"
           >
             View all tasks
@@ -449,7 +449,7 @@ export default function ReadTab({
             {openTasksFromStill.map((item) => (
               <li key={`still-task-${item.id}`}>
                 <Link
-                  href={`/projects/${projectId}/tasks?tab=tasks#${item.id}`}
+                  href={`/projects/${projectId}?tab=signals#${item.id}`}
                   className="block text-sm text-[rgb(var(--text))] hover:text-[rgb(var(--muted))] transition-colors"
                 >
                   <span className="flex items-center gap-2">
@@ -471,7 +471,7 @@ export default function ReadTab({
             {filteredNextTasks.map((task) => (
               <li key={`next-task-${task.id}`}>
                 <Link
-                  href={`/projects/${projectId}/tasks?tab=tasks#${task.id}`}
+                  href={`/projects/${projectId}?tab=signals#${task.id}`}
                   className="block text-sm text-[rgb(var(--text))] hover:text-[rgb(var(--muted))] transition-colors"
                 >
                   {task.title}

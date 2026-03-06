@@ -44,7 +44,7 @@ export async function getProjectReadTabServerData(
     .from('decisions')
     .select('id, title, content, created_at, is_pinned, conversation_id, conversations(title)')
     .eq('user_id', user_id)
-    .eq('is_inactive', false);
+    .eq('status', 'active');
   decisionsQuery = decisionsQuery.or(
     `project_id.eq.${project_id},conversation_id.in.(${conversationIds.join(',')})`
   );
@@ -138,7 +138,7 @@ export async function getProjectReadTabServerData(
     .from('decisions')
     .select('id, title, created_at')
     .eq('user_id', user_id)
-    .eq('is_inactive', false);
+    .eq('status', 'active');
   decQuery = decQuery.or(
     `project_id.eq.${project_id},conversation_id.in.(${conversationIds.join(',')})`
   );

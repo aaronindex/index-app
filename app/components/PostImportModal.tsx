@@ -67,9 +67,9 @@ export default function PostImportModal({ isOpen, onClose }: PostImportModalProp
               2
             </div>
             <div>
-              <p className="font-medium text-[rgb(var(--text))] mb-1">Reduce to structural signals</p>
+              <p className="font-medium text-[rgb(var(--text))] mb-1">Distill signals</p>
               <p className="text-sm text-[rgb(var(--muted))]">
-                Open a conversation and reduce it to the moments that carry weight:
+                Open a conversation and distill signals from it:
               </p>
               <p className="text-sm text-[rgb(var(--muted))] mt-1">
                 • decisions
@@ -100,7 +100,7 @@ export default function PostImportModal({ isOpen, onClose }: PostImportModalProp
         <div className="flex flex-col items-center gap-3">
           <Link href="/unassigned" onClick={onClose}>
             <Button variant="primary">
-              Reduce your first conversation
+              Distill signals from a conversation
             </Button>
           </Link>
           <button

@@ -137,7 +137,7 @@ export default function WhatChangedThisWeek({ projectId }: WhatChangedThisWeekPr
               {data.decisions.items.map((decision) => (
                 <Link
                   key={decision.id}
-                  href={`/projects/${projectId}?tab=decisions`}
+                  href={`/projects/${projectId}?tab=signals`}
                   className="block p-5 rounded-xl bg-gradient-to-br from-[rgb(var(--surface2))] to-[rgb(var(--surface))] shadow-md ring-2 ring-[rgb(var(--ring)/0.12)] hover:shadow-lg hover:ring-[rgb(var(--ring)/0.2)] transition-all"
                 >
                   <p className="text-base font-semibold text-[rgb(var(--text))]">{decision.title}</p>
@@ -164,7 +164,7 @@ export default function WhatChangedThisWeek({ projectId }: WhatChangedThisWeekPr
                     .map((task) => (
                       <Link
                         key={task.id}
-                        href={`/projects/${projectId}?tab=tasks`}
+                        href={`/projects/${projectId}?tab=signals`}
                         className="block p-4 rounded-xl bg-gradient-to-br from-[rgb(var(--surface2))] to-[rgb(var(--surface))] shadow-sm ring-1 ring-[rgb(var(--ring)/0.08)] hover:shadow-md hover:ring-[rgb(var(--ring)/0.12)] transition-all"
                       >
                         <div className="flex items-center justify-between">
@@ -190,7 +190,7 @@ export default function WhatChangedThisWeek({ projectId }: WhatChangedThisWeekPr
                     .map((task) => (
                       <Link
                         key={task.id}
-                        href={`/projects/${projectId}?tab=tasks`}
+                        href={`/projects/${projectId}?tab=signals`}
                         className="block p-3 rounded-lg bg-[rgb(var(--surface))] ring-1 ring-[rgb(var(--ring)/0.05)] hover:ring-[rgb(var(--ring)/0.08)] transition-all"
                       >
                         <div className="flex items-center justify-between">

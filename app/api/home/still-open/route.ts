@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
       .from('decisions')
       .select('id, title, created_at, is_pinned, project_id, conversation_id, projects(name), conversations(title)')
       .eq('user_id', user.id)
-      .eq('is_inactive', false)
+      .eq('status', 'active')
       .order('is_pinned', { ascending: false })
       .order('created_at', { ascending: false });
 

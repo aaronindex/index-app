@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
         .from('decisions')
         .select('id', { count: 'exact', head: true })
         .eq('user_id', user.id)
-        .eq('is_inactive', false),
+        .eq('status', 'active'),
     ]);
 
     const projectCount = projectsResult.count || 0;

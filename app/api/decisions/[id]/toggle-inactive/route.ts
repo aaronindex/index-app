@@ -19,7 +19,7 @@ export async function POST(
     // Verify decision belongs to user
     const { data: decision, error: decisionError } = await supabase
       .from('decisions')
-      .select('id, is_inactive')
+      .select('id, status')
       .eq('id', id)
       .eq('user_id', user.id)
       .single();
@@ -28,16 +28,29 @@ export async function POST(
       return NextResponse.json({ error: 'Decision not found' }, { status: 404 });
     }
 
-    // Toggle is_inactive
+    // Canonical: status. Keep is_inactive in sync for compatibility.
+    const isActive = decision.status === 'active';
+    const nextStatus = isActive ? 'closed' : 'active';
+    const is_inactive = nextStatus !== 'active';
+    const updatePayload: { status: string; is_inactive: boolean; closed_at?: string | null } = {
+      status: nextStatus,
+      is_inactive,
+    };
+    if (nextStatus === 'closed') {
+      updatePayload.closed_at = new Date().toISOString();
+    } else {
+      updatePayload.closed_at = null;
+    }
+
     const { data: updatedDecision, error: updateError } = await supabase
       .from('decisions')
-      .update({ is_inactive: !decision.is_inactive })
+      .update(updatePayload)
       .eq('id', id)
       .select()
       .single();
 
     if (updateError || !updatedDecision) {
-      console.error('Error toggling decision inactive flag:', updateError);
+      console.error('Error toggling decision status:', updateError);
       return NextResponse.json(
         { error: updateError?.message || 'Failed to update decision' },
         { status: 500 }
@@ -48,7 +61,7 @@ export async function POST(
   } catch (error) {
     console.error('Toggle decision inactive error:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to toggle decision inactive flag' },
+      { error: error instanceof Error ? error.message : 'Failed to toggle decision status' },
       { status: 500 }
     );
   }

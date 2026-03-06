@@ -76,11 +76,12 @@ export async function POST(
       occurredAt = parsed.toISOString();
     }
 
-    const insertPayload: any = {
+    const insertPayload: Record<string, unknown> = {
       user_id: user.id,
       project_id: projectId,
       text,
       occurred_at: occurredAt ?? new Date().toISOString(),
+      origin: 'user',
     };
 
     if (isDevEnv()) {

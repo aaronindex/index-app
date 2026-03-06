@@ -22,7 +22,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   const steps = [
     {
       title: 'Welcome to INDEX',
-      description: 'INDEX helps you reduce your AI conversations into what actually matters — decisions, tasks, and direction you can carry forward.',
+      description: 'INDEX helps you distill your AI conversations into what actually matters — decisions, tasks, and direction you can carry forward.',
       action: {
         label: 'Start with a real conversation',
         href: '/import',
@@ -31,7 +31,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     },
     {
       title: 'Start with what you already thought through',
-      description: 'Import an AI conversation. INDEX extracts what matters, surfaces decisions, and reduces the rest.',
+      description: 'Import an AI conversation. INDEX extracts what matters, surfaces decisions, and distills the rest.',
       action: {
         label: 'Import Conversation',
         href: '/import',

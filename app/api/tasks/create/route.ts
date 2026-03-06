@@ -95,6 +95,7 @@ export async function POST(request: NextRequest) {
         title: title.trim(),
         description: description?.trim() || null,
         status: status,
+        origin: 'user',
       })
       .select()
       .single();

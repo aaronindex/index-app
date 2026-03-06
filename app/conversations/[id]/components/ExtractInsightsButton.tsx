@@ -127,9 +127,9 @@ export default function ExtractInsightsButton({ conversationId, projectId }: Ext
       const isTimeout = isAbort && extractTimeoutRef.current;
       setError(
         isTimeout
-          ? 'Reduce is taking too long. Try again in a moment.'
+          ? 'Distillation is taking too long. Try again in a moment.'
           : isAbort
-            ? 'Request was canceled. Click Reduce again.'
+            ? 'Request was canceled. Click Distill signals again.'
             : err instanceof Error
               ? err.message
               : 'Failed to extract insights'
@@ -146,12 +146,12 @@ export default function ExtractInsightsButton({ conversationId, projectId }: Ext
         <button
           disabled
           className="px-6 py-2 text-sm bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-600 rounded-lg cursor-not-allowed font-medium min-w-[120px]"
-          aria-label="Extract tasks, decisions, and highlights"
+          aria-label="Distill signals from this conversation"
         >
-          ✨ REDUCE
+          Distill signals
         </button>
         <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-xs rounded-lg opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
-          Assign this conversation to a project to enable Reduce.
+          Assign this conversation to a project to enable Distill signals.
           <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-zinc-900 dark:border-t-zinc-100"></div>
         </div>
       </div>
@@ -165,12 +165,12 @@ export default function ExtractInsightsButton({ conversationId, projectId }: Ext
           onClick={handleExtract}
           disabled={extracting}
           className="px-6 py-2 text-sm bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-400 hover:bg-purple-200 dark:hover:bg-purple-900/50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium min-w-[120px]"
-          aria-label="Extract tasks, decisions, and highlights"
+          aria-label="Distill signals from this conversation"
         >
-          {extracting ? 'Reducing...' : '✨ REDUCE'}
+          {extracting ? 'Distilling...' : 'Distill signals'}
         </button>
         <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-xs rounded-lg opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
-          Extract tasks, decisions, and highlights
+          Extract decisions, tasks, loops, and highlights
           <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-zinc-900 dark:border-t-zinc-100"></div>
         </div>
       </div>
@@ -179,7 +179,7 @@ export default function ExtractInsightsButton({ conversationId, projectId }: Ext
         <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
       )}
 
-      {/* First structural moment: shown once per account after first Reduce */}
+      {/* First structural moment: shown once per account after first distillation */}
       {showFirstStructuralModal && (
         <FirstStructuralMomentModal
           counts={firstStructuralCounts}
@@ -196,7 +196,7 @@ export default function ExtractInsightsButton({ conversationId, projectId }: Ext
         />
       )}
 
-      {/* Success Modal (subsequent reduces) */}
+      {/* Success Modal (subsequent distillations) */}
       {showSuccessModal && result && result.success && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
@@ -212,7 +212,7 @@ export default function ExtractInsightsButton({ conversationId, projectId }: Ext
             <div className="text-center mb-6">
               <div className="text-4xl mb-4">✨</div>
               <h2 className="font-serif text-2xl font-semibold text-[rgb(var(--text))] mb-2">
-                Reduced
+                Signals distilled
               </h2>
               <p className="text-sm text-[rgb(var(--muted))]">
                 {result.created} item{result.created !== 1 ? 's' : ''} carried forward

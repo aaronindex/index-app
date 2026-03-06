@@ -30,9 +30,9 @@ export async function collectStructuralSignals(
   
   const { data: decisions, error: decisionsError } = await supabaseClient
     .from('decisions')
-    .select('id, conversation_id, project_id, is_inactive')
+    .select('id, conversation_id, project_id, status')
     .eq('user_id', userId)
-    .eq('is_inactive', false) // Only active decisions generate signals
+    .eq('status', 'active') // Only active decisions generate signals
     .order('id', { ascending: true }); // Deterministic ordering by ID
   
   if (decisionsError) {

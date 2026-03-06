@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import { useEffect, useRef } from 'react';
 
-type Tab = 'read' | 'chats' | 'decisions' | 'tasks';
+type Tab = 'read' | 'signals' | 'chats';
 
 interface ProjectTabsProps {
   projectId: string;
@@ -14,8 +14,7 @@ interface ProjectTabsProps {
 export default function ProjectTabs({ projectId, activeTab }: ProjectTabsProps) {
   const tabs: { id: Tab; label: string; href: string }[] = [
     { id: 'read', label: 'Read', href: `/projects/${projectId}?tab=read` },
-    { id: 'decisions', label: 'Decisions', href: `/projects/${projectId}?tab=decisions` },
-    { id: 'tasks', label: 'Tasks', href: `/projects/${projectId}?tab=tasks` },
+    { id: 'signals', label: 'Signals', href: `/projects/${projectId}?tab=signals` },
     { id: 'chats', label: 'Sources', href: `/projects/${projectId}?tab=chats` },
   ];
 

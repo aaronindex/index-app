@@ -7,8 +7,7 @@ import type { Metadata } from 'next';
 import ProjectTabs from './components/ProjectTabs';
 import ReadTab from './components/ReadTab';
 import ChatsTab from './components/ChatsTab';
-import DecisionsTab from './components/DecisionsTab';
-import TasksTab from './components/TasksTab';
+import SignalsTab from './components/SignalsTab';
 import ProjectStartChatButton from './components/ProjectStartChatButton';
 import ProjectOverflowMenu from './components/ProjectOverflowMenu';
 import { loadProjectView } from '@/lib/ui-data';
@@ -56,19 +55,18 @@ export default async function ProjectDetailPage({
   const tab = tabParam === 'sources' ? 'chats' : tabParam;
   const user = await getCurrentUser();
   if (!user) {
-    // Middleware should handle this, but just in case
     return null;
   }
 
-  // Redirect old tabs to appropriate destinations
-  if (tab === 'overview') {
+  // Redirect old tabs to consolidated nav: Read / Signals / Sources
+  if (tab === 'overview' || tab === 'library') {
     redirect(`/projects/${id}?tab=read`);
   }
   if (tab === 'highlights') {
     redirect(`/projects/${id}?tab=chats`);
   }
-  if (tab === 'library') {
-    redirect(`/projects/${id}?tab=read`);
+  if (tab === 'decisions' || tab === 'tasks') {
+    redirect(`/projects/${id}?tab=signals`);
   }
 
   const supabase = await getSupabaseServerClient();
@@ -111,13 +109,17 @@ export default async function ProjectDetailPage({
     console.log('[AccumulationIndicator]', { project_id: id, count: capturesSinceLastReduce });
   }
 
-  // Fetch data based on active tab
+  // Fetch data based on active tab (signals = decisions + tasks + highlights in one surface)
   let chatsData: any[] = [];
   let decisionsData: any[] = [];
   let tasksData: any[] = [];
+  let highlightsData: any[] = [];
 
   if (conversationIds.length > 0) {
-    if (tab === 'chats') {
+    const needsSignalsData = tab === 'signals';
+    const needsChatsData = tab === 'chats';
+
+    if (needsChatsData) {
       // Get conversations (include inactive for filtering)
       const { data: conversations } = await supabase
         .from('conversations')
@@ -151,7 +153,7 @@ export default async function ProjectDetailPage({
       }
     }
 
-    if (tab === 'decisions') {
+    if (needsSignalsData) {
       // Query decisions for this project (by project_id OR by conversation_id)
       // Order: pinned first, then by created_at (descending)
       let decisionsQuery = supabase
@@ -185,6 +187,7 @@ export default async function ProjectDetailPage({
           title: decision.title,
           content: decision.content,
           is_pinned: decision.is_pinned || false,
+          is_inactive: decision.is_inactive ?? false,
           conversation_title: decision.conversation_id
             ? conversationMap.get(decision.conversation_id) || null
             : null,
@@ -194,7 +197,7 @@ export default async function ProjectDetailPage({
       }
     }
 
-    if (tab === 'tasks') {
+    if (needsSignalsData) {
       // Query tasks for this project (include inactive for filtering)
       // Order: pinned first, then by sort_order (ascending), then by created_at (descending)
       const { data: tasks } = await supabase
@@ -229,14 +232,42 @@ export default async function ProjectDetailPage({
           conversation_id: task.conversation_id,
           created_at: task.created_at,
           source_query: task.source_query || null,
+          is_inactive: task.is_inactive ?? false,
+        }));
+      }
+    }
+
+    if (needsSignalsData && conversationIds.length > 0) {
+      const { data: highlights } = await supabase
+        .from('highlights')
+        .select('id, content, label, conversation_id, created_at')
+        .in('conversation_id', conversationIds)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (highlights && highlights.length > 0) {
+        const convIds = [...new Set(highlights.map((h) => h.conversation_id))];
+        const { data: convTitles } = await supabase
+          .from('conversations')
+          .select('id, title')
+          .in('id', convIds);
+        const convMap = new Map(convTitles?.map((c) => [c.id, c.title]) || []);
+        highlightsData = highlights.map((h) => ({
+          id: h.id,
+          content: h.content,
+          label: h.label,
+          status: null as string | null,
+          conversation_title: convMap.get(h.conversation_id) || null,
+          conversation_id: h.conversation_id,
+          created_at: h.created_at,
         }));
       }
     }
   }
 
-  const activeTab = (['read', 'decisions', 'tasks', 'chats'].includes(tab)
+  const activeTab = (['read', 'signals', 'chats'].includes(tab)
     ? tab
-    : 'read') as 'read' | 'decisions' | 'tasks' | 'chats';
+    : 'read') as 'read' | 'signals' | 'chats';
   const captureLabel = capturesSinceLastReduce === 1 ? 'capture' : 'captures';
 
   // Structural data for Read tab (snapshot + arcs + timeline, read-only)
@@ -302,15 +333,15 @@ export default async function ProjectDetailPage({
             </p>
           )}
 
-          {/* Accumulation: new captures since last reduce (calm; only when last reduce exists and count > 0) */}
+          {/* Accumulation: new captures since last distillation (calm; only when last distill exists and count > 0) */}
           {lastReduceAt != null && capturesSinceLastReduce > 0 && (
             <p className="mt-3 text-sm text-[rgb(var(--muted))]">
-              {capturesSinceLastReduce} new {captureLabel} since last reduce{' '}
+              {capturesSinceLastReduce} new {captureLabel} since last distillation{' '}
               <Link
                 href={`/projects/${id}?tab=chats`}
                 className="text-[rgb(var(--text))] hover:underline"
               >
-                Reduce
+                Distill signals
               </Link>
             </p>
           )}
@@ -335,11 +366,18 @@ export default async function ProjectDetailPage({
                 serverReadData={readTabServerData}
               />
             )}
+            {activeTab === 'signals' && (
+              <SignalsTab
+                decisions={decisionsData}
+                tasks={tasksData}
+                highlights={highlightsData}
+                projectId={id}
+                projectName={project.name}
+              />
+            )}
             {activeTab === 'chats' && (
               <ChatsTab conversations={chatsData} projectId={id} />
             )}
-            {activeTab === 'decisions' && <DecisionsTab decisions={decisionsData} projectId={id} />}
-            {activeTab === 'tasks' && <TasksTab tasks={tasksData} projectId={id} />}
           </div>
         </div>
       </div>

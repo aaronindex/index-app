@@ -13,7 +13,7 @@ Think anywhere → Capture → Reduce → Structure → Direction → Continue T
 ## Post-Import Flow
 
 - [x] Update PostImportModal copy
-- [ ] Update post-import confirmation screen copy
+- [x] Update post-import confirmation screen copy
 - [ ] Ensure Reduce flow is clearly surfaced after import
 - [ ] Validate multi-source reduction workflow (Sources → Reduce → Return)
 
@@ -21,7 +21,7 @@ Think anywhere → Capture → Reduce → Structure → Direction → Continue T
 
 ## Direction System
 
-- [ ] Direction empty state copy
+- [x] Direction empty state copy
 - [ ] Direction first-emergence behavior
 - [ ] Direction regeneration when state changes
 - [ ] Validate Direction tone (field-note style)
@@ -30,21 +30,21 @@ Think anywhere → Capture → Reduce → Structure → Direction → Continue T
 
 ## Continue Thinking
 
-- [ ] Rename **Resume → Continue Thinking**
-- [ ] Update modal copy
-- [ ] Validate prompt generation modes:
+- [x] Rename **Resume → Continue Thinking**
+- [x] Update modal copy
+- [x] Validate prompt generation modes:
   - Next actions
   - Decisions
   - What’s blocking me
   - Full context
-- [ ] Confirm prompts remain structural and non-coaching
+- [x] Confirm prompts remain structural and non-coaching
 
 ---
 
 ## Weekly Log
 
 - [ ] Weekly digest generation test
-- [ ] Confirm naming (Weekly Digest vs Weekly Log)
+- [x] Confirm naming (Weekly Digest vs Weekly Log)
 - [ ] Validate tone (logbook / structural reflection)
 - [ ] Confirm data sources:
   - Decisions
@@ -79,9 +79,9 @@ Think anywhere → Capture → Reduce → Structure → Direction → Continue T
 
 ## Spotlight Tour
 
-- [ ] Implement onboarding slides
-- [ ] Ensure onboarding is skippable
-- [ ] Validate restart control
+- [x] Implement onboarding slides
+- [x] Ensure onboarding is skippable
+- [x] Validate restart control
 
 ---
 
@@ -97,10 +97,10 @@ Think anywhere → Capture → Reduce → Structure → Direction → Continue T
 
 ## Extension Nudging
 
-- [ ] Extension banner behavior
-- [ ] Extension install pill logic
+- [x] Extension banner behavior
+- [x] Extension install pill logic
 - [ ] Badge state conditions
-- [ ] Dismissal behavior
+- [x] Dismissal behavior
 
 ---
 
@@ -123,8 +123,8 @@ Think anywhere → Capture → Reduce → Structure → Direction → Continue T
 
 # 5. Billing & Access
 
-- [ ] Pricing page copy update
-- [ ] Upgrade modal copy
+- [x] Pricing page copy update
+- [x] Upgrade modal copy
 - [ ] Subscription flow validation
 
 ---
@@ -159,6 +159,16 @@ Perform full user loop:
 - [x] Founder Note (v2)
 - [ ] Launch post
 - [ ] Initial outreach
+
+
+---
+
+NOTES:
+- magic link still not redirecting to /home
+- customize magic link email?
+- don't like this line in welcome email "That's all INDEX does."
+- create extension instructions /extension
+
 
 ---
 

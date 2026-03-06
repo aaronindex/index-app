@@ -128,12 +128,12 @@ export async function compileProjectContinuityPacket(
     .order('created_at', { ascending: false })
     .limit(10);
 
-  // Get key decisions - exclude inactive
+  // Get key decisions - only active
   const { data: decisions } = await supabase
     .from('decisions')
     .select('id, title, content, created_at, conversation_id')
     .eq('user_id', userId)
-    .eq('is_inactive', false)
+    .eq('status', 'active')
     .in('conversation_id', conversationIds.length > 0 ? conversationIds : ['00000000-0000-0000-0000-000000000000'])
     .order('created_at', { ascending: false })
     .limit(7);
@@ -432,7 +432,7 @@ export async function compileDecisionStartChatPacket(
     .select('id, title, content, conversation_id, project_id, created_at')
     .eq('id', decisionId)
     .eq('user_id', userId)
-    .eq('is_inactive', false)
+    .eq('status', 'active')
     .single();
 
   if (!decision) {
@@ -499,7 +499,7 @@ export async function compileDecisionStartChatPacket(
         .select('id, title, content, created_at')
         .eq('project_id', projectId)
         .eq('user_id', userId)
-        .eq('is_inactive', false)
+        .eq('status', 'active')
         .neq('id', decisionId)
         .order('created_at', { ascending: false })
         .limit(5)

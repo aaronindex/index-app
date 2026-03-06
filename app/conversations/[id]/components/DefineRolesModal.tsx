@@ -414,7 +414,7 @@ export default function DefineRolesModal({
               Define Roles
             </h2>
             <p className="text-sm text-[rgb(var(--muted))]">
-              Tag each block as Me or AI to improve Reduce accuracy
+              Tag each block as Me or AI to improve distillation accuracy
             </p>
           </div>
           <button

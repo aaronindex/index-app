@@ -285,6 +285,8 @@ async function runReductionForCapture(params: {
         content:
           decision.content +
           (decision.context ? `\n\nContext: ${decision.context}` : ''),
+        status: 'active',
+        origin: 'system',
       })
       .select()
       .single();
@@ -315,6 +317,8 @@ async function runReductionForCapture(params: {
         }`,
         status: 'open',
         source_query: 'AI Insight Extraction',
+        origin: 'system',
+        attributes: { commitment: true },
       })
       .select()
       .single();
@@ -340,6 +344,8 @@ async function runReductionForCapture(params: {
         }`,
         status: 'open',
         source_query: 'AI Insight Extraction',
+        origin: 'system',
+        attributes: { blocker: true },
       })
       .select()
       .single();
@@ -365,6 +371,8 @@ async function runReductionForCapture(params: {
         }`,
         status: 'open',
         source_query: 'AI Insight Extraction',
+        origin: 'system',
+        attributes: { loop: true },
       })
       .select()
       .single();
@@ -405,6 +413,7 @@ async function runReductionForCapture(params: {
         message_id: targetMessageId,
         content: highlight.content,
         label: highlight.title,
+        origin: 'system',
       })
       .select()
       .single();

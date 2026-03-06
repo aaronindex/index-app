@@ -56,7 +56,7 @@ export default function TheLedgerForThinking() {
               Thinking happens wherever it already happens — in conversations, notes, documents, or long walks. INDEX
               exists <strong>after</strong> thinking.
             </p>
-            <p>You capture moments of thinking and reduce them to the signals that still matter:</p>
+            <p>You capture moments of thinking and distill them into the signals that still matter:</p>
             <ul className="mb-4">
               <li>decisions</li>
               <li>results</li>
@@ -76,11 +76,11 @@ export default function TheLedgerForThinking() {
               The core loop
             </h2>
             <p>The system is intentionally simple:</p>
-            <p className="mb-4">Think anywhere → capture → reduce → continue thinking.</p>
+            <p className="mb-4">Think anywhere → capture → distill signals → continue thinking.</p>
             <p>
               You import conversations or fragments of thinking.
               <br />
-              You reduce them to the pieces that carry weight.
+              You distill them into the pieces that carry weight.
             </p>
             <p className="mb-4">Everything else fades.</p>
             <p>From those signals, INDEX reveals the shape of your thinking:</p>

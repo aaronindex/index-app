@@ -376,7 +376,7 @@ export default function AskPage() {
                     {stateData.sections.newDecisions.map((decision) => (
                       <li key={decision.id}>
                         <Link
-                          href={`/projects/${decision.project_id || ''}/decisions?tab=decisions#${decision.id}`}
+                          href={`/projects/${decision.project_id || ''}?tab=signals#${decision.id}`}
                           className="block text-sm text-[rgb(var(--text))] hover:text-[rgb(var(--muted))] transition-colors"
                         >
                           {decision.project_name && (
@@ -397,7 +397,7 @@ export default function AskPage() {
                     {stateData.sections.newOrChangedTasks.map((task) => (
                       <li key={task.id}>
                         <Link
-                          href={`/projects/${task.project_id || ''}/tasks?tab=tasks#${task.id}`}
+                          href={`/projects/${task.project_id || ''}?tab=signals#${task.id}`}
                           className="block text-sm text-[rgb(var(--text))] hover:text-[rgb(var(--muted))] transition-colors"
                         >
                           {task.project_name && (
@@ -418,7 +418,7 @@ export default function AskPage() {
                     {stateData.sections.blockersOrStale.map((item) => (
                       <li key={item.id}>
                         <Link
-                          href={`/projects/${item.project_id || ''}/tasks?tab=tasks#${item.id}`}
+                          href={`/projects/${item.project_id || ''}?tab=signals#${item.id}`}
                           className="block text-sm text-[rgb(var(--text))] hover:text-[rgb(var(--muted))] transition-colors"
                         >
                           <span className="flex items-center gap-2">

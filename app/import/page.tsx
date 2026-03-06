@@ -204,6 +204,8 @@ export default function ImportPage() {
           title,
           messageCount,
         });
+        // Auto-open source detail so user can distill immediately
+        router.replace(`/conversations/${conversationId}`);
       }
     } catch (err) {
       if (timeoutId) clearTimeout(timeoutId);
@@ -247,42 +249,17 @@ export default function ImportPage() {
             <p className="text-[rgb(var(--muted))]">
               Paste a conversation from ChatGPT, Claude, or Cursor.
               <br />
-              Reduce it to what still matters.
+              Then distill signals from it.
             </p>
           </div>
 
           {quickSuccess ? (
             <Card className="p-6">
-              <div className="space-y-4">
-                <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-                  <p className="text-green-800 dark:text-green-400 font-medium">Conversation imported.</p>
-                  <p className="text-sm text-green-700 dark:text-green-500 mt-1">
-                    {quickSuccess.messageCount} message{quickSuccess.messageCount === 1 ? '' : 's'} captured
-                  </p>
-                </div>
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => {
-                      router.push(`/conversations/${quickSuccess.conversationId}`);
-                      setQuickSuccess(null);
-                      setQuickTranscript('');
-                      setQuickTitle('');
-                    }}
-                    className="px-4 py-2 bg-[rgb(var(--text))] text-[rgb(var(--bg))] rounded-lg hover:opacity-90 transition-opacity font-medium"
-                  >
-                    Open Source
-                  </button>
-                  <button
-                    onClick={() => {
-                      setQuickSuccess(null);
-                      setQuickTranscript('');
-                      setQuickTitle('');
-                    }}
-                    className="px-4 py-2 border border-[rgb(var(--ring)/0.12)] rounded-lg hover:bg-[rgb(var(--surface2))] transition-colors font-medium"
-                  >
-                    Import Another
-                  </button>
-                </div>
+              <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                <p className="text-green-800 dark:text-green-400 font-medium">Conversation imported.</p>
+                <p className="text-sm text-green-700 dark:text-green-500 mt-1">
+                  Taking you to the source to distill signals…
+                </p>
               </div>
             </Card>
           ) : (

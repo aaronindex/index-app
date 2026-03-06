@@ -224,10 +224,10 @@ export default function LandingPage() {
                   </div>
                   <div>
                     <div className="inline-block text-xs font-semibold tracking-wider uppercase mb-2 text-white/60">
-                      Reduce
+                      Distill signals
                     </div>
                     <p className="text-base text-white/80">
-                      Distill decisions, open loops, and highlights.
+                      Extract decisions, open loops, and highlights.
                     </p>
                   </div>
                   <div>

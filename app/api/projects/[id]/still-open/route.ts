@@ -42,7 +42,7 @@ export async function GET(
       .from('decisions')
       .select('id, title, content, created_at, is_pinned, conversation_id, conversations(title)')
       .eq('user_id', user.id)
-      .eq('is_inactive', false);
+      .eq('status', 'active');
 
     // Build OR condition: project_id = id OR conversation_id in conversationIds
     if (conversationIds.length > 0) {

@@ -72,6 +72,8 @@ export async function POST(request: NextRequest) {
         conversation_id: conversation_id || null,
         title: title.trim(),
         content: content?.trim() || null,
+        status: 'active',
+        origin: 'user',
       })
       .select()
       .single();

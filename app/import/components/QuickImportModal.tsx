@@ -120,6 +120,8 @@ export default function QuickImportModal({ isOpen, onClose }: QuickImportModalPr
                     messageCount: currentJob.counts?.messages || 0,
                   });
                   setLoading(false);
+                  router.replace(`/conversations/${convData.id}`);
+                  onClose();
                 }
               }
             } else if (currentJob.status === 'error') {
@@ -298,21 +300,8 @@ export default function QuickImportModal({ isOpen, onClose }: QuickImportModalPr
           <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
             <p className="text-green-800 dark:text-green-400 font-medium">Conversation imported.</p>
             <p className="text-sm text-green-700 dark:text-green-500 mt-1">
-              {success.messageCount} message{success.messageCount === 1 ? '' : 's'} captured
+              Taking you to the source to distill signals…
             </p>
-          </div>
-          <div className="flex gap-3">
-            <Button
-              onClick={() => {
-                router.push(`/conversations/${success.conversationId}`);
-                handleClose();
-              }}
-            >
-              Open Source
-            </Button>
-            <Button variant="secondary" onClick={handleClose}>
-              Close
-            </Button>
           </div>
         </div>
       ) : (

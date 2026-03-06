@@ -41,7 +41,7 @@ export async function GET(
       .from('decisions')
       .select('id, title, created_at')
       .eq('user_id', user.id)
-      .eq('is_inactive', false);
+      .eq('status', 'active');
 
     if (conversationIds.length > 0) {
       decisionsQuery = decisionsQuery.or(`project_id.eq.${id},conversation_id.in.(${conversationIds.join(',')})`);
