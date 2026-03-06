@@ -64,7 +64,7 @@ export default function HighlightsTab({ highlights, projectName }: HighlightsTab
 
   return (
     <div className="space-y-6">
-      <SectionHeader compact>Highlights</SectionHeader>
+      <SectionHeader compact>Insights</SectionHeader>
 
       {highlights.length === 0 ? (
         <div className="text-center py-12">

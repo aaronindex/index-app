@@ -72,18 +72,22 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     // Verify cron authentication
-    // Vercel cron jobs automatically send x-vercel-cron header
-    // We also support token query param for manual/external triggers
+    // Vercel cron: x-vercel-cron header, or Authorization: Bearer CRON_SECRET / INDEX_ADMIN_SECRET, or ?token=CRON_TOKEN
     const cronHeader = request.headers.get('x-vercel-cron');
+    const auth = request.headers.get('authorization');
+    const bearerSecret = auth?.startsWith('Bearer ') ? auth.slice(7).trim() : null;
     const { searchParams } = new URL(request.url);
     const token = searchParams.get('token');
     const expectedToken = process.env.CRON_TOKEN;
+    const cronSecret = process.env.CRON_SECRET;
+    const adminSecret = process.env.INDEX_ADMIN_SECRET;
 
-    // Allow if it's a Vercel cron job (has header) OR if token matches
     const isVercelCron = cronHeader === '1';
     const isTokenValid = expectedToken && token === expectedToken;
+    const isBearerValid =
+      bearerSecret && (cronSecret === bearerSecret || (adminSecret && adminSecret === bearerSecret));
 
-    if (!isVercelCron && !isTokenValid) {
+    if (!isVercelCron && !isTokenValid && !isBearerValid) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

@@ -88,32 +88,46 @@ export async function extractInsights(
   const inputChars = conversation.messages.reduce((sum, m) => sum + (m.content?.length ?? 0), 0);
   const extractedTextChars = conversationText.length;
 
-  const prompt = `Analyze the following conversation and extract a SMALL set of structured insights.
+  const prompt = `Analyze the following conversation and extract a small set of structured signals.
 
-INDEX is not a task manager. Prioritize distillation into durable "ledger" items that create a feeling of lightness. Be conservative.
+INDEX is a structural ledger for thinking.
+Extract only signals that create downstream consequences.
 
-Extract only when the conversation contains clear, high-signal material. If there are no strong items for a category, return an empty array.
+The two primary signal types are:
+- Decisions: settled choices, chosen direction, or explicit commitments to a path
+- Commitments: required work that must happen to move the plan forward
 
-CATEGORIES (in priority order):
+Be selective, but do not omit real required work just to stay sparse.
 
-1) **Decisions** (highest priority)
+If the conversation contains launch requirements, implementation steps, next steps, remaining work, or things that must be included, extract them as commitments.
+
+1) Decisions
 - Only explicit decisions / settled choices / commitments to a direction (e.g., "We will do X", "I'm choosing Y", "We're not doing Z").
 - Prefer fewer, clearer decisions over many small ones.
 
-2) **Commitments** (rare)
-- ONLY include explicit commitments with a clear owner ("I/we") and an action that is actually agreed to happen.
-- If there is no clear commitment (or it's just brainstorming), do not include.
-- Avoid turning ideas into tasks.
+2) Commitments
+- A conversation can contain multiple commitments even if no one says "I will do X."
+- Treat these as commitments when they imply required work:
+  - launch should include
+  - needs to include
+  - must have
+  - required for launch
+  - next steps
+  - remaining work
+  - implementation steps
+  - operational preparation
+- Do not leave commitments empty if the conversation clearly identifies required work.
+- Do NOT create tasks from speculation, ideas that lack clear execution intent, or items that duplicate an existing decision.
 
-3) **Blockers** (rare)
+3) Blockers
 - ONLY include blockers that materially prevent a decision or commitment from progressing.
 - Do not list generic concerns.
 
-4) **Open Loops** (very rare)
+4) Open Loops
 - ONLY include unresolved items that are decision-critical (the answer would change a decision or unblock a commitment).
 - Do NOT include casual questions, musings, or general "we should think about…" items.
 
-5) **Suggested Highlights**
+5) Suggested Highlights
 - Extract only the most memorable / structurally meaningful nuggets (max 3).
 - Prefer lines that clarify direction, constraints, or key realizations.
 - Avoid "interesting" quotes that don't change understanding.
@@ -144,9 +158,13 @@ Return a JSON object with exactly this structure:
 }
 
 Selection rules:
-- Aim for sparsity: in typical cases return 0–2 decisions, 0–1 commitments, 0–1 blockers, 0–1 openLoops, and 0–3 highlights.
+- Aim for sparsity on decisions and highlights; commitments can be 0–4 when the conversation lists clear required work (e.g. launch checklist, next steps).
+- In typical cases: 0–2 decisions, 0–4 commitments, 0–1 blockers, 0–1 openLoops, 0–3 highlights.
 - Never invent items that are not clearly supported by the text.
-- Include message_index (0-based) for each item.`;
+- Include message_index (0-based) for each item.
+
+Use a decision when the conversation settles direction.
+Use a commitment when the conversation identifies work that must be done.`;
 
   try {
     const apiKey = process.env.OPENAI_API_KEY;
@@ -234,6 +252,10 @@ Selection rules:
       openLoops: parsedOpenLoops,
       suggestedHighlights: parsedHighlights,
     });
+    // Debug: verify model returned expected keys (e.g. openLoops vs open_loops)
+    if (isDev) {
+      console.log('[InsightExtraction] Parsed top-level keys:', Object.keys(parsed));
+    }
 
     if (includeDebug && parsedItemsCount === 0) {
       const debug: ReduceDebug = {

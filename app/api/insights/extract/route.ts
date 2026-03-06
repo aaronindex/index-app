@@ -140,6 +140,14 @@ export async function POST(request: NextRequest) {
 
     // Store commitments (as tasks with special status or in a separate table)
     // For now, we'll store them as tasks with status 'open' and a special description
+    if (isDev && (insights.commitments.length + insights.blockers.length + insights.openLoops.length > 0)) {
+      console.log('[InsightExtract] Task-like insert attempt:', {
+        project_id: projectId,
+        commitments: insights.commitments.length,
+        blockers: insights.blockers.length,
+        openLoops: insights.openLoops.length,
+      });
+    }
     for (const commitment of insights.commitments) {
       const { data: taskRecord, error: taskError } = await supabase
         .from('tasks')
@@ -159,7 +167,7 @@ export async function POST(request: NextRequest) {
 
       if (taskError) {
         hadPersistenceError = true;
-        console.error('Error creating commitment task:', taskError);
+        console.error('[InsightExtract] Error creating commitment task:', taskError.message, { project_id: projectId });
       } else if (taskRecord) {
         persistedCount += 1;
         const { type: _, ...commitmentData } = commitment;
@@ -187,7 +195,7 @@ export async function POST(request: NextRequest) {
 
       if (taskError) {
         hadPersistenceError = true;
-        console.error('Error creating blocker task:', taskError);
+        console.error('[InsightExtract] Error creating blocker task:', taskError.message, { project_id: projectId });
       } else if (taskRecord) {
         persistedCount += 1;
         const { type: _, ...blockerData } = blocker;
@@ -215,7 +223,7 @@ export async function POST(request: NextRequest) {
 
       if (taskError) {
         hadPersistenceError = true;
-        console.error('Error creating open loop task:', taskError);
+        console.error('[InsightExtract] Error creating open loop task:', taskError.message, { project_id: projectId });
       } else if (taskRecord) {
         persistedCount += 1;
         const { type: _, ...openLoopData } = openLoop;

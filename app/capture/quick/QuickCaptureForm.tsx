@@ -165,7 +165,7 @@ export default function QuickCaptureForm() {
         <p className="text-sm text-[rgb(var(--muted))] leading-relaxed">
           Sources accumulate here.
           <br />
-          Distill signals when a conversation still matters.
+          Distill signals when a capture still matters.
         </p>
         <div className="flex flex-col gap-2 pt-2">
           <Link
@@ -173,12 +173,6 @@ export default function QuickCaptureForm() {
             className="w-full px-4 py-2 bg-[rgb(var(--text))] text-[rgb(var(--bg))] rounded-lg font-medium text-center hover:opacity-90"
           >
             View sources
-          </Link>
-          <Link
-            href={sourcesHref}
-            className="w-full px-4 py-2 border border-[rgb(var(--ring)/0.2)] rounded-lg font-medium text-center text-[rgb(var(--text))] hover:bg-[rgb(var(--ring)/0.06)]"
-          >
-            Distill now
           </Link>
         </div>
       </div>

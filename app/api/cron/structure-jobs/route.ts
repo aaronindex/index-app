@@ -16,6 +16,13 @@ function getAdminSecretFromRequest(request: NextRequest): string | null {
   return null;
 }
 
+function isCronAuthorized(secret: string | null, expectedAdmin: string | undefined, cronSecret: string | undefined): boolean {
+  if (!secret) return false;
+  if (expectedAdmin && secret === expectedAdmin) return true;
+  if (cronSecret && secret === cronSecret) return true;
+  return false;
+}
+
 /**
  * GET /api/cron/structure-jobs
  *
@@ -25,22 +32,23 @@ function getAdminSecretFromRequest(request: NextRequest): string | null {
  * - Header: x-index-admin-secret matching INDEX_ADMIN_SECRET
  * - Header: Authorization: Bearer <INDEX_ADMIN_SECRET>
  *
- * In Vercel: set CRON_SECRET to the same value as INDEX_ADMIN_SECRET so Vercel sends Authorization: Bearer <secret>, or add header x-index-admin-secret in Cron Job config if supported.
+ * In Vercel: set CRON_SECRET (Vercel may send it as Authorization: Bearer). We accept either Bearer token matching INDEX_ADMIN_SECRET or CRON_SECRET.
  */
 export async function GET(request: NextRequest) {
   try {
     const secret = getAdminSecretFromRequest(request);
-    const expectedSecret = process.env.INDEX_ADMIN_SECRET;
+    const expectedAdmin = process.env.INDEX_ADMIN_SECRET;
+    const cronSecret = process.env.CRON_SECRET;
 
-    if (!expectedSecret) {
-      console.error('[CronStructureJobs] INDEX_ADMIN_SECRET not configured');
+    if (!expectedAdmin && !cronSecret) {
+      console.error('[CronStructureJobs] INDEX_ADMIN_SECRET or CRON_SECRET must be configured');
       return NextResponse.json(
         { error: 'Processor not configured' },
         { status: 500 }
       );
     }
 
-    if (!secret || secret !== expectedSecret) {
+    if (!isCronAuthorized(secret, expectedAdmin, cronSecret)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
