@@ -7,6 +7,7 @@ import { getSupabaseBrowserClient } from '@/lib/supabaseClient';
 import { parseTranscript } from '@/lib/parsers/transcript';
 import Card from '@/app/components/ui/Card';
 import { trackEvent } from '@/lib/analytics';
+import { getOnboardingStep, setOnboardingStep } from '@/lib/onboarding/state';
 
 export default function ImportPage() {
   const router = useRouter();
@@ -26,10 +27,15 @@ export default function ImportPage() {
   const [quickSuccess, setQuickSuccess] = useState<{ conversationId: string; title: string; messageCount: number } | null>(null);
   const [quickThinkingTimeChoice, setQuickThinkingTimeChoice] = useState<'today' | 'yesterday' | 'last_week' | 'last_month'>('today');
   const [projects, setProjects] = useState<Array<{ id: string; name: string }>>([]);
+  const [onboardingStep, setOnboardingStepState] = useState<number | null>(null);
 
   // Update page title
   useEffect(() => {
     document.title = 'Import | INDEX';
+  }, []);
+
+  useEffect(() => {
+    setOnboardingStepState(getOnboardingStep());
   }, []);
 
   // Fetch projects on mount
@@ -204,6 +210,7 @@ export default function ImportPage() {
           title,
           messageCount,
         });
+        if (getOnboardingStep() === 2) setOnboardingStep(3);
         // Auto-open source detail so user can distill immediately
         router.replace(`/conversations/${conversationId}`);
       }
@@ -232,10 +239,24 @@ export default function ImportPage() {
     }
   };
 
+  const showStep2Copy = onboardingStep === 2;
+
   return (
     <main className="min-h-screen bg-[rgb(var(--bg))]">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <h1 className="font-serif text-3xl font-semibold text-[rgb(var(--text))] mb-8">Import</h1>
+        {showStep2Copy && (
+          <div className="mb-8 p-6 rounded-2xl bg-[rgb(var(--surface))] ring-1 ring-[rgb(var(--ring)/0.12)]">
+            <h1 className="font-serif text-2xl font-semibold text-[rgb(var(--text))] mb-2">
+              Bring one piece of thinking into INDEX.
+            </h1>
+            <p className="text-sm text-[rgb(var(--muted))]">
+              A conversation, idea, or working thread.
+            </p>
+          </div>
+        )}
+        {!showStep2Copy && (
+          <h1 className="font-serif text-3xl font-semibold text-[rgb(var(--text))] mb-8">Import</h1>
+        )}
 
         {quickError && (
           <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">

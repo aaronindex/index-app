@@ -10,6 +10,7 @@ import CreateTaskFromHighlightButton from './components/CreateTaskFromHighlightB
 import DeleteHighlightButton from '@/app/projects/[id]/components/DeleteHighlightButton';
 import MobileHighlightsPanel from './components/MobileHighlightsPanel';
 import ReduceOnboardingModal from './components/ReduceOnboardingModal';
+import OnboardingStep3Spotlight from './components/OnboardingStep3Spotlight';
 import ConversationOverflowMenu from './components/ConversationOverflowMenu';
 import ThinkingTimeResolve from '@/app/components/ThinkingTimeResolve';
 import { isRoleAmbiguous, isRoleConfidenceLow } from '@/lib/conversations/roleAmbiguity';
@@ -114,6 +115,7 @@ export default async function ConversationPage({
 
   return (
     <main className="min-h-screen bg-[rgb(var(--bg))]">
+      <OnboardingStep3Spotlight />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-6">

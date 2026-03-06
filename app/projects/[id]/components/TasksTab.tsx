@@ -132,14 +132,17 @@ export default function TasksTab({ tasks, projectId }: TasksTabProps) {
         key={task.id}
         className={task.is_inactive ? 'opacity-60' : ''}
       >
-        <div className="p-4">
-          <div className="flex items-start justify-between mb-2">
-            <div className="flex-1">
-              <h3 className="font-semibold text-sm text-[rgb(var(--text))]">
+        <div className="p-3">
+          <div className="flex items-start justify-between mb-1">
+            <div className="flex-1 min-w-0">
+              <p className="text-[0.7em] uppercase tracking-wider text-[rgb(var(--muted))] opacity-80 leading-tight mb-0.5">
+                Task
+              </p>
+              <h3 className="font-semibold text-[rgb(var(--text))] text-sm sm:text-base leading-snug">
                 {task.title}
               </h3>
             </div>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 shrink-0">
               {badgeLabel && (
                 <span className={`px-2 py-0.5 text-[10px] font-medium rounded-md ${badgeColor}`}>
                   {badgeLabel}
@@ -153,16 +156,16 @@ export default function TasksTab({ tasks, projectId }: TasksTabProps) {
             </div>
           </div>
           {cleanDescription && (
-            <p className="text-[rgb(var(--text))] mb-3 text-sm">
+            <p className="text-[rgb(var(--text))] mb-2 text-sm">
               {cleanDescription}
             </p>
           )}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4 text-xs text-[rgb(var(--muted))]">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-4 text-xs text-[rgb(var(--muted))] opacity-90 min-w-0">
               {task.conversation_id && task.conversation_title ? (
                 <Link
                   href={`/conversations/${task.conversation_id}`}
-                  className="hover:text-[rgb(var(--text))] transition-colors"
+                  className="hover:text-[rgb(var(--text))] transition-colors truncate"
                   onClick={(e) => e.stopPropagation()}
                 >
                   From: {task.conversation_title}
@@ -171,7 +174,7 @@ export default function TasksTab({ tasks, projectId }: TasksTabProps) {
                 <span>Created: {formatDate(task.created_at)}</span>
               )}
             </div>
-            <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-2 shrink-0 text-xs text-[rgb(var(--muted))] opacity-90" onClick={(e) => e.stopPropagation()}>
               <ToggleInactiveButton
                 type="task"
                 id={task.id}
@@ -187,7 +190,7 @@ export default function TasksTab({ tasks, projectId }: TasksTabProps) {
 
   return (
     <div className="space-y-6">
-      <SectionHeader action={<CreateTaskButton projectId={projectId} />}>
+      <SectionHeader compact action={<CreateTaskButton projectId={projectId} />}>
         Tasks
       </SectionHeader>
 

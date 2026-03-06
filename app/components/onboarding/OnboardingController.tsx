@@ -1,85 +1,24 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
-import SpotlightTour from './SpotlightTour';
-import type { SpotlightStep } from './SpotlightTour';
-import { getOnboardingState, markOnboardingCompleted } from '@/lib/onboarding/state';
-
-const ONBOARDING_STEPS: SpotlightStep[] = [
-  {
-    id: 'projects',
-    body: (
-      <>
-        Anything you save lives inside a project.
-        <br />
-        Projects are simple containers.
-        <br />
-        Structure emerges across them.
-        <br />
-        No hierarchy.
-        <br />
-        No complexity.
-      </>
-    ),
-    targetSelector: '[data-onboarding="nav-projects"]',
-    placement: 'bottom',
-  },
-  {
-    id: 'import',
-    body: (
-      <>
-        Import a conversation to get started.
-        <br />
-        Paste a chat from ChatGPT, Claude, or Cursor.
-      </>
-    ),
-    targetSelector: '[data-onboarding="nav-import"]',
-    placement: 'bottom',
-    actionLabel: 'Import a conversation',
-    onAction: () => {},
-  },
-  {
-    id: 'direction',
-    body: (
-      <>
-        As decisions accumulate, Direction becomes visible.
-        <br />
-        Direction isn&apos;t written. It forms over time.
-        <br />
-        Shifts mark meaningful change.
-      </>
-    ),
-    targetSelector: '[data-onboarding="direction-panel"]',
-    placement: 'right',
-  },
-  {
-    id: 'extension',
-    body: (
-      <>
-        Capture moments while you think.
-        <br />
-        Install the extension to save in real time.
-      </>
-    ),
-    targetSelector: '[data-onboarding="extension-link"]',
-    placement: 'top',
-    actionLabel: 'Install extension',
-    onAction: () => {},
-  },
-];
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import {
+  getOnboardingState,
+  getOnboardingStep,
+  setOnboardingStep,
+  markOnboardingCompleted,
+  clearOnboardingStep,
+} from '@/lib/onboarding/state';
 
 export default function OnboardingController() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const [onboardingCompleted, setOnboardingCompleted] = useState<boolean | null>(null);
-
-  const isRestart = searchParams.get('tour') === 'restart';
+  const [completed, setCompleted] = useState<boolean | null>(null);
+  const [step, setStep] = useState<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     getOnboardingState().then((state) => {
-      if (!cancelled) setOnboardingCompleted(state.completed);
+      if (!cancelled) setCompleted(state.completed);
     });
     return () => {
       cancelled = true;
@@ -87,44 +26,90 @@ export default function OnboardingController() {
   }, []);
 
   useEffect(() => {
-    if (!isRestart) return;
-    setOnboardingCompleted(false);
-    router.replace('/home');
-  }, [isRestart, router]);
+    setStep(getOnboardingStep());
+  }, [completed]);
 
-  const showTour = onboardingCompleted === false || isRestart;
+  const showStep1 = completed === false && (step === null || step === 1);
+  const showStep7 = completed === false && step === 7;
 
-  const steps = useMemo(() => {
-    return ONBOARDING_STEPS.map((s) => {
-      if (s.id === 'import') {
-        return { ...s, onAction: () => router.push('/import') };
-      }
-      if (s.id === 'extension') {
-        return { ...s, onAction: () => router.push('/extension') };
-      }
-      return s;
-    });
-  }, [router]);
-
-  const handleClose = async () => {
-    await markOnboardingCompleted();
-    setOnboardingCompleted(true);
+  const handleStart = () => {
+    setOnboardingStep(2);
+    setStep(2);
+    router.push('/import');
   };
 
-  const handleComplete = async () => {
+  const handleYoureReady = async () => {
     await markOnboardingCompleted();
-    setOnboardingCompleted(true);
+    clearOnboardingStep();
+    setCompleted(true);
+    setStep(null);
   };
 
-  if (!showTour) return null;
+  if (completed !== false) return null;
 
-  return (
-    <SpotlightTour
-      isOpen={showTour}
-      steps={steps}
-      initialStepId="projects"
-      onClose={handleClose}
-      onComplete={handleComplete}
-    />
-  );
+  // Step 1 — Concept introduction (no skip)
+  if (showStep1) {
+    return (
+      <div
+        className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="onboarding-step1-heading"
+      >
+        <div className="bg-[rgb(var(--surface))] rounded-2xl max-w-md w-full p-8 shadow-xl ring-1 ring-[rgb(var(--ring)/0.12)] text-center">
+          <h2
+            id="onboarding-step1-heading"
+            className="font-serif text-xl font-semibold text-[rgb(var(--text))] mb-4"
+          >
+            Thinking happens everywhere. INDEX keeps what matters.
+          </h2>
+          <p className="text-sm text-[rgb(var(--muted))] mb-6 whitespace-pre-wrap">
+            Import conversations or captures.{'\n'}
+            Distill signals.{'\n'}
+            Watch structure emerge.
+          </p>
+          <button
+            type="button"
+            onClick={handleStart}
+            className="px-6 py-3 bg-[rgb(var(--text))] text-[rgb(var(--bg))] rounded-lg hover:opacity-90 transition-opacity font-medium"
+          >
+            Start
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Step 7 — Home / Direction
+  if (showStep7) {
+    return (
+      <div
+        className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="onboarding-step7-heading"
+      >
+        <div className="bg-[rgb(var(--surface))] rounded-2xl max-w-md w-full p-8 shadow-xl ring-1 ring-[rgb(var(--ring)/0.12)] text-center">
+          <h2
+            id="onboarding-step7-heading"
+            className="font-serif text-xl font-semibold text-[rgb(var(--text))] mb-4"
+          >
+            INDEX reflects where your thinking is headed.
+          </h2>
+          <p className="text-sm text-[rgb(var(--muted))] mb-6">
+            Direction evolves as signals accumulate.
+          </p>
+          <button
+            type="button"
+            onClick={handleYoureReady}
+            className="px-6 py-3 bg-[rgb(var(--text))] text-[rgb(var(--bg))] rounded-lg hover:opacity-90 transition-opacity font-medium"
+          >
+            You&apos;re ready
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return null;
 }

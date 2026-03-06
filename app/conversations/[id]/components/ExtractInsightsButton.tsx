@@ -4,6 +4,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { track } from '@/lib/analytics/track';
+import { getOnboardingStep, setOnboardingStep } from '@/lib/onboarding/state';
 import FirstStructuralMomentModal from './FirstStructuralMomentModal';
 
 interface ExtractInsightsButtonProps {
@@ -116,6 +117,7 @@ export default function ExtractInsightsButton({ conversationId, projectId }: Ext
             openLoops: c.openLoops ?? 0,
             suggestedHighlights: c.suggestedHighlights ?? 0,
           });
+          if (getOnboardingStep() === 3) setOnboardingStep(4);
           setShowFirstStructuralModal(true);
         } else {
           setShowSuccessModal(true);
@@ -166,6 +168,7 @@ export default function ExtractInsightsButton({ conversationId, projectId }: Ext
           disabled={extracting}
           className="px-6 py-2 text-sm bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-400 hover:bg-purple-200 dark:hover:bg-purple-900/50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium min-w-[120px]"
           aria-label="Distill signals from this conversation"
+          data-onboarding="distill-signals"
         >
           {extracting ? 'Distilling...' : 'Distill signals'}
         </button>
@@ -193,6 +196,27 @@ export default function ExtractInsightsButton({ conversationId, projectId }: Ext
             setFirstStructuralCounts(null);
             router.refresh();
           }}
+          onboardingStep4={
+            projectId && getOnboardingStep() === 4
+              ? {
+                  projectId,
+                  onViewSignals: () => {
+                    setOnboardingStep(5);
+                    setShowFirstStructuralModal(false);
+                    setFirstStructuralCounts(null);
+                    fetch('/api/profile/first-reduce-acknowledged', { method: 'POST', credentials: 'same-origin' }).catch(() => {});
+                    router.push(`/projects/${projectId}?tab=signals`);
+                  },
+                  onImportAnother: () => {
+                    setOnboardingStep(2);
+                    setShowFirstStructuralModal(false);
+                    setFirstStructuralCounts(null);
+                    fetch('/api/profile/first-reduce-acknowledged', { method: 'POST', credentials: 'same-origin' }).catch(() => {});
+                    router.push('/import');
+                  },
+                }
+              : undefined
+          }
         />
       )}
 

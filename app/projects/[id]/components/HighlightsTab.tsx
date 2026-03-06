@@ -57,7 +57,7 @@ export default function HighlightsTab({ highlights, projectName }: HighlightsTab
 
   return (
     <div className="space-y-6">
-      <SectionHeader>Highlights</SectionHeader>
+      <SectionHeader compact>Highlights</SectionHeader>
 
       {highlights.length === 0 ? (
         <div className="text-center py-12">
@@ -71,30 +71,35 @@ export default function HighlightsTab({ highlights, projectName }: HighlightsTab
             <Card key={highlight.id} hover>
               <Link
                 href={`/conversations/${highlight.conversation_id}`}
-                className="block p-4"
+                className="block p-3"
               >
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      {highlight.label && (
-                        <h3 className="font-medium text-[rgb(var(--text))]">{highlight.label}</h3>
-                      )}
-                      <StatusPill status={highlight.status} />
-                    </div>
-                    <p className="text-[rgb(var(--text))] mb-2">
-                      {highlight.content}
+                <div className="flex items-start justify-between mb-1">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[0.7em] uppercase tracking-wider text-[rgb(var(--muted))] opacity-80 leading-tight mb-0.5">
+                      Insight
                     </p>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4 text-sm text-[rgb(var(--muted))]">
-                        <span>From: {highlight.conversation_title || 'Untitled Chat'}</span>
-                        <span>Created: {formatDate(highlight.created_at)}</span>
-                        {/* TODO: Add AI provenance label for highlights created via Extract Insights
-                            Requires schema change to track source (e.g., add source_query or extract_run_id to highlights table) */}
-                      </div>
-                      <div onClick={(e) => e.preventDefault()}>
-                        <DeleteHighlightButton highlightId={highlight.id} highlightLabel={highlight.label} />
-                      </div>
-                    </div>
+                    {highlight.label ? (
+                      <h3 className="font-semibold text-[rgb(var(--text))] text-sm sm:text-base leading-snug">
+                        {highlight.label}
+                      </h3>
+                    ) : null}
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <StatusPill status={highlight.status} />
+                  </div>
+                </div>
+                <p className="text-sm text-[rgb(var(--text))] mb-2">
+                  {highlight.content}
+                </p>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-4 text-xs text-[rgb(var(--muted))] opacity-90 min-w-0">
+                    <span className="truncate">From: {highlight.conversation_title || 'Untitled Chat'}</span>
+                    <span>Created: {formatDate(highlight.created_at)}</span>
+                    {/* TODO: Add AI provenance label for highlights created via Extract Insights
+                        Requires schema change to track source (e.g., add source_query or extract_run_id to highlights table) */}
+                  </div>
+                  <div className="shrink-0 text-xs text-[rgb(var(--muted))] opacity-90" onClick={(e) => e.preventDefault()}>
+                    <DeleteHighlightButton highlightId={highlight.id} highlightLabel={highlight.label} />
                   </div>
                 </div>
               </Link>

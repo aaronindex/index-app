@@ -2,7 +2,9 @@
 
 import Link from 'next/link';
 import { useState, useEffect, useRef } from 'react';
+import { usePathname } from 'next/navigation';
 import { getSupabaseBrowserClient } from '@/lib/supabaseClient';
+import { isOnboardingInProgress } from '@/lib/onboarding/state';
 import type { User } from '@supabase/supabase-js';
 import AccountDropdown from './header/AccountDropdown';
 import ThemeToggle from './ThemeToggle';
@@ -19,11 +21,20 @@ const APP_ENV =
 const SHOW_DEV_BADGE = APP_ENV !== 'production';
 
 export default function Nav() {
+  const pathname = usePathname();
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [onboardingInProgress, setOnboardingInProgress] = useState(false);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const update = () => setOnboardingInProgress(isOnboardingInProgress());
+    update();
+    window.addEventListener('index_onboarding_completed', update);
+    return () => window.removeEventListener('index_onboarding_completed', update);
+  }, [pathname]);
 
   // Check auth state
   useEffect(() => {
@@ -181,7 +192,7 @@ export default function Nav() {
                 <kbd className="font-mono text-[10px]">K</kbd>
               </button>
               <ThemeToggle />
-              <AccountDropdown />
+              {!onboardingInProgress && <AccountDropdown />}
               {/* Mobile hamburger button */}
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}

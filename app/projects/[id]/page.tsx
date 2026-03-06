@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import type { Metadata } from 'next';
 import ProjectTabs from './components/ProjectTabs';
+import OnboardingProjectOverlay from './components/OnboardingProjectOverlay';
 import ReadTab from './components/ReadTab';
 import ChatsTab from './components/ChatsTab';
 import SignalsTab from './components/SignalsTab';
@@ -288,6 +289,7 @@ export default async function ProjectDetailPage({
 
   return (
     <main className="min-h-screen bg-[rgb(var(--bg))]">
+      <OnboardingProjectOverlay />
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="mb-8">
           <Link

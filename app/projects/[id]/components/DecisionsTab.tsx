@@ -55,7 +55,7 @@ export default function DecisionsTab({ decisions, projectId }: DecisionsTabProps
 
   return (
     <div className="space-y-6">
-      <SectionHeader action={<CreateDecisionButton projectId={projectId} />}>
+      <SectionHeader compact action={<CreateDecisionButton projectId={projectId} />}>
         Decisions
       </SectionHeader>
 
@@ -83,28 +83,33 @@ export default function DecisionsTab({ decisions, projectId }: DecisionsTabProps
               key={decision.id}
               className={decision.is_inactive ? 'opacity-60' : ''}
             >
-              <div className="p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <h3 className="font-semibold text-[rgb(var(--text))] text-sm sm:text-base">
-                    {decision.title}
-                  </h3>
+              <div className="p-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[0.7em] uppercase tracking-wider text-[rgb(var(--muted))] opacity-80 leading-tight mb-0.5">
+                      Decision
+                    </p>
+                    <h3 className="font-semibold text-[rgb(var(--text))] text-sm sm:text-base leading-snug">
+                      {decision.title}
+                    </h3>
+                  </div>
                   {decision.is_inactive && (
-                    <span className="px-2 py-0.5 text-xs font-medium rounded-md bg-[rgb(var(--surface2))] text-[rgb(var(--muted))]">
+                    <span className="px-2 py-0.5 text-xs font-medium rounded-md bg-[rgb(var(--surface2))] text-[rgb(var(--muted))] shrink-0">
                       Inactive
                     </span>
                   )}
                 </div>
                 {decision.content && (
-                  <p className="text-sm text-[rgb(var(--muted))] mb-3">
+                  <p className="text-sm text-[rgb(var(--muted))] mb-2">
                     {decision.content}
                   </p>
                 )}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4 text-xs text-[rgb(var(--muted))]">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-4 text-xs text-[rgb(var(--muted))] opacity-90 min-w-0">
                     {decision.conversation_id && decision.conversation_title ? (
                       <Link
                         href={`/conversations/${decision.conversation_id}`}
-                        className="hover:text-[rgb(var(--text))] transition-colors"
+                        className="hover:text-[rgb(var(--text))] transition-colors truncate"
                         onClick={(e) => e.stopPropagation()}
                       >
                         From: {decision.conversation_title}
@@ -115,7 +120,7 @@ export default function DecisionsTab({ decisions, projectId }: DecisionsTabProps
                     {/* TODO: Add AI provenance label for decisions created via Extract Insights
                         Requires schema change to track source (e.g., add source_query or extract_run_id to decisions table) */}
                   </div>
-                  <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex items-center gap-2 shrink-0 text-xs text-[rgb(var(--muted))] opacity-90" onClick={(e) => e.stopPropagation()}>
                     <ToggleInactiveButton
                       type="decision"
                       id={decision.id}

@@ -6,6 +6,8 @@ interface SectionHeaderProps {
   description?: string;
   action?: ReactNode;
   className?: string;
+  /** Smaller size and margins for Signals page section headers (Decisions, Tasks, Highlights). */
+  compact?: boolean;
 }
 
 export default function SectionHeader({
@@ -13,11 +15,24 @@ export default function SectionHeader({
   description,
   action,
   className = '',
+  compact = false,
 }: SectionHeaderProps) {
   return (
-    <div className={`flex items-center justify-between mb-6 ${className}`}>
+    <div
+      className={
+        compact
+          ? `flex items-center justify-between mb-4 ${className}`
+          : `flex items-center justify-between mb-6 ${className}`
+      }
+    >
       <div>
-        <h2 className="font-serif text-2xl font-semibold text-[rgb(var(--text))] dark:text-white/90 mb-1">
+        <h2
+          className={
+            compact
+              ? 'font-serif text-lg font-semibold text-[rgb(var(--text))] dark:text-white/90 mb-0.5'
+              : 'font-serif text-2xl font-semibold text-[rgb(var(--text))] dark:text-white/90 mb-1'
+          }
+        >
           {children}
         </h2>
         {description && (
