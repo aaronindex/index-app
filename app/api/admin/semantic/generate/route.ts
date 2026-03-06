@@ -86,10 +86,13 @@ Direction rules:
 - Keep Direction to 1–2 sentences maximum.
 
 Arc title rules:
-- Arc titles must be concrete and content-bearing.
-- Prefer focus- or milestone-oriented phrasing when the structure implies movement toward a recognizable outcome.
-- If arc context includes project/product proper nouns (INDEX, v2, semantic labels, direction, shifts, timeline, import/distill), include them.
-- Avoid generic stage language: setup, initial setup, exploration ongoing, foundational phase, activity, progress (as standalone signals).
+- Arc titles must be concrete and content-bearing. Name the actual focus or milestone emerging from clustered signals, not the structural state.
+- When multiple signals point toward a clear milestone, initiative, or focus area, name that milestone/focus directly.
+- Prefer milestone- or focus-oriented phrasing, e.g.: "INDEX v2 launch readiness", "Personal-first launch strategy", "Onboarding and reduction clarity", "Product validation with early users".
+- Avoid generic structural phrasing, e.g.: "initial structural setup", "foundational setup", "exploration ongoing", "active work", "progress phase", "structural activity".
+- Arc titles should answer: "What is this work cohering around?" — not "What kind of structural state exists?"
+- Do not invent milestones that are not implied by the signals. Only use milestone/focus phrasing when the signal cluster clearly supports it.
+- If arc context includes project/product proper nouns (INDEX, v2, direction, timeline, import/distill), include them when relevant.
 
 Pulse headline rules:
 - Pulse headlines should name the meaningful event in plain language.
@@ -129,11 +132,11 @@ function buildUserPrompt(body: GenerateBody): string {
 Rules:
 
 Arc titles
-- 3–7 words, concrete and content-bearing
-- No generic placeholders: avoid "Initial phase of activity", "Exploration ongoing"
-- No numbering; do not include the word "Arc"; no metaphors
-- Reflect what is being stabilized or decided; include product/context nouns (INDEX, v2, direction, timeline, etc.) when relevant
-- Prefer milestone- or focus-oriented phrasing when the arc implies concrete movement
+- 3–7 words, concrete and content-bearing. Name the milestone or focus the signals cohere around.
+- When signals (e.g. onboarding flow, reduction UX finalized, quick capture extension, pricing + gating, launch personal-first) point to a clear outcome, name that outcome: e.g. "INDEX v2 launch readiness" not "INDEX v2 initial structural setup".
+- Prefer: milestone/focus phrasing (launch readiness, strategy, clarity, validation). Avoid: generic structural phrasing (initial structural setup, foundational setup, exploration ongoing, active work, progress phase).
+- Answer: "What is this work cohering around?" — not "What kind of structural state exists?"
+- Do not invent milestones unsupported by the signals. No numbering; do not include the word "Arc"; no metaphors.
 
 Pulse headlines
 - 4–10 words; name the semantic event in plain language, not the structural mechanism
