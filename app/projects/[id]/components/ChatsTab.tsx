@@ -7,6 +7,7 @@ import Link from 'next/link';
 import ActiveFilterPills from './ActiveFilterPills';
 import ToggleInactiveButton from './ToggleInactiveButton';
 import SectionHeader from '@/app/components/ui/SectionHeader';
+import SourceDistillAction from './SourceDistillAction';
 
 type Status = 'priority' | 'open' | 'complete' | 'dormant';
 
@@ -38,6 +39,7 @@ interface Conversation {
   updated_at: string;
   highlights_count: number;
   is_inactive?: boolean;
+  is_distilled?: boolean;
 }
 
 interface ChatsTabProps {
@@ -133,10 +135,10 @@ export default function ChatsTab({ conversations, projectId }: ChatsTabProps) {
                   : 'hover:shadow-md hover:ring-[rgb(var(--ring)/0.12)]'
               }`}
             >
-              <div className="flex items-start justify-between">
+              <div className="flex items-start justify-between gap-4">
                 <Link
                   href={`/conversations/${conversation.id}`}
-                  className="flex-1"
+                  className="flex-1 min-w-0"
                 >
                   <div className="flex items-center gap-3 mb-1.5">
                     <h3 className="font-medium text-sm text-[rgb(var(--text))]">
@@ -153,6 +155,13 @@ export default function ChatsTab({ conversations, projectId }: ChatsTabProps) {
                     <span>Updated: {formatDate(conversation.updated_at)}</span>
                   </div>
                 </Link>
+                <div className="shrink-0 pt-0.5">
+                  <SourceDistillAction
+                    conversationId={conversation.id}
+                    projectId={projectId}
+                    isDistilled={conversation.is_distilled ?? false}
+                  />
+                </div>
               </div>
             </div>
           ))}

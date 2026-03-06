@@ -144,12 +144,36 @@ export default async function ProjectDetailPage({
           highlightCountMap.set(hc.conversation_id, count + 1);
         });
 
+        // Conversations with at least one decision or task are distilled
+        const { data: decisionConvs } = await supabase
+          .from('decisions')
+          .select('conversation_id')
+          .in('conversation_id', convIds)
+          .not('conversation_id', 'is', null);
+        const { data: taskConvs } = await supabase
+          .from('tasks')
+          .select('conversation_id')
+          .in('conversation_id', convIds)
+          .not('conversation_id', 'is', null);
+
+        const distilledConvIds = new Set<string>();
+        decisionConvs?.forEach((d) => {
+          if (d.conversation_id) distilledConvIds.add(d.conversation_id);
+        });
+        taskConvs?.forEach((t) => {
+          if (t.conversation_id) distilledConvIds.add(t.conversation_id);
+        });
+        highlightCounts?.forEach((h) => {
+          distilledConvIds.add(h.conversation_id);
+        });
+
         chatsData = conversations.map((conv) => ({
           id: conv.id,
           title: conv.title,
           status: null,
           updated_at: conv.created_at,
           highlights_count: highlightCountMap.get(conv.id) || 0,
+          is_distilled: distilledConvIds.has(conv.id),
         }));
       }
     }

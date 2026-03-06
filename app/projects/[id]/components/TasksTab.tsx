@@ -12,6 +12,7 @@ import ToggleInactiveButton from './ToggleInactiveButton';
 import Card from '@/app/components/ui/Card';
 import CreateTaskButton from './CreateTaskButton';
 import SectionHeader from '@/app/components/ui/SectionHeader';
+import SignalBodyPreview from '@/app/components/ui/SignalBodyPreview';
 
 interface Task {
   id: string;
@@ -43,8 +44,11 @@ const getDisplayStatus = (status: string): DisplayStatus => {
   return 'open'; // open, in_progress, dormant all map to 'open'
 };
 
+const INITIAL_VISIBLE = 4;
+
 export default function TasksTab({ tasks, projectId }: TasksTabProps) {
   const [activeFilter, setActiveFilter] = useState<ActiveFilter>('active');
+  const [sectionExpanded, setSectionExpanded] = useState(false);
 
   const { activeTasks, inactiveTasks } = useMemo(() => {
     const active = tasks.filter((t) => !t.is_inactive);
@@ -72,6 +76,9 @@ export default function TasksTab({ tasks, projectId }: TasksTabProps) {
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
   }, [filteredByActive]);
+
+  const visibleTasks = sectionExpanded ? sortedTasks : sortedTasks.slice(0, INITIAL_VISIBLE);
+  const hasMoreTasks = sortedTasks.length > INITIAL_VISIBLE;
 
   const formatDate = (dateString: string) => {
     try {
@@ -131,7 +138,7 @@ export default function TasksTab({ tasks, projectId }: TasksTabProps) {
     return (
       <Card
         key={task.id}
-        className={task.is_inactive ? 'opacity-60' : ''}
+        className={`group ${task.is_inactive ? 'opacity-60' : ''}`}
       >
         <div className="p-3">
           <div className="flex items-start justify-between mb-1">
@@ -157,9 +164,12 @@ export default function TasksTab({ tasks, projectId }: TasksTabProps) {
             </div>
           </div>
           {cleanDescription && (
-            <p className="text-[rgb(var(--text))] mb-2 text-sm">
-              {cleanDescription}
-            </p>
+            <div className="mb-2">
+              <SignalBodyPreview
+                text={cleanDescription}
+                className="[&_p]:text-[rgb(var(--text))]"
+              />
+            </div>
           )}
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-4 text-xs text-[rgb(var(--muted))] opacity-90 min-w-0">
@@ -175,7 +185,10 @@ export default function TasksTab({ tasks, projectId }: TasksTabProps) {
                 <span>Created: {formatDate(task.created_at)}</span>
               )}
             </div>
-            <div className="flex items-center gap-2 shrink-0 text-xs text-[rgb(var(--muted))] opacity-90" onClick={(e) => e.stopPropagation()}>
+            <div
+              className="flex items-center gap-2 shrink-0 text-xs text-[rgb(var(--muted))] opacity-60 group-hover:opacity-100 transition-opacity"
+              onClick={(e) => e.stopPropagation()}
+            >
               <TaskStatusControl taskId={task.id} currentStatus={task.status} />
               <ToggleInactiveButton
                 type="task"
@@ -216,7 +229,16 @@ export default function TasksTab({ tasks, projectId }: TasksTabProps) {
         </div>
       ) : (
         <div className="space-y-3">
-          {sortedTasks.map((task, index) => renderTaskCard(task, index))}
+          {visibleTasks.map((task, index) => renderTaskCard(task, index))}
+          {hasMoreTasks && (
+            <button
+              type="button"
+              onClick={() => setSectionExpanded((v) => !v)}
+              className="text-sm font-medium text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] transition-colors"
+            >
+              {sectionExpanded ? 'Show less' : `Show all (${sortedTasks.length})`}
+            </button>
+          )}
         </div>
       )}
     </div>

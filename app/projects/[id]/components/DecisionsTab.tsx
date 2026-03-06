@@ -12,6 +12,7 @@ import ActiveFilterPills from './ActiveFilterPills';
 import ToggleInactiveButton from './ToggleInactiveButton';
 import Card from '@/app/components/ui/Card';
 import SectionHeader from '@/app/components/ui/SectionHeader';
+import SignalBodyPreview from '@/app/components/ui/SignalBodyPreview';
 
 interface Decision {
   id: string;
@@ -31,8 +32,11 @@ interface DecisionsTabProps {
 
 type ActiveFilter = 'active' | 'all' | 'inactive';
 
+const INITIAL_VISIBLE = 4;
+
 export default function DecisionsTab({ decisions, projectId }: DecisionsTabProps) {
   const [filter, setFilter] = useState<ActiveFilter>('active');
+  const [sectionExpanded, setSectionExpanded] = useState(false);
 
   const { activeDecisions, inactiveDecisions } = useMemo(() => {
     const active = decisions.filter((d) => !d.is_inactive);
@@ -45,6 +49,11 @@ export default function DecisionsTab({ decisions, projectId }: DecisionsTabProps
     if (filter === 'inactive') return inactiveDecisions;
     return [...activeDecisions, ...inactiveDecisions];
   }, [filter, activeDecisions, inactiveDecisions]);
+
+  const visibleDecisions = sectionExpanded
+    ? filteredDecisions
+    : filteredDecisions.slice(0, INITIAL_VISIBLE);
+  const hasMore = filteredDecisions.length > INITIAL_VISIBLE;
 
   const formatDate = (dateString: string) => {
     try {
@@ -80,7 +89,7 @@ export default function DecisionsTab({ decisions, projectId }: DecisionsTabProps
         </div>
       ) : (
         <div className="space-y-3">
-          {filteredDecisions.map((decision) => (
+          {visibleDecisions.map((decision) => (
             <Card
               key={decision.id}
               className={`group ${decision.is_inactive ? 'opacity-60' : ''}`}
@@ -102,9 +111,7 @@ export default function DecisionsTab({ decisions, projectId }: DecisionsTabProps
                   )}
                 </div>
                 {decision.content && (
-                  <p className="text-sm text-[rgb(var(--muted))] mb-2">
-                    {decision.content}
-                  </p>
+                  <SignalBodyPreview text={decision.content} className="mb-2" />
                 )}
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-4 text-xs text-[rgb(var(--muted))] opacity-90 min-w-0">
@@ -123,39 +130,40 @@ export default function DecisionsTab({ decisions, projectId }: DecisionsTabProps
                         Requires schema change to track source (e.g., add source_query or extract_run_id to decisions table) */}
                   </div>
                   <div
-                    className="flex items-center gap-2 shrink-0 text-xs text-[rgb(var(--muted))] opacity-90"
+                    className="flex items-center gap-2 shrink-0 text-xs text-[rgb(var(--muted))] opacity-60 group-hover:opacity-100 transition-opacity"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <div className="flex items-center gap-2">
-                      <span className="opacity-80 group-hover:opacity-100 transition-opacity">
-                        <ToggleInactiveButton
-                          type="decision"
-                          id={decision.id}
-                          isInactive={decision.is_inactive || false}
-                        />
-                      </span>
-                      <span className="opacity-80 group-hover:opacity-100 transition-opacity">
-                        <SupersedeDecisionButton
-                          decisionId={decision.id}
-                          decisionTitle={decision.title}
-                          otherDecisions={decisions
-                            .filter((d) => d.id !== decision.id)
-                            .map((d) => ({ id: d.id, title: d.title }))}
-                        />
-                      </span>
-                      <span className="opacity-70 group-hover:opacity-100 transition-opacity">
-                        <InvalidateDecisionButton decisionId={decision.id} />
-                      </span>
+                      <ToggleInactiveButton
+                        type="decision"
+                        id={decision.id}
+                        isInactive={decision.is_inactive || false}
+                      />
+                      <SupersedeDecisionButton
+                        decisionId={decision.id}
+                        decisionTitle={decision.title}
+                        otherDecisions={decisions
+                          .filter((d) => d.id !== decision.id)
+                          .map((d) => ({ id: d.id, title: d.title }))}
+                      />
+                      <InvalidateDecisionButton decisionId={decision.id} />
                     </div>
                     <span className="mx-1 h-4 w-px bg-[rgb(var(--ring)/0.4)]" />
-                    <span className="opacity-80 group-hover:opacity-100 transition-opacity">
-                      <DeleteDecisionButton decisionId={decision.id} decisionTitle={decision.title} />
-                    </span>
+                    <DeleteDecisionButton decisionId={decision.id} decisionTitle={decision.title} />
                   </div>
                 </div>
               </div>
             </Card>
           ))}
+          {hasMore && (
+            <button
+              type="button"
+              onClick={() => setSectionExpanded((v) => !v)}
+              className="text-sm font-medium text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] transition-colors"
+            >
+              {sectionExpanded ? 'Show less' : `Show all (${filteredDecisions.length})`}
+            </button>
+          )}
         </div>
       )}
     </div>

@@ -6,6 +6,7 @@ import Link from 'next/link';
 import DeleteHighlightButton from './DeleteHighlightButton';
 import Card from '@/app/components/ui/Card';
 import SectionHeader from '@/app/components/ui/SectionHeader';
+import SignalBodyPreview from '@/app/components/ui/SignalBodyPreview';
 
 type Status = 'priority' | 'open' | 'complete' | 'dormant';
 
@@ -45,7 +46,13 @@ interface HighlightsTabProps {
   projectName?: string;
 }
 
+const INITIAL_VISIBLE = 4;
+
 export default function HighlightsTab({ highlights, projectName }: HighlightsTabProps) {
+  const [sectionExpanded, setSectionExpanded] = useState(false);
+  const visibleHighlights = sectionExpanded ? highlights : highlights.slice(0, INITIAL_VISIBLE);
+  const hasMoreHighlights = highlights.length > INITIAL_VISIBLE;
+
   const formatDate = (dateString: string) => {
     try {
       const date = new Date(dateString);
@@ -67,8 +74,8 @@ export default function HighlightsTab({ highlights, projectName }: HighlightsTab
         </div>
       ) : (
         <div className="space-y-3">
-          {highlights.map((highlight) => (
-            <Card key={highlight.id} hover>
+          {visibleHighlights.map((highlight) => (
+            <Card key={highlight.id} hover className="group">
               <Link
                 href={`/conversations/${highlight.conversation_id}`}
                 className="block p-3"
@@ -88,9 +95,12 @@ export default function HighlightsTab({ highlights, projectName }: HighlightsTab
                     <StatusPill status={highlight.status} />
                   </div>
                 </div>
-                <p className="text-sm text-[rgb(var(--text))] mb-2">
-                  {highlight.content}
-                </p>
+                <div className="mb-2" onClick={(e) => e.preventDefault()}>
+                  <SignalBodyPreview
+                    text={highlight.content}
+                    className="[&_p]:text-[rgb(var(--text))]"
+                  />
+                </div>
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-4 text-xs text-[rgb(var(--muted))] opacity-90 min-w-0">
                     <span className="truncate">From: {highlight.conversation_title || 'Untitled Chat'}</span>
@@ -98,13 +108,28 @@ export default function HighlightsTab({ highlights, projectName }: HighlightsTab
                     {/* TODO: Add AI provenance label for highlights created via Extract Insights
                         Requires schema change to track source (e.g., add source_query or extract_run_id to highlights table) */}
                   </div>
-                  <div className="shrink-0 text-xs text-[rgb(var(--muted))] opacity-90" onClick={(e) => e.preventDefault()}>
+                  <div
+                    className="shrink-0 text-xs text-[rgb(var(--muted))] opacity-60 group-hover:opacity-100 transition-opacity"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                  >
                     <DeleteHighlightButton highlightId={highlight.id} highlightLabel={highlight.label} />
                   </div>
                 </div>
               </Link>
             </Card>
           ))}
+          {hasMoreHighlights && (
+            <button
+              type="button"
+              onClick={() => setSectionExpanded((v) => !v)}
+              className="text-sm font-medium text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] transition-colors"
+            >
+              {sectionExpanded ? 'Show less' : `Show all (${highlights.length})`}
+            </button>
+          )}
         </div>
       )}
     </div>

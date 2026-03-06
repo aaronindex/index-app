@@ -50,7 +50,7 @@ export default function QuickCaptureForm() {
   const [selectedProjectId, setSelectedProjectId] = useState<string>('');
   const [thinkingChoice, setThinkingChoice] = useState<ThinkingChoice>('today');
   const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState<{ projectId: string | null } | null>(null);
+  const [saved, setSaved] = useState<{ projectId: string | null; projectName?: string | null } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Listen for postMessage from extension: strict origin equality only (no '*' or substring)
@@ -137,8 +137,12 @@ export default function QuickCaptureForm() {
         setError(data.error || 'Save failed');
         return;
       }
+      const projectName = container.kind === 'project'
+        ? projects.find((p) => p.id === container.project_id)?.name ?? null
+        : null;
       setSaved({
         projectId: container.kind === 'project' ? container.project_id : null,
+        projectName,
       });
       setExtensionCaptureUsed();
     } catch (e) {
@@ -146,27 +150,37 @@ export default function QuickCaptureForm() {
     } finally {
       setSaving(false);
     }
-  }, [payload, selectedProjectId, thinkingChoice]);
+  }, [payload, selectedProjectId, thinkingChoice, projects]);
 
   if (saved) {
+    const projectName = saved.projectName ?? 'Me';
+    const sourcesHref = saved.projectId
+      ? `/projects/${saved.projectId}?tab=sources`
+      : '/me';
     return (
-      <div className="space-y-4">
-        <p className="text-[rgb(var(--text))] font-medium">Saved</p>
-        {saved.projectId ? (
+      <div className="space-y-6">
+        <p className="text-sm text-[rgb(var(--muted))]">
+          Saved to: {projectName}
+        </p>
+        <p className="text-sm text-[rgb(var(--muted))] leading-relaxed">
+          Sources accumulate here.
+          <br />
+          Distill signals when a conversation still matters.
+        </p>
+        <div className="flex flex-col gap-2 pt-2">
           <Link
-            href={`/projects/${saved.projectId}?tab=sources`}
-            className="text-sm text-[rgb(var(--text))] hover:underline"
+            href={sourcesHref}
+            className="w-full px-4 py-2 bg-[rgb(var(--text))] text-[rgb(var(--bg))] rounded-lg font-medium text-center hover:opacity-90"
           >
-            Open project Sources
+            View sources
           </Link>
-        ) : (
           <Link
-            href="/me"
-            className="text-sm text-[rgb(var(--text))] hover:underline"
+            href={sourcesHref}
+            className="w-full px-4 py-2 border border-[rgb(var(--ring)/0.2)] rounded-lg font-medium text-center text-[rgb(var(--text))] hover:bg-[rgb(var(--ring)/0.06)]"
           >
-            Open Me
+            Distill now
           </Link>
-        )}
+        </div>
       </div>
     );
   }
