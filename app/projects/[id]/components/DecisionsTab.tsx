@@ -5,6 +5,8 @@ import { useState, useMemo } from 'react';
 import Link from 'next/link';
 // Start chat is reserved for project-level re-entry; no per-decision start chat.
 import DeleteDecisionButton from './DeleteDecisionButton';
+import InvalidateDecisionButton from './InvalidateDecisionButton';
+import SupersedeDecisionButton from './SupersedeDecisionButton';
 import CreateDecisionButton from './CreateDecisionButton';
 import ActiveFilterPills from './ActiveFilterPills';
 import ToggleInactiveButton from './ToggleInactiveButton';
@@ -125,6 +127,12 @@ export default function DecisionsTab({ decisions, projectId }: DecisionsTabProps
                       type="decision"
                       id={decision.id}
                       isInactive={decision.is_inactive || false}
+                    />
+                    <InvalidateDecisionButton decisionId={decision.id} />
+                    <SupersedeDecisionButton
+                      decisionId={decision.id}
+                      decisionTitle={decision.title}
+                      otherDecisions={decisions.filter((d) => d.id !== decision.id).map((d) => ({ id: d.id, title: d.title }))}
                     />
                     <DeleteDecisionButton decisionId={decision.id} decisionTitle={decision.title} />
                   </div>

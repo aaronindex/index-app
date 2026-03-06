@@ -5,6 +5,7 @@ import { useState, useMemo } from 'react';
 import Link from 'next/link';
 // Start chat is reserved for project-level re-entry; no per-task start chat.
 import DeleteTaskButton from './DeleteTaskButton';
+import TaskStatusControl from './TaskStatusControl';
 import ActiveFilterPills from './ActiveFilterPills';
 import ToggleInactiveButton from './ToggleInactiveButton';
 // Pinning and manual reorder are intentionally removed to keep Tasks lightweight.
@@ -175,6 +176,7 @@ export default function TasksTab({ tasks, projectId }: TasksTabProps) {
               )}
             </div>
             <div className="flex items-center gap-2 shrink-0 text-xs text-[rgb(var(--muted))] opacity-90" onClick={(e) => e.stopPropagation()}>
+              <TaskStatusControl taskId={task.id} currentStatus={task.status} />
               <ToggleInactiveButton
                 type="task"
                 id={task.id}
