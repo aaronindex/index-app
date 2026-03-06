@@ -22,8 +22,8 @@ interface SignalsTabProps {
     id: string;
     title: string;
     description: string | null;
-    status: string;
-    horizon: string | null;
+    status: 'open' | 'in_progress' | 'complete' | 'cancelled' | 'dormant' | 'priority';
+    horizon: 'this_week' | 'this_month' | 'later' | null;
     is_pinned?: boolean;
     sort_order: number | null;
     conversation_title: string | null;
