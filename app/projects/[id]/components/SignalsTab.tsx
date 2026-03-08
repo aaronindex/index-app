@@ -126,10 +126,13 @@ export default function SignalsTab({
         <section aria-labelledby="signals-emerging-themes-heading">
           <h2
             id="signals-emerging-themes-heading"
-            className="font-serif text-lg font-semibold text-[rgb(var(--text))] mb-3"
+            className="font-serif text-lg font-semibold text-[rgb(var(--text))] mb-0.5"
           >
-            Emerging Themes
+            Patterns emerging
           </h2>
+          <p className="text-xs text-[rgb(var(--muted))] mb-3">
+            Signals that appear to be clustering around the same focus.
+          </p>
           {themesLoading ? (
             <p className="text-sm text-[rgb(var(--muted))]">Identifying themes…</p>
           ) : (
@@ -144,18 +147,37 @@ export default function SignalsTab({
                     onClick={() => scrollToSignal(ids[0]!)}
                     className="text-left p-3 rounded-xl border border-[rgb(var(--ring)/0.12)] bg-[rgb(var(--surface))] hover:bg-[rgb(var(--ring)/0.04)] transition-colors"
                   >
-                    <div className="font-medium text-sm text-[rgb(var(--text))] mb-1">
+                    <div className="font-medium text-sm text-[rgb(var(--text))] mb-0.5">
                       {theme.theme_name}
                     </div>
-                    <div className="text-[11px] text-[rgb(var(--muted))] mb-2">
+                    <div className="text-[10px] text-[rgb(var(--muted))] opacity-80 mb-1.5">
                       {ids.length} signal{ids.length !== 1 ? 's' : ''}
                     </div>
-                    <ul className="space-y-0.5 text-xs text-[rgb(var(--muted))] list-disc list-inside">
-                      {ids.slice(0, 5).map((id) => (
+                    <ul className="space-y-0 text-xs text-[rgb(var(--muted))] list-disc list-inside">
+                      {ids.slice(0, 3).map((id) => (
                         <li key={id}>{signalTitleById.get(id) || id}</li>
                       ))}
-                      {ids.length > 5 && (
-                        <li className="list-none text-[11px]">+{ids.length - 5} more</li>
+                      {ids.length > 3 && (
+                        <li className="list-none mt-0.5">
+                          <span
+                            role="button"
+                            tabIndex={0}
+                            className="text-[11px] text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] cursor-pointer underline underline-offset-1"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              scrollToSignal(ids[0]!);
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                scrollToSignal(ids[0]!);
+                              }
+                            }}
+                          >
+                            +{ids.length - 3} more
+                          </span>
+                        </li>
                       )}
                     </ul>
                   </button>
