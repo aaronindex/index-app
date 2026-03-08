@@ -136,10 +136,10 @@ export default function TasksTab({ tasks, projectId }: TasksTabProps) {
       .trim();
 
     return (
-      <Card
-        key={task.id}
-        className={`group ${task.is_inactive ? 'opacity-60' : ''}`}
-      >
+      <div key={task.id} data-signal-id={task.id}>
+        <Card
+          className={`group ${task.is_inactive ? 'opacity-60' : ''}`}
+        >
         <div className="p-3">
           <div className="flex items-start justify-between mb-0.5">
             <div className="flex-1 min-w-0">
@@ -193,6 +193,7 @@ export default function TasksTab({ tasks, projectId }: TasksTabProps) {
           </div>
         </div>
       </Card>
+      </div>
     );
   };
 

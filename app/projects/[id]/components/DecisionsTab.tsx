@@ -90,10 +90,10 @@ export default function DecisionsTab({ decisions, projectId }: DecisionsTabProps
       ) : (
         <div className="space-y-3">
           {visibleDecisions.map((decision) => (
-            <Card
-              key={decision.id}
-              className={`group ${decision.is_inactive ? 'opacity-60' : ''}`}
-            >
+            <div key={decision.id} data-signal-id={decision.id}>
+              <Card
+                className={`group ${decision.is_inactive ? 'opacity-60' : ''}`}
+              >
               <div className="p-3">
                 <div className="flex items-center gap-2 mb-0.5">
                   <div className="flex-1 min-w-0">
@@ -152,6 +152,7 @@ export default function DecisionsTab({ decisions, projectId }: DecisionsTabProps
                 </div>
               </div>
             </Card>
+            </div>
           ))}
           {hasMore && (
             <button

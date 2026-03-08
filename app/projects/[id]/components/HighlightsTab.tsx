@@ -75,7 +75,8 @@ export default function HighlightsTab({ highlights, projectName }: HighlightsTab
       ) : (
         <div className="space-y-3">
           {visibleHighlights.map((highlight) => (
-            <Card key={highlight.id} hover className="group">
+            <div key={highlight.id} data-signal-id={highlight.id}>
+              <Card hover className="group">
               <Link
                 href={`/conversations/${highlight.conversation_id}`}
                 className="block p-3"
@@ -114,7 +115,8 @@ export default function HighlightsTab({ highlights, projectName }: HighlightsTab
                   </div>
                 </div>
               </Link>
-            </Card>
+              </Card>
+            </div>
           ))}
           {hasMoreHighlights && (
             <button
