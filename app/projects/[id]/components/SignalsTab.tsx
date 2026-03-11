@@ -164,10 +164,7 @@ export default function SignalsTab({
     };
   }, [signalsForApi]);
 
-  const scrollToSignal = (signalId: string) => {
-    const el = document.querySelector(`[data-signal-id="${signalId}"]`);
-    el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  };
+  const [expandedThemeIndex, setExpandedThemeIndex] = useState<number | null>(null);
 
   const showEmergingThemes =
     signalsForApi.length >= 2 && (themes.length > 0 || themesLoading);
@@ -178,69 +175,64 @@ export default function SignalsTab({
         <section aria-labelledby="signals-emerging-themes-heading">
           <h2
             id="signals-emerging-themes-heading"
-            className="font-serif text-lg font-semibold text-[rgb(var(--text))] mb-0.5"
+            className="font-serif text-xl font-semibold text-[rgb(var(--text))] mb-1"
           >
             Patterns emerging
           </h2>
-          <p className="text-xs text-[rgb(var(--muted))] mb-3">
-            Signals that appear to be clustering around the same focus.
+          <p className="text-sm text-[rgb(var(--muted))] mb-6">
+            Structural themes emerging from signals.
           </p>
           {themesLoading ? (
             <p className="text-sm text-[rgb(var(--muted))]">Identifying themes…</p>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-4">
               {themes.map((theme, idx) => {
                 const ids = theme.signal_ids.filter((id) => signalTitleById.has(id));
                 if (ids.length === 0) return null;
+                const isExpanded = expandedThemeIndex === idx;
                 return (
-                  <button
+                  <div
                     key={idx}
-                    type="button"
-                    onClick={() => scrollToSignal(ids[0]!)}
-                    className="text-left p-3 rounded-xl border border-[rgb(var(--ring)/0.12)] bg-[rgb(var(--surface))] hover:bg-[rgb(var(--ring)/0.04)] transition-colors"
+                    className="rounded-xl border border-[rgb(var(--ring)/0.12)] bg-[rgb(var(--surface))] overflow-hidden"
                   >
-                    <div className="font-medium text-sm text-[rgb(var(--text))] mb-0.5">
-                      {theme.theme_name}
-                    </div>
-                    {theme.interpretation && (
-                      <p className="text-[11px] text-[rgb(var(--muted))] mb-1">
-                        {theme.interpretation}
-                      </p>
-                    )}
-                    <div className="text-[10px] text-[rgb(var(--muted))] opacity-80 mb-1">
-                      {ids.length} signal{ids.length !== 1 ? 's' : ''}
-                    </div>
-                    <p className="text-[11px] text-[rgb(var(--muted))] mb-0.5">
-                      Signals contributing
-                    </p>
-                    <ul className="space-y-0 text-xs text-[rgb(var(--muted))] list-disc list-inside">
-                      {ids.slice(0, 3).map((id) => (
-                        <li key={id}>{signalTitleById.get(id) || id}</li>
-                      ))}
-                      {ids.length > 3 && (
-                        <li className="list-none mt-0.5">
-                          <span
-                            role="button"
-                            tabIndex={0}
-                            className="text-[11px] text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] cursor-pointer underline underline-offset-1"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              scrollToSignal(ids[0]!);
-                            }}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter' || e.key === ' ') {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                scrollToSignal(ids[0]!);
-                              }
-                            }}
-                          >
-                            +{ids.length - 3} more
-                          </span>
-                        </li>
+                    <div className="p-4">
+                      <div className="font-semibold text-base text-[rgb(var(--text))] mb-1">
+                        {theme.theme_name}
+                      </div>
+                      {theme.interpretation && (
+                        <p className="text-sm text-[rgb(var(--muted))] mb-2">
+                          {theme.interpretation}
+                        </p>
                       )}
-                    </ul>
-                  </button>
+                      <p className="text-xs font-medium text-[rgb(var(--muted))] mb-3">
+                        {ids.length} signals contributing
+                      </p>
+                      {!isExpanded ? (
+                        <button
+                          type="button"
+                          onClick={() => setExpandedThemeIndex(idx)}
+                          className="text-sm font-medium text-[rgb(var(--text))] hover:text-[rgb(var(--muted))] underline underline-offset-2 transition-colors"
+                        >
+                          View signals
+                        </button>
+                      ) : (
+                        <>
+                          <ul className="space-y-1.5 text-sm text-[rgb(var(--muted))] list-disc list-inside mb-3">
+                            {ids.map((id) => (
+                              <li key={id}>{signalTitleById.get(id) || id}</li>
+                            ))}
+                          </ul>
+                          <button
+                            type="button"
+                            onClick={() => setExpandedThemeIndex(null)}
+                            className="text-sm font-medium text-[rgb(var(--text))] hover:text-[rgb(var(--muted))] underline underline-offset-2 transition-colors"
+                          >
+                            Close
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
                 );
               })}
             </div>

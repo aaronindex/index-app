@@ -353,14 +353,15 @@ export async function loadProjectView(params: {
 
   // Project timeline: pulses (for this project) + outcomes as events with labels
   const PULSE_TYPES_PROJECT = ['arc_shift', 'structural_threshold', 'tension', 'result_recorded'] as const;
+  /** Pulse-specific labels for project timeline; fallback only when type unknown. */
   function pulseTypeLabel(pt: string): string {
     switch (pt) {
-      case 'tension':
-        return 'Tension surfaced';
       case 'arc_shift':
-        return 'Arc shifted';
+        return 'Arc shift detected';
       case 'structural_threshold':
-        return 'Structure updated';
+        return 'Structural threshold crossed';
+      case 'tension':
+        return 'Tension detected';
       case 'result_recorded':
         return 'Result recorded';
       default:
@@ -396,9 +397,11 @@ export async function loadProjectView(params: {
       : { pulseHeadlines: {} as Record<string, string> };
 
   const pulseEvents = (projectPulses ?? []).map((p: { id: string; pulse_type: string; headline: string | null; occurred_at: string }) => {
+    const baseLabel = pulseTypeLabel(p.pulse_type);
     const semantic = pulseOverlay.pulseHeadlines[p.id]?.trim();
     const editorial = (p.headline ?? '').trim();
-    const label = semantic || editorial || pulseTypeLabel(p.pulse_type);
+    const signalRef = semantic || editorial;
+    const label = signalRef ? `${baseLabel} — ${signalRef}` : baseLabel;
     return {
       id: p.id,
       occurred_at: p.occurred_at,

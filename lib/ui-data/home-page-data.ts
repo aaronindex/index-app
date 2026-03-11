@@ -39,23 +39,32 @@ export type HomePageData = {
   weekly_digest_enabled: boolean;
 };
 
-function getTypedHeadline(p: HomePulse, semanticHeadline?: string | null): string {
-  const semantic = (semanticHeadline || '').trim();
-  if (semantic) return semantic;
-  const editorial = (p.headline || '').trim();
-  if (editorial) return editorial;
-  switch (p.pulse_type) {
-    case 'tension':
-      return 'Tension surfaced';
+/** Pulse-specific labels for Shifts; fallback only when type is unknown. */
+function getPulseTypeLabel(pulseType: string): string {
+  switch (pulseType) {
     case 'arc_shift':
-      return 'Arc shifted';
+      return 'Arc shift detected';
     case 'structural_threshold':
-      return 'Structure updated';
+      return 'Structural threshold crossed';
+    case 'tension':
+      return 'Tension detected';
     case 'result_recorded':
       return 'Result recorded';
     default:
       return 'Structure updated';
   }
+}
+
+/** Shift label: pulse-specific label, optionally with signal reference (semantic/editorial headline). */
+function getTypedHeadline(p: HomePulse, semanticHeadline?: string | null): string {
+  const baseLabel = getPulseTypeLabel(p.pulse_type);
+  const semantic = (semanticHeadline || '').trim();
+  const editorial = (p.headline || '').trim();
+  const signalRef = semantic || editorial;
+  if (signalRef) {
+    return `${baseLabel} — ${signalRef}`;
+  }
+  return baseLabel;
 }
 
 function dedupePulses(pulses: HomePulse[]): HomePulse[] {
@@ -180,7 +189,13 @@ export async function getHomePageData(
       normalized,
     };
   });
-  const GENERIC_HEADLINES = new Set(['structure updated', 'threshold crossed']);
+  const GENERIC_HEADLINES = new Set([
+    'structure updated',
+    'arc shift detected',
+    'structural threshold crossed',
+    'tension detected',
+    'result recorded',
+  ]);
   const seenKeys = new Set<string>();
   const dedupedShifts: Array<{ id: string; occurred_at: string; label: string; pulse_type: string }> = [];
   // Walk from oldest to newest so we keep the earliest occurrence for each key.
