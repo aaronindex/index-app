@@ -116,8 +116,8 @@ export default function SignalsTab({
             return theme;
           }
 
-          let bestMatch: ThemeItem | null = null;
           let bestOverlapRatio = 0;
+          let stableName = theme.theme_name;
 
           previousThemes.forEach((prev) => {
             const prevIds = new Set(prev.signal_ids);
@@ -131,14 +131,14 @@ export default function SignalsTab({
             const ratio = overlapCount / currentIds.size;
             if (ratio > bestOverlapRatio) {
               bestOverlapRatio = ratio;
-              bestMatch = prev;
+              stableName = prev.theme_name;
             }
           });
 
-          if (bestMatch && bestOverlapRatio >= 0.6) {
+          if (bestOverlapRatio >= 0.6) {
             return {
               ...theme,
-              theme_name: bestMatch.theme_name,
+              theme_name: stableName,
             };
           }
 
