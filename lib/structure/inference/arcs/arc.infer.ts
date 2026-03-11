@@ -120,6 +120,68 @@ export async function inferArcsAndBuildState(
     arcLastSignalBuckets[arc_id] = bucketTimestamp(segment.last_signal_at, 'hour');
   }
 
+  // Step 2.5: Sync arc_signal_link for traceability (arc_id ↔ structural signals)
+  if (arcIds.length > 0) {
+    const { data: existingLinks, error: linksError } = await supabaseAdminClient
+      .from('arc_signal_link')
+      .select('arc_id, signal_id')
+      .in('arc_id', arcIds);
+
+    if (linksError) {
+      throw new Error(`[ArcInfer] Error fetching arc_signal_link: ${linksError.message}`);
+    }
+
+    const existingByArc = new Map<string, Set<string>>();
+    for (const row of existingLinks ?? []) {
+      const r = row as { arc_id: string; signal_id: string };
+      if (!existingByArc.has(r.arc_id)) {
+        existingByArc.set(r.arc_id, new Set());
+      }
+      existingByArc.get(r.arc_id)!.add(r.signal_id);
+    }
+
+    const rowsToInsert: Array<{ arc_id: string; signal_id: string; project_id: string | null; kind: string | null }> = [];
+
+    for (const arcId of arcIds) {
+      const signalsForArc = arcSignals[arcId] ?? [];
+      const desiredIds = new Set<string>();
+      for (const sig of signalsForArc) {
+        desiredIds.add(sig.id);
+        const existingSet = existingByArc.get(arcId);
+        if (!existingSet || !existingSet.has(sig.id)) {
+          rowsToInsert.push({
+            arc_id: arcId,
+            signal_id: sig.id,
+            project_id: sig.project_id ?? null,
+            kind: sig.kind ?? null,
+          });
+        }
+      }
+
+      const existingSet = existingByArc.get(arcId) ?? new Set<string>();
+      const toDelete = [...existingSet].filter((id) => !desiredIds.has(id));
+      if (toDelete.length > 0) {
+        const { error: deleteError } = await supabaseAdminClient
+          .from('arc_signal_link')
+          .delete()
+          .eq('arc_id', arcId)
+          .in('signal_id', toDelete);
+        if (deleteError) {
+          throw new Error(`[ArcInfer] Error deleting arc_signal_link rows: ${deleteError.message}`);
+        }
+      }
+    }
+
+    if (rowsToInsert.length > 0) {
+      const { error: insertError } = await supabaseAdminClient
+        .from('arc_signal_link')
+        .insert(rowsToInsert);
+      if (insertError) {
+        throw new Error(`[ArcInfer] Error inserting arc_signal_link rows: ${insertError.message}`);
+      }
+    }
+  }
+
   // Step 3: Determine active arcs
   const activeArcIds = arcIds.filter(arcId => arcStatuses[arcId] === 'active').sort();
 

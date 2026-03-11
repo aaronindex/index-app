@@ -223,10 +223,29 @@ export default function ReadTab({
           Active Arcs
         </h2>
         {activeArcs.length > 0 ? (
-          <ul className="space-y-1 text-sm text-[rgb(var(--text))]">
+          <ul className="space-y-3 text-sm text-[rgb(var(--text))]">
             {activeArcs.map((arc, index) => {
               const label = arc.title || `Arc ${index + 1}`;
-              return <li key={arc.id}>{label}</li>;
+              return (
+                <li key={arc.id}>
+                  <div className="font-medium">{label}</div>
+                  {Array.isArray((arc as any).contributingSignals) &&
+                    (arc as any).contributingSignals.length > 0 && (
+                      <div className="mt-1">
+                        <p className="text-[11px] text-[rgb(var(--muted))] mb-0.5">
+                          Contributing signals
+                        </p>
+                        <ul className="list-disc list-inside text-xs text-[rgb(var(--muted))] space-y-0.5">
+                          {(arc as any).contributingSignals.slice(0, 5).map(
+                            (s: { id: string; label: string }) => (
+                              <li key={s.id}>{s.label}</li>
+                            )
+                          )}
+                        </ul>
+                      </div>
+                    )}
+                </li>
+              );
             })}
           </ul>
         ) : (
@@ -524,12 +543,11 @@ function ProjectEventTimeline(props: { events: ProjectTimelineEvent[] }) {
     .filter((e): e is ProjectTimelineEvent & { ts: number } => e !== null)
     .sort((a, b) => a.ts - b.ts);
 
-  if (events.length === 0) return null;
-
-  const first = events[0]!;
-  const last = events[events.length - 1]!;
-  const t0 = first.ts;
-  const tN = last.ts;
+  const hasEvents = events.length > 0;
+  const first = hasEvents ? events[0]! : null;
+  const last = hasEvents ? events[events.length - 1]! : null;
+  const t0 = first ? first.ts : 0;
+  const tN = last ? last.ts : 0;
   const span = tN - t0 || 1;
 
   return (
@@ -538,43 +556,46 @@ function ProjectEventTimeline(props: { events: ProjectTimelineEvent[] }) {
         Timeline
       </h2>
       <p className="mt-1 text-sm text-[rgb(var(--muted))]">
-        Dots reflect structural changes. Spacing shows time between them.
+        {hasEvents
+          ? 'Dots reflect structural changes. Spacing shows time between them.'
+          : 'Pulses and results will appear here as the project moves forward.'}
       </p>
       <div className="relative h-12 mt-2">
         <div className="absolute top-1/2 left-0 right-0 h-px bg-[rgb(var(--ring)/0.12)]" />
-        {events.map((item) => {
-          const pos = span === 0 ? 0.5 : (item.ts - t0) / span;
-          const dateLabel = new Date(item.occurred_at).toLocaleDateString(undefined, {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric',
-          });
-          return (
-            <div
-              key={item.id}
-              className="absolute top-1/2 -translate-y-1/2"
-              style={{ left: `${pos * 100}%` }}
-            >
-              <div className="group relative">
-                <div
-                  className={`rounded-full bg-[rgb(var(--text))] ${
-                    item.kind === 'result' ? 'h-3 w-3' : 'h-2 w-2'
-                  }`}
-                />
-                <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                  <div className="max-w-[260px] min-w-[180px] rounded-md border border-[rgb(var(--ring)/0.12)] bg-[rgb(var(--surface))] px-2 py-1 shadow-sm font-sans">
-                    <div className="text-[10px] font-medium text-[rgb(var(--text))]">
-                      {dateLabel}
-                    </div>
-                    <div className="mt-1 text-[10px] text-[rgb(var(--muted))] whitespace-normal break-words">
-                      {item.label}
+        {hasEvents &&
+          events.map((item) => {
+            const pos = span === 0 ? 0.5 : (item.ts - t0) / span;
+            const dateLabel = new Date(item.occurred_at).toLocaleDateString(undefined, {
+              month: 'short',
+              day: 'numeric',
+              year: 'numeric',
+            });
+            return (
+              <div
+                key={item.id}
+                className="absolute top-1/2 -translate-y-1/2"
+                style={{ left: `${pos * 100}%` }}
+              >
+                <div className="group relative">
+                  <div
+                    className={`rounded-full bg-[rgb(var(--text))] ${
+                      item.kind === 'result' ? 'h-3 w-3' : 'h-2 w-2'
+                    }`}
+                  />
+                  <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                    <div className="max-w-[260px] min-w-[180px] rounded-md border border-[rgb(var(--ring)/0.12)] bg-[rgb(var(--surface))] px-2 py-1 shadow-sm font-sans">
+                      <div className="text-[10px] font-medium text-[rgb(var(--text))]">
+                        {dateLabel}
+                      </div>
+                      <div className="mt-1 text-[10px] text-[rgb(var(--muted))] whitespace-normal break-words">
+                        {item.label}
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
       </div>
     </div>
   );

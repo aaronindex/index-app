@@ -5,6 +5,8 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { getSupabaseServiceClient } from '@/lib/supabaseService';
 import { loadHomeView } from './home.load';
 import type { HomePulse } from './home.load';
+import { collectStructuralSignals } from '@/lib/structure/signals';
+import type { StructuralSignal } from '@/lib/structure/signals';
 
 export type HomePageData = {
   hasConversations: boolean;
@@ -17,6 +19,7 @@ export type HomePageData = {
     active_arc_count: number;
     project_count: number;
     lastChangeAt: string | null;
+    signals?: Array<{ id: string; label: string }>;
   };
   shifts: Array<{ id: string; occurred_at: string; label: string; pulse_type: string }>;
   timelineEvents: Array<{
@@ -209,6 +212,90 @@ export async function getHomePageData(
 
   const profile = profileResult.data;
 
+  // Resolve a small set of signals informing Direction (global, across arcs)
+  let directionSignals: Array<{ id: string; label: string }> = [];
+  try {
+    const latestStateHash = homeView.latestSnapshot?.state_hash ?? null;
+    const activeArcIds = Array.isArray(payload?.active_arc_ids) ? payload!.active_arc_ids! : [];
+    if (latestStateHash && activeArcIds.length > 0) {
+      const serviceClientForSignals = getSupabaseServiceClient();
+      const allSignals: StructuralSignal[] = await collectStructuralSignals(
+        serviceClientForSignals as unknown as SupabaseClient,
+        user_id
+      );
+
+      const signalById = new Map<string, StructuralSignal>();
+      for (const s of allSignals) {
+        signalById.set(s.id, s);
+      }
+
+      const { data: arcSignalRows } = await serviceClientForSignals
+        .from('arc_signal_link')
+        .select('arc_id, signal_id')
+        .in('arc_id', activeArcIds);
+
+      const contributingSignals: StructuralSignal[] = [];
+      for (const row of arcSignalRows ?? []) {
+        const r = row as { arc_id: string; signal_id: string };
+        const sig = signalById.get(r.signal_id);
+        if (!sig) continue;
+        contributingSignals.push(sig);
+      }
+
+      if (contributingSignals.length > 0) {
+        const decisionIds = new Set<string>();
+        for (const sig of contributingSignals) {
+          if (sig.kind === 'decision' && sig.source_id) {
+            decisionIds.add(sig.source_id);
+          }
+        }
+
+        let decisionTitleById = new Map<string, string>();
+        if (decisionIds.size > 0) {
+          const { data: decisionRows } = await serviceClientForSignals
+            .from('decisions')
+            .select('id, title')
+            .eq('user_id', user_id)
+            .in('id', Array.from(decisionIds));
+          decisionTitleById = new Map(
+            (decisionRows ?? []).map((row: { id: string; title: string | null }) => [
+              row.id,
+              row.title ?? '',
+            ])
+          );
+        }
+
+        // Sort by occurred_at descending and take top 5
+        const sorted = [...contributingSignals].sort(
+          (a, b) =>
+            new Date(b.occurred_at).getTime() - new Date(a.occurred_at).getTime()
+        );
+
+        directionSignals = sorted.slice(0, 5).map((sig) => {
+          let label: string | null = null;
+          if (sig.kind === 'decision' && sig.source_id) {
+            label = (decisionTitleById.get(sig.source_id) ?? '').trim() || null;
+          }
+          if (!label) {
+            label =
+              sig.kind === 'decision'
+                ? 'Decision'
+                : sig.kind === 'result'
+                  ? 'Result'
+                  : 'Signal';
+          }
+          return {
+            id: sig.id,
+            label,
+          };
+        });
+      }
+    }
+  } catch {
+    // If Direction signal resolution fails, proceed without chain info.
+    directionSignals = [];
+  }
+
   return {
     hasConversations,
     hasProjects,
@@ -220,6 +307,7 @@ export async function getHomePageData(
       active_arc_count,
       project_count,
       lastChangeAt,
+      signals: directionSignals,
     },
     shifts,
     timelineEvents,

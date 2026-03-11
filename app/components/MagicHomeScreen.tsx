@@ -36,6 +36,7 @@ type LandingData = {
     active_arc_count: number;
     project_count: number;
     lastChangeAt: string | null;
+     signals?: Array<{ id: string; label: string }>;
   };
   shifts: ShiftItem[];
   timelineEvents: TimelineEvent[];
@@ -281,6 +282,7 @@ export default function MagicHomeScreen({ initialData = null, initialShowFocusMo
   const hasSnapshot = !!directionGeneratedAt;
   const hasStructuralChange = shifts.length > 0;
   const showDirectionStatusLine = activeArcCount > 0;
+  const directionSignals = data?.direction?.signals ?? [];
 
   return (
     <div className="space-y-8">
@@ -336,8 +338,22 @@ export default function MagicHomeScreen({ initialData = null, initialShowFocusMo
                   </p>
                 </div>
               ) : (
-                <div className="text-sm text-[rgb(var(--text))] whitespace-pre-wrap font-sans">
-                  {directionText}
+                <div className="text-sm text-[rgb(var(--text))] whitespace-pre-wrap font-sans space-y-3">
+                  <div>{directionText}</div>
+                  {directionSignals.length > 0 && (
+                    <div>
+                      <details className="text-xs text-[rgb(var(--muted))]">
+                        <summary className="cursor-pointer list-none marker:hidden underline underline-offset-2">
+                          Signals informing this direction
+                        </summary>
+                        <ul className="mt-1 list-disc list-inside space-y-0.5">
+                          {directionSignals.map((s) => (
+                            <li key={s.id}>{s.label}</li>
+                          ))}
+                        </ul>
+                      </details>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

@@ -207,9 +207,12 @@ export default function SignalsTab({
                         {theme.interpretation}
                       </p>
                     )}
-                    <div className="text-[10px] text-[rgb(var(--muted))] opacity-80 mb-1.5">
+                    <div className="text-[10px] text-[rgb(var(--muted))] opacity-80 mb-1">
                       {ids.length} signal{ids.length !== 1 ? 's' : ''}
                     </div>
+                    <p className="text-[11px] text-[rgb(var(--muted))] mb-0.5">
+                      Signals contributing
+                    </p>
                     <ul className="space-y-0 text-xs text-[rgb(var(--muted))] list-disc list-inside">
                       {ids.slice(0, 3).map((id) => (
                         <li key={id}>{signalTitleById.get(id) || id}</li>

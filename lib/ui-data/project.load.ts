@@ -4,6 +4,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { collectStructuralSignals } from '../structure/signals';
+import type { StructuralSignal } from '../structure/signals';
 import type { StructuralStatePayload } from '@/lib/structure/hash';
 import { getSemanticOverlay } from '@/lib/semantic-overlay/get-overlay';
 
@@ -30,6 +31,7 @@ export type ProjectViewData = {
     id: string;
     title: string | null;
     status: string | null;
+    contributingSignals?: Array<{ id: string; kind: string; label: string }>;
   }>;
   timelineEvents: Array<{
     kind: 'decision' | 'result';
@@ -296,7 +298,12 @@ export async function loadProjectView(params: {
   }
 
   // Resolve active arcs for this project from snapshot payload + arc tables (read-only)
-  let activeArcs: Array<{ id: string; title: string | null; status: string | null }> = [];
+  let activeArcs: Array<{
+    id: string;
+    title: string | null;
+    status: string | null;
+    contributingSignals?: Array<{ id: string; kind: string; label: string }>;
+  }> = [];
   const activeArcIds = latestSnapshotPayload?.active_arc_ids ?? [];
   if (activeArcIds.length > 0) {
     const { data: arcLinks } = await supabaseClient
@@ -414,16 +421,17 @@ export async function loadProjectView(params: {
     (a, b) => new Date(a.occurred_at).getTime() - new Date(b.occurred_at).getTime()
   );
 
-  // Load timeline events from structural signals (decision/result only)
+  // Load structural signals once (for timeline + contributing signals)
   let timelineEvents: Array<{
     kind: 'decision' | 'result';
     occurred_at: string;
     project_id: string;
   }> = [];
+  let allSignals: StructuralSignal[] = [];
 
   const signalsStarted = Date.now();
   try {
-    const allSignals = await collectStructuralSignals(supabaseClient, user_id);
+    allSignals = await collectStructuralSignals(supabaseClient, user_id);
     timelineEvents = allSignals
       .filter(
         (signal) =>
@@ -462,6 +470,93 @@ export async function loadProjectView(params: {
       });
     }
     // Degrade gracefully: timelineEvents remains empty.
+  }
+
+  // Contributing signals per active arc (derived from arc_signal_link + structural signals)
+  if (activeArcs.length > 0 && allSignals.length > 0) {
+    const arcIds = activeArcs.map((a) => a.id);
+    const { data: arcSignalRows } = await supabaseClient
+      .from('arc_signal_link')
+      .select('arc_id, signal_id')
+      .in('arc_id', arcIds)
+      .eq('project_id', project_id);
+
+    const signalById = new Map<string, StructuralSignal>();
+    for (const s of allSignals) {
+      signalById.set(s.id, s);
+    }
+
+    const linksByArc = new Map<string, StructuralSignal[]>();
+    for (const row of arcSignalRows ?? []) {
+      const r = row as { arc_id: string; signal_id: string };
+      const sig = signalById.get(r.signal_id);
+      if (!sig) continue;
+      if (sig.project_id !== project_id) continue;
+      if (!linksByArc.has(r.arc_id)) {
+        linksByArc.set(r.arc_id, []);
+      }
+      linksByArc.get(r.arc_id)!.push(sig);
+    }
+
+    const decisionIds = new Set<string>();
+    for (const sig of allSignals) {
+      if (sig.kind === 'decision' && sig.source_id) {
+        decisionIds.add(sig.source_id);
+      }
+    }
+
+    let decisionTitleById = new Map<string, string>();
+    if (decisionIds.size > 0) {
+      const { data: decisionRows } = await supabaseClient
+        .from('decisions')
+        .select('id, title')
+        .eq('user_id', user_id)
+        .in('id', Array.from(decisionIds));
+      decisionTitleById = new Map(
+        (decisionRows ?? []).map((row: { id: string; title: string | null }) => [
+          row.id,
+          row.title ?? '',
+        ])
+      );
+    }
+
+    activeArcs = activeArcs.map((arc) => {
+      const signals = (linksByArc.get(arc.id) ?? []).slice();
+      if (signals.length === 0) return arc;
+
+      // Order by most recent structural contribution
+      signals.sort(
+        (a, b) =>
+          new Date(b.occurred_at).getTime() - new Date(a.occurred_at).getTime()
+      );
+
+      const items = signals
+        .map((sig) => {
+          let label: string | null = null;
+          if (sig.kind === 'decision' && sig.source_id) {
+            label = (decisionTitleById.get(sig.source_id) ?? '').trim() || null;
+          }
+          if (!label) {
+            label =
+              sig.kind === 'decision'
+                ? 'Decision'
+                : sig.kind === 'result'
+                  ? 'Result'
+                  : 'Signal';
+          }
+          return {
+            id: sig.id,
+            kind: sig.kind,
+            label,
+          };
+        })
+        .slice(0, 5);
+
+      return {
+        ...arc,
+        contributingSignals: items,
+      };
+    });
   }
 
   return {
