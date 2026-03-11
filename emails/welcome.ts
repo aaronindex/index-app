@@ -31,22 +31,19 @@ export function renderWelcomeEmail(): string {
               </p>
               <p style="margin: 0 0 24px 0; font-size: 16px; line-height: 1.6; color: #121211;">
                 Conversations, notes, and ideas happen everywhere.<br>
-                INDEX is where they are distilled into arcs, decisions, and tasks.
+                INDEX is where they're distilled into signals — decisions, tasks, and insights.
               </p>
               <p style="margin: 0 0 24px 0; font-size: 16px; line-height: 1.6; color: #121211;">
                 Start small.
               </p>
               <p style="margin: 0 0 24px 0; font-size: 16px; line-height: 1.6; color: #121211;">
-                Import one conversation that still matters.
+                Import one conversation you're still thinking about.
               </p>
               <p style="margin: 0 0 24px 0; font-size: 16px; line-height: 1.6; color: #121211;">
-                Then distill signals from it.
+                Then distill it.
               </p>
               <p style="margin: 0 0 24px 0; font-size: 16px; line-height: 1.6; color: #121211;">
-                You'll begin to see the shape of the work: what's active, what's unresolved, and where things are moving.
-              </p>
-              <p style="margin: 24px 0 0 0; font-size: 16px; line-height: 1.6; color: #121211;">
-                That's all INDEX does.
+                You'll begin to see the shape of the work.
               </p>
               <p style="margin: 32px 0 0 0; font-size: 14px; color: #666666; font-style: italic;">
                 — INDEX

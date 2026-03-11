@@ -33,12 +33,12 @@ const CHAT_DESTINATIONS = {
   },
 };
 
-// User-facing Continue Thinking focus choices
+// User-facing Continue Thinking focus choices (optional; default Full context)
 const RESUME_FOCUS_OPTIONS = [
   { label: 'Full context', internalIntent: 'summarize_state_propose_path' },
   { label: 'Next actions', internalIntent: 'generate_next_actions' },
   { label: 'Decisions', internalIntent: 'decide_between_options' },
-  { label: "What's blocking me", internalIntent: 'resolve_blocking_uncertainty' },
+  { label: 'Blockers', internalIntent: 'resolve_blocking_uncertainty' },
 ] as const;
 
 export default function StartChatModal({
