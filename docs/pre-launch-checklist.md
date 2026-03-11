@@ -1,4 +1,4 @@
-# INDEX v2 — Pre-Launch Checklist
+# INDEX v2 — Pre-Launch Checklist 
 
 This checklist defines the minimum required work before launching INDEX v2.
 
@@ -169,13 +169,9 @@ NOTES:
 - don't like this line in welcome email "That's all INDEX does."
 - create extension instructions /extension
 - onboarding is superclose but still a little glitchy at points... need to smooth it out... like when modals are triggered, etc.
-
-- import from quick-import > doesn't create title
   - quick import confirm page feels too sparse
-- looks like no tasks are being extracted... investigate
-- some copy mentions "open loops" but really "tasks" are the correct signal level... open loops, commitments, blockers are attributes
-  - need to update copy in those areas to remove "open loops" &/or replace with "tasks" (if tasks not already in those copy blocks)
-  - we need to start properly extracting tasks so can see how those attributes are handled
+
+
 - need to run some tests with changing signal lifecycle to "track" impact
 
 
