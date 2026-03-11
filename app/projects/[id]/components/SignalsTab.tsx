@@ -110,7 +110,7 @@ export default function SignalsTab({
 
         // Soft title stabilization: if a new cluster overlaps >=60% of its ids
         // with a previous cluster, keep the previous cluster's title.
-        const stabilized = nextThemes.map((theme) => {
+        const stabilized: ThemeItem[] = nextThemes.map((theme: ThemeItem): ThemeItem => {
           const currentIds = new Set(theme.signal_ids);
           if (currentIds.size === 0 || previousThemes.length === 0) {
             return theme;
