@@ -9,7 +9,11 @@ const MAX_SIGNALS = 20;
 const MODEL = 'gpt-4o-mini';
 
 type ThemeResponse = {
-  themes: Array<{ theme_name: string; signal_ids: string[] }>;
+  themes: Array<{
+    theme_name: string;
+    signal_ids: string[];
+    interpretation?: string;
+  }>;
 };
 
 export async function POST(request: NextRequest) {
@@ -39,7 +43,12 @@ export async function POST(request: NextRequest) {
     .map((s) => `- id: ${s.id}\n  title: ${s.title}`)
     .join('\n');
 
-  const prompt = `You are given a list of recent signals from a project (decisions, tasks, insights). Group them into 2–4 thematic clusters. Each theme should have a short label (2–5 words) and the list of signal ids that belong to it. Use only the ids provided. A signal may appear in at most one theme. Include every signal in exactly one theme.
+  const prompt = `You are given a list of recent signals from a project (decisions, tasks, insights). Group them into 2–4 thematic clusters. Each theme should have:
+- a short label (2–5 words)
+- a one-sentence plain-language interpretation of what the cluster represents
+- the list of signal ids that belong to it
+
+Use only the ids provided. A signal may appear in at most one theme. Include every signal in exactly one theme.
 
 Signals:
 ${signalList}
@@ -47,8 +56,16 @@ ${signalList}
 Return a JSON object with this exact structure:
 {
   "themes": [
-    { "theme_name": "Short label", "signal_ids": ["id1", "id2"] },
-    { "theme_name": "Another theme", "signal_ids": ["id3"] }
+    {
+      "theme_name": "Short label",
+      "interpretation": "One-sentence observational description of what this cluster represents.",
+      "signal_ids": ["id1", "id2"]
+    },
+    {
+      "theme_name": "Another theme",
+      "interpretation": "Another short, observational one-sentence description.",
+      "signal_ids": ["id3"]
+    }
   ]
 }`;
 
@@ -82,7 +99,9 @@ Return a JSON object with this exact structure:
       return NextResponse.json({ error: 'Theme generation failed' }, { status: 502 });
     }
 
-    const data = (await response.json()) as { choices?: Array<{ message?: { content?: string } }> };
+    const data = (await response.json()) as {
+      choices?: Array<{ message?: { content?: string } }>;
+    };
     const rawContent = data.choices?.[0]?.message?.content?.trim() ?? '';
     const cleaned = rawContent.replace(/^```json\s*|\s*```$/g, '').trim();
     const parsed = JSON.parse(cleaned) as ThemeResponse;
@@ -100,6 +119,10 @@ Return a JSON object with this exact structure:
     const validIds = new Set(signals.map((s) => s.id));
     const themesSanitized = themes.map((t) => ({
       theme_name: String(t.theme_name).trim() || 'Theme',
+      interpretation:
+        typeof t.interpretation === 'string'
+          ? t.interpretation.trim()
+          : undefined,
       signal_ids: t.signal_ids.filter((id) => validIds.has(id)),
     }));
 

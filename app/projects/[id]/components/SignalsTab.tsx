@@ -48,7 +48,11 @@ interface SignalsTabProps {
   projectName: string;
 }
 
-type ThemeItem = { theme_name: string; signal_ids: string[] };
+type ThemeItem = {
+  theme_name: string;
+  signal_ids: string[];
+  interpretation?: string;
+};
 
 export default function SignalsTab({
   decisions,
@@ -58,6 +62,7 @@ export default function SignalsTab({
   projectName,
 }: SignalsTabProps) {
   const [themes, setThemes] = useState<ThemeItem[]>([]);
+  const [previousThemes, setPreviousThemes] = useState<ThemeItem[]>([]);
   const [themesLoading, setThemesLoading] = useState(false);
 
   const signalsForApi = useMemo(() => {
@@ -99,7 +104,54 @@ export default function SignalsTab({
     })
       .then((res) => (res.ok ? res.json() : { themes: [] }))
       .then((data) => {
-        if (!cancelled && Array.isArray(data.themes)) setThemes(data.themes);
+        if (cancelled || !Array.isArray(data.themes)) return;
+
+        const nextThemes: ThemeItem[] = data.themes;
+
+        // Soft title stabilization: if a new cluster overlaps >=60% of its ids
+        // with a previous cluster, keep the previous cluster's title.
+        const stabilized = nextThemes.map((theme) => {
+          const currentIds = new Set(theme.signal_ids);
+          if (currentIds.size === 0 || previousThemes.length === 0) {
+            return theme;
+          }
+
+          let bestMatch: ThemeItem | null = null;
+          let bestOverlapRatio = 0;
+
+          previousThemes.forEach((prev) => {
+            const prevIds = new Set(prev.signal_ids);
+            if (prevIds.size === 0) return;
+
+            let overlapCount = 0;
+            currentIds.forEach((id) => {
+              if (prevIds.has(id)) overlapCount += 1;
+            });
+
+            const ratio = overlapCount / currentIds.size;
+            if (ratio > bestOverlapRatio) {
+              bestOverlapRatio = ratio;
+              bestMatch = prev;
+            }
+          });
+
+          if (bestMatch && bestOverlapRatio >= 0.6) {
+            return {
+              ...theme,
+              theme_name: bestMatch.theme_name,
+            };
+          }
+
+          return theme;
+        });
+
+        // Sort by descending signal count for visual stability
+        const sorted = [...stabilized].sort(
+          (a, b) => b.signal_ids.length - a.signal_ids.length,
+        );
+
+        setThemes(sorted);
+        setPreviousThemes(sorted);
       })
       .catch(() => {
         if (!cancelled) setThemes([]);
@@ -150,6 +202,11 @@ export default function SignalsTab({
                     <div className="font-medium text-sm text-[rgb(var(--text))] mb-0.5">
                       {theme.theme_name}
                     </div>
+                    {theme.interpretation && (
+                      <p className="text-[11px] text-[rgb(var(--muted))] mb-1">
+                        {theme.interpretation}
+                      </p>
+                    )}
                     <div className="text-[10px] text-[rgb(var(--muted))] opacity-80 mb-1.5">
                       {ids.length} signal{ids.length !== 1 ? 's' : ''}
                     </div>
