@@ -411,8 +411,8 @@ export default function AskPage() {
           </div>
         )}
 
-        {/* State Response */}
-        {stateData && intent === 'state' && (
+        {/* Structural State Interpretation (always shown when available) */}
+        {stateData && (
           <div className="mb-8 space-y-6">
             <div className="border border-zinc-200 dark:border-zinc-800 rounded-lg p-6 bg-gradient-to-br from-zinc-50 to-white dark:from-zinc-950 dark:to-zinc-900">
               <div className="flex items-center gap-2 mb-4">
