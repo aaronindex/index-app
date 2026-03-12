@@ -6,6 +6,7 @@
 import { getSupabaseServerClient } from '@/lib/supabaseServer';
 import type { StateQueryResult } from './stateQuery';
 import type { AskCategory } from './askRouter';
+import type { AskIndexAnalysisMode } from './askAnalysisMode';
 
 type Scope = 'project' | 'global';
 
@@ -37,8 +38,10 @@ export async function buildStructuralAnswer(params: {
   category: AskCategory;
   state: StateQueryResult;
   projectId?: string | null;
+  /** Optional analysis mode for tension-aware and structural-pressure phrasing. */
+  analysisMode?: AskIndexAnalysisMode | null;
 }): Promise<StructuralAnswerSections> {
-  const { userId, scope, category, state, projectId } = params;
+  const { userId, scope, category, state, projectId, analysisMode } = params;
   const supabase = await getSupabaseServerClient();
 
   // ---------------------------------------------------------------------------
@@ -109,6 +112,13 @@ export async function buildStructuralAnswer(params: {
     interpretationParts.push(
       'No signals detected yet in this scope.'
     );
+  } else if (analysisMode === 'tension') {
+    // Tension mode: acknowledge tension framing; do not invent tension.
+    interpretationParts.push(
+      hasPulses
+        ? 'Recent shifts suggest some structural movement; no strong conflicting pull is clearly surfaced in the current ledger.'
+        : 'Current signals are relatively aligned, with no major conflicting pull clearly detected in this scope.'
+    );
   } else {
     // Category-specific framing
     if (category === 'STRUCTURAL') {
@@ -147,18 +157,21 @@ export async function buildStructuralAnswer(params: {
         interpretationParts.push(`No new decisions were recorded in the last ${state.timeWindowDaysUsed} days ${scopeLabel}.`);
       }
     } else if (category === 'ATTENTION') {
+      // Structural pressure language: momentum, focus, signals — not task-system or diagnostic.
       if (hasBlockers) {
         const blockedCount = state.blockersOrStale.filter((b) => b.reason === 'blocked').length;
         const staleCount = state.blockersOrStale.filter((b) => b.reason === 'stale').length;
         interpretationParts.push(
-          `There are ${blockedCount} blockers and ${staleCount} stale tasks that likely need attention ${scopeLabel}.`
+          `Structural pressure is concentrated around ${blockedCount} blocked and ${staleCount} stalled items ${scopeLabel}; the ledger suggests attention is being pulled there.`
         );
       } else if (hasTasks) {
         interpretationParts.push(
-          `There are active tasks but no explicit blockers or stale items detected ${scopeLabel}.`
+          `Recent tasks indicate where momentum is asking for focus ${scopeLabel}. Current signals suggest attention is concentrated around advancing active work.`
         );
       } else {
-        interpretationParts.push(`No open tasks requiring attention were detected ${scopeLabel}.`);
+        interpretationParts.push(
+          `Current signals suggest no strong concentration of attention in this scope yet. The ledger is relatively quiet on where to focus.`
+        );
       }
     } else if (category === 'EVOLUTION') {
       if (hasPulses) {

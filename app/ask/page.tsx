@@ -8,6 +8,7 @@ import { getSupabaseBrowserClient } from '@/lib/supabaseClient';
 import ConversionTile from '@/app/ask/components/ConversionTile';
 import Card from '@/app/components/ui/Card';
 import type { AskIndexAnalysisMode } from '@/lib/askAnalysisMode';
+import type { AskIndexFollowUp } from '@/lib/askFollowUps';
 import { getAskIndexLayoutConfig, getSectionLabel } from '@/lib/askLayoutConfig';
 
 interface SearchResult {
@@ -106,6 +107,7 @@ export default function AskPage() {
           setIntent(data.intent || 'recall_semantic');
           setAnalysisMode(data.analysisMode ?? null);
           setAskDebug(data.debug ?? null);
+          setFollowUps(Array.isArray(data.followUps) ? data.followUps : null);
           setRelatedContent(data.relatedContent || null);
           setAskIndexRunId(data.ask_index_run_id || null);
           setHasSearched(true);
@@ -202,6 +204,7 @@ export default function AskPage() {
     setIntent(null);
     setAnalysisMode(null);
     setAskDebug(null);
+    setFollowUps(null);
     setRelatedContent(null);
     setNeedsDisambiguation(false);
     setCandidateProjects([]);
@@ -300,6 +303,7 @@ export default function AskPage() {
       setResultScope((data.scope as 'global' | 'project') || 'global');
       setAnalysisMode((data.analysisMode as AskIndexAnalysisMode) ?? null);
       setAskDebug(data.debug ?? null);
+      setFollowUps(Array.isArray(data.followUps) ? data.followUps : null);
       setResults(data.results || []);
       setAnswer(data.answer || null);
       setStateData(data.stateData || null);
@@ -319,6 +323,7 @@ export default function AskPage() {
         stateData: data.stateData || null,
         analysisMode: data.analysisMode ?? null,
         debug: data.debug ?? null,
+        followUps: Array.isArray(data.followUps) ? data.followUps : null,
         relatedContent: data.relatedContent || null,
         ask_index_run_id: data.ask_index_run_id || null,
         intent: data.intent,
@@ -684,24 +689,27 @@ export default function AskPage() {
                 }
 
                 if (key === 'continueExploring') {
+                  const nextReads = followUps && followUps.length > 0
+                    ? followUps
+                    : [
+                        { label: 'What signals are driving that?', nextQuery: 'What signals are driving that?', operator: 'drill_down' as const },
+                        { label: 'What changed recently?', nextQuery: 'What changed recently?', operator: 'reframe' as const },
+                        { label: 'What needs attention next?', nextQuery: 'What needs attention next?', operator: 'advance' as const },
+                      ];
                   return (
                     <div key="continueExploring" className="mb-8 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 bg-[rgb(var(--surface))]">
                       <h3 className="text-sm font-semibold text-[rgb(var(--text))] mb-3">
                         {getSectionLabel('continueExploring', layoutConfig)}
                       </h3>
                       <div className="flex flex-col gap-2">
-                        {[
-                          'What signals are driving that?',
-                          'What changed recently?',
-                          'What needs attention next?',
-                        ].map((text) => (
+                        {nextReads.map((item) => (
                           <button
-                            key={text}
+                            key={item.nextQuery}
                             type="button"
-                            onClick={() => handleSuggestionClick(text)}
+                            onClick={() => handleSuggestionClick(item.nextQuery)}
                             className="w-full text-left px-4 py-3 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-sm text-[rgb(var(--text))] hover:bg-zinc-50 dark:hover:bg-zinc-900 hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors"
                           >
-                            {text}
+                            {item.label}
                           </button>
                         ))}
                       </div>

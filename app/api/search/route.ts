@@ -10,6 +10,7 @@ import { routeAskQuery } from '@/lib/askRouter';
 import { normalizeAskIndexQuery } from '@/lib/askNormalize';
 import { buildAskIndexInterpretation } from '@/lib/askAnalysisMode';
 import { getAskIndexLayoutConfig } from '@/lib/askLayoutConfig';
+import { getAskIndexFollowUps } from '@/lib/askFollowUps';
 import { queryState } from '@/lib/stateQuery';
 import { buildStructuralAnswer } from '@/lib/askStructuralAnswer';
 import crypto from 'crypto';
@@ -102,13 +103,14 @@ export async function POST(request: NextRequest) {
     resultCountTasks =
       state.newOrChangedTasks.length + state.blockersOrStale.length;
 
-    // Build structured answer sections from ledger state
+    // Build structured answer sections from ledger state (analysisMode for tension / attention phrasing)
     const sections = await buildStructuralAnswer({
       userId: user.id,
       scope: routerResult.scope,
       category: routerResult.category,
       state,
       projectId: routerResult.resolvedProjectId || projectId || null,
+      analysisMode: interpretation.analysisMode,
     });
 
     // Compose multi-section summary text for UI:
@@ -122,6 +124,12 @@ export async function POST(request: NextRequest) {
     }
 
     const stateSummaryText = parts.join('\n\n').trim();
+
+    const followUps = getAskIndexFollowUps(
+      interpretation.analysisMode,
+      routerResult.scope === 'global' ? 'index' : 'project',
+      { projectId: routerResult.resolvedProjectId || projectId }
+    );
 
     stateData = {
       stateSummary: stateSummaryText,
@@ -276,12 +284,15 @@ export async function POST(request: NextRequest) {
       /** Normalized Ask INDEX query + analysis mode for downstream analysis/layout. */
       normalizedQuery: normalizedAsk,
       analysisMode: interpretation.analysisMode,
+      /** Structural next reads (follow-up intelligence V1). */
+      followUps,
       /** Development visibility only; remove or hide before production. */
       debug: {
         rawQuestion: query.trim(),
         normalizedQuery: normalizedAsk,
         analysisMode: interpretation.analysisMode,
         layoutOrder: getAskIndexLayoutConfig(interpretation.analysisMode).sectionOrder,
+        followUps,
       },
       ask_index_run_id: askIndexRunId,
     });

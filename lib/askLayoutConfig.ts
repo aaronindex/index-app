@@ -1,7 +1,7 @@
 // lib/askLayoutConfig.ts
 /**
  * Ask INDEX Phase 3: Layout adaptation by analysis mode.
- * Section order and optional label overrides. Reading first, Continue Exploring last.
+ * Section order and optional label overrides. Reading first, Next Reads last.
  */
 
 import type { AskIndexAnalysisMode } from './askAnalysisMode';
@@ -23,7 +23,7 @@ const DEFAULT_LABELS: Record<AskIndexSectionKey, string> = {
   supportingSignals: 'Supporting Signals',
   structuralContext: 'Structural Context',
   nextAttention: 'Next Attention',
-  continueExploring: 'Continue exploring',
+  continueExploring: 'Next Reads',
 };
 
 export const ASK_INDEX_LAYOUTS: Record<AskIndexAnalysisMode, AskIndexLayoutConfig> = {
