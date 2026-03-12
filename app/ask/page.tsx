@@ -158,6 +158,8 @@ export default function AskPage() {
     analysisMode: string;
     layoutOrder: string[];
   } | null>(null);
+  /** Next Reads: structural follow-ups from API. */
+  const [followUps, setFollowUps] = useState<AskIndexFollowUp[] | null>(null);
   const [suggestions, setSuggestions] = useState<string[]>([
     'What arc is most active right now?',
     'What patterns are emerging?',
