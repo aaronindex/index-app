@@ -37,7 +37,6 @@ interface StateData {
   stateSummary: string;
   stateSummarySource: 'deterministic' | 'llm';
   currentDirection?: string;
-  timeWindowDaysUsed?: number;
   sections: {
     newDecisions: Array<{
       id: string;
