@@ -57,19 +57,17 @@ export async function createMinimalPulses(
   const pulseScope = mapScopeToPulseScope(scope);
   const pulseTypes: string[] = [];
 
-  // If no previous payload, all changes are new (but we only create pulses for specific types)
-  if (!prevPayload) {
-    // First snapshot - no pulses for initial state
-    return [];
-  }
+  // Treat missing previous as "no prior structure" (e.g. first snapshot after import+distill)
+  const prevArcIds = prevPayload?.active_arc_ids ?? [];
+  const prevDensity = prevPayload?.decision_density_bucket ?? null;
 
-  // Check if active_arc_ids changed
-  if (!arraysEqual(prevPayload.active_arc_ids, newPayload.active_arc_ids)) {
+  // Check if active_arc_ids changed (including first snapshot: [] -> [arcs])
+  if (!arraysEqual(prevArcIds, newPayload.active_arc_ids)) {
     pulseTypes.push('arc_shift');
   }
 
   // Check if decision_density_bucket changed
-  if (prevPayload.decision_density_bucket !== newPayload.decision_density_bucket) {
+  if (prevDensity !== newPayload.decision_density_bucket) {
     pulseTypes.push('structural_threshold'); // Use structural_threshold for density changes
   }
 
