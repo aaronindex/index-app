@@ -98,6 +98,7 @@ export async function buildStructuralAnswer(params: {
   const hasPulses = pulses.length > 0;
 
   const hasLedger = hasDecisions || hasTasks || hasBlockers || hasArcs || hasPulses;
+  const scopeLabel = scope === 'project' ? 'in this project' : 'across your INDEX';
 
   // ---------------------------------------------------------------------------
   // 2) Interpretation
