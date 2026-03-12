@@ -219,7 +219,7 @@ export async function buildStructuralAnswer(params: {
   if (activeArcs.length > 0) {
     contextLines.push('Active arcs:');
     activeArcs.forEach((arc) => {
-      const title = arc.summary?.trim() || arc.id.substring(0, 8);
+      const title = arc.summary?.trim() || 'Untitled arc';
       contextLines.push(`- ${title}`);
     });
   }
@@ -228,8 +228,26 @@ export async function buildStructuralAnswer(params: {
     if (contextLines.length > 0) contextLines.push('');
     contextLines.push('Recent shifts:');
     pulses.forEach((p) => {
-      const label = (p.headline || '').trim() || p.pulse_type.replace(/_/g, ' ');
-      contextLines.push(`- [${p.pulse_type}] ${label}`);
+      const headline = (p.headline || '').trim();
+      let humanLabel: string;
+      switch (p.pulse_type) {
+        case 'arc_shift':
+          humanLabel = 'Direction shift forming';
+          break;
+        case 'structural_threshold':
+          humanLabel = 'Structural momentum detected';
+          break;
+        case 'tension':
+          humanLabel = 'New tension emerging';
+          break;
+        case 'result_recorded':
+          humanLabel = 'Milestone recorded';
+          break;
+        default:
+          humanLabel = 'Structural change';
+      }
+      const line = headline ? `${humanLabel}: ${headline}` : humanLabel;
+      contextLines.push(`- ${line}`);
     });
   }
 
@@ -279,6 +297,6 @@ function pickPrimaryArc(arcs: ArcRow[]): string {
   }));
   withTimes.sort((a, b) => b.ts - a.ts);
   const primary = withTimes[0]?.arc ?? arcs[0];
-  return primary.summary?.trim() || primary.id.substring(0, 8);
+  return primary.summary?.trim() || 'an active arc';
 }
 

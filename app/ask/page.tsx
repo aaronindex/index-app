@@ -364,8 +364,8 @@ export default function AskPage() {
           </div>
         </form>
 
-        {/* Default / empty-state suggestions (no answer yet, no error) */}
-        {!loading && !error && !answer && !stateData && results.length === 0 && (
+        {/* Default suggestions before first search (ledger-oriented questions) */}
+        {!loading && !error && !hasSearched && !answer && !stateData && results.length === 0 && (
           <div className="mb-8">
             <p className="text-sm text-[rgb(var(--muted))] mb-2">Try asking:</p>
             <div className="flex flex-col gap-1">
@@ -390,32 +390,8 @@ export default function AskPage() {
           </div>
         )}
 
-        {/* No-results improvement with suggestions */}
-        {!loading &&
-          hasSearched &&
-          !error &&
-          !answer &&
-          !stateData &&
-          results.length === 0 && (
-            <div className="mb-8 p-4 border border-zinc-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-950">
-              <p className="text-sm text-[rgb(var(--muted))] mb-3">
-                I couldn’t find an exact match. Try asking about decisions, arcs, patterns, or recent shifts.
-              </p>
-              <div className="flex flex-col gap-1">
-                {suggestions.slice(0, 3).map((text) => (
-                  <button
-                    key={text}
-                    type="button"
-                    onClick={() => handleSuggestionClick(text)}
-                    className="inline-flex items-center text-sm text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] text-left"
-                  >
-                    <span className="mr-2">•</span>
-                    <span>{text}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+        {/* No explicit "no results" failure state:
+            when a query returns no semantic hits, the API falls back to ledger interpretation. */}
 
         {/* Disambiguation UI */}
         {needsDisambiguation && candidateProjects.length > 0 && (
@@ -548,7 +524,7 @@ export default function AskPage() {
             <div className="border border-zinc-200 dark:border-zinc-800 rounded-lg p-6 bg-gradient-to-br from-zinc-50 to-white dark:from-zinc-950 dark:to-zinc-900">
               <div className="flex items-center gap-2 mb-4">
                 <span className="text-2xl">✨</span>
-                <h2 className="text-xl font-semibold text-foreground">Answer</h2>
+                <h2 className="text-xl font-semibold text-foreground">Interpretation</h2>
               </div>
               <div className="prose prose-zinc dark:prose-invert max-w-none">
                 <p className="text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap leading-relaxed text-sm">
@@ -591,7 +567,7 @@ export default function AskPage() {
                 </div>
               )}
 
-              {/* Evidence (Collapsed by default, deduped, capped at 5) */}
+              {/* Supporting Signals (Collapsed by default, deduped, capped at 5) */}
               {(() => {
                 // Combine citations and results, dedupe by conversation_id, take top 5 by similarity
                 const allSources: Array<{
@@ -640,7 +616,7 @@ export default function AskPage() {
                       onClick={() => setEvidenceExpanded(!evidenceExpanded)}
                       className="flex items-center justify-between w-full text-sm font-semibold text-foreground hover:opacity-80 transition-opacity"
                     >
-                      <span>Evidence ({topSources.length})</span>
+                      <span>Supporting Signals ({topSources.length})</span>
                       <span className="text-zinc-500 dark:text-zinc-400">
                         {evidenceExpanded ? '−' : '+'}
                       </span>
@@ -686,7 +662,7 @@ export default function AskPage() {
         )}
 
 
-        {/* Evidence drawer for results without answer (deduped, capped) */}
+        {/* Supporting Signals drawer for results without answer (deduped, capped) */}
         {!answer && results.length > 0 && (() => {
           // Dedupe by conversation_id, keep highest similarity, cap at 5
           const deduped = new Map<string, SearchResult>();
@@ -707,7 +683,7 @@ export default function AskPage() {
                   onClick={() => setEvidenceExpanded(!evidenceExpanded)}
                   className="flex items-center justify-between w-full text-sm font-semibold text-foreground hover:opacity-80 transition-opacity mb-4"
                 >
-                  <span>Evidence ({topResults.length})</span>
+                  <span>Supporting Signals ({topResults.length})</span>
                   <span className="text-zinc-500 dark:text-zinc-400">
                     {evidenceExpanded ? '−' : '+'}
                   </span>

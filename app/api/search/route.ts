@@ -128,13 +128,8 @@ export async function POST(request: NextRequest) {
         changeDefinition: state.changeDefinition,
       };
 
-      // Treat any ledger evidence as a successful answer (avoid "no results" when ledger has content)
-      status =
-        sections.hasLedger ||
-        resultCountDecisions > 0 ||
-        resultCountTasks > 0
-          ? 'ok'
-          : 'no_results';
+      // Ledger interpretation is always considered a successful answer (even when sparse).
+      status = 'ok';
     } else {
       // Recall query: semantic search with fallback
       console.log('[Search API] Executing semantic search...');
@@ -167,7 +162,56 @@ export async function POST(request: NextRequest) {
           status = 'error';
         }
       } else if (results.length === 0) {
-        status = 'no_results';
+        // No semantic hits: fall back to structural ledger interpretation so Ask still answers.
+        console.log('[Search API] No semantic hits; falling back to ledger interpretation.');
+
+        // Try 7 days first, fallback to 14 if empty
+        let state = await queryState(user.id, routerResult.resolvedProjectId, 7);
+        if (
+          state.newDecisions.length === 0 &&
+          state.newOrChangedTasks.length === 0 &&
+          state.blockersOrStale.length === 0
+        ) {
+          state = await queryState(user.id, routerResult.resolvedProjectId, 14);
+          timeWindowDaysUsed = 14;
+        }
+
+        resultCountDecisions = state.newDecisions.length;
+        resultCountTasks =
+          state.newOrChangedTasks.length + state.blockersOrStale.length;
+
+        const sections = await buildStructuralAnswer({
+          userId: user.id,
+          scope: routerResult.scope,
+          category: routerResult.category,
+          state,
+          projectId: routerResult.resolvedProjectId || projectId || null,
+        });
+
+        const parts: string[] = [];
+        parts.push(`Interpretation:\n${sections.interpretation}`);
+        parts.push(`\nSupporting Signals:\n${sections.supportingSignals}`);
+        parts.push(`\nStructural Context:\n${sections.structuralContext}`);
+        if (sections.nextAttention) {
+          parts.push(`\nNext Attention:\n${sections.nextAttention}`);
+        }
+
+        const stateSummaryText = parts.join('\n\n').trim();
+
+        stateData = {
+          stateSummary: stateSummaryText,
+          stateSummarySource: 'ledger_structured',
+          currentDirection: state.currentDirection,
+          sections: {
+            newDecisions: state.newDecisions,
+            newOrChangedTasks: state.newOrChangedTasks,
+            blockersOrStale: state.blockersOrStale,
+          },
+          timeWindowDaysUsed: state.timeWindowDaysUsed,
+          changeDefinition: state.changeDefinition,
+        };
+
+        status = 'ok';
       }
     }
 
