@@ -39,32 +39,35 @@ export type HomePageData = {
   weekly_digest_enabled: boolean;
 };
 
-/** Pulse-specific labels for Shifts; fallback only when type is unknown. */
-function getPulseTypeLabel(pulseType: string): string {
-  switch (pulseType) {
-    case 'arc_shift':
-      return 'Arc shift detected';
-    case 'structural_threshold':
-      return 'Structural threshold crossed';
-    case 'tension':
-      return 'Tension detected';
-    case 'result_recorded':
-      return 'Result recorded';
-    default:
-      return 'Structure updated';
-  }
-}
-
-/** Shift label: pulse-specific label, optionally with signal reference (semantic/editorial headline). */
+/**
+ * Build human-readable Shift labels from pulse type + semantic/editorial context.
+ *
+ * Rules:
+ * - structural_threshold → "Momentum increased in: {arc_title_or_context}"
+ * - arc_shift           → "Arc shift: {arc_title_or_context}"
+ * - result_recorded     → "Milestone recorded: {result_title_or_context}"
+ * - tension             → "Tension emerging: {theme_or_arc_label}"
+ *
+ * If no semantic/editorial context is available, fall back to a shorter type-only label,
+ * and ultimately "Structure updated" for unknown types.
+ */
 function getTypedHeadline(p: HomePulse, semanticHeadline?: string | null): string {
-  const baseLabel = getPulseTypeLabel(p.pulse_type);
   const semantic = (semanticHeadline || '').trim();
   const editorial = (p.headline || '').trim();
-  const signalRef = semantic || editorial;
-  if (signalRef) {
-    return `${baseLabel} — ${signalRef}`;
+  const context = semantic || editorial;
+
+  switch (p.pulse_type) {
+    case 'structural_threshold':
+      return context ? `Momentum increased in: ${context}` : 'Momentum increased';
+    case 'arc_shift':
+      return context ? `Arc shift: ${context}` : 'Arc shift';
+    case 'result_recorded':
+      return context ? `Milestone recorded: ${context}` : 'Milestone recorded';
+    case 'tension':
+      return context ? `Tension emerging: ${context}` : 'Tension emerging';
+    default:
+      return context || 'Structure updated';
   }
-  return baseLabel;
 }
 
 function dedupePulses(pulses: HomePulse[]): HomePulse[] {
@@ -190,11 +193,17 @@ export async function getHomePageData(
     };
   });
   const GENERIC_HEADLINES = new Set([
+    // Legacy generic labels (pre-structural wording)
     'structure updated',
     'arc shift detected',
     'structural threshold crossed',
     'tension detected',
     'result recorded',
+    // New generic labels when no contextual title is available
+    'momentum increased',
+    'arc shift',
+    'milestone recorded',
+    'tension emerging',
   ]);
   const seenKeys = new Set<string>();
   const dedupedShifts: Array<{ id: string; occurred_at: string; label: string; pulse_type: string }> = [];

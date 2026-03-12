@@ -1,0 +1,284 @@
+// lib/askStructuralAnswer.ts
+// Structured ledger interpretation for Ask Index state queries.
+// Builds multi-section answers (Interpretation / Supporting Signals / Structural Context / Next Attention)
+// from decisions, tasks, arcs, and recent shifts.
+
+import { getSupabaseServerClient } from '@/lib/supabaseServer';
+import type { StateQueryResult } from './stateQuery';
+import type { AskCategory } from './askRouter';
+
+type Scope = 'project' | 'global';
+
+type PulseRow = {
+  id: string;
+  pulse_type: string;
+  headline: string | null;
+  occurred_at: string;
+};
+
+type ArcRow = {
+  id: string;
+  summary: string | null;
+  last_signal_at: string | null;
+};
+
+export interface StructuralAnswerSections {
+  interpretation: string;
+  supportingSignals: string;
+  structuralContext: string;
+  nextAttention: string | null;
+  /** True when any ledger evidence (decisions, tasks, arcs, shifts) was available. */
+  hasLedger: boolean;
+}
+
+export async function buildStructuralAnswer(params: {
+  userId: string;
+  scope: Scope;
+  category: AskCategory;
+  state: StateQueryResult;
+  projectId?: string | null;
+}): Promise<StructuralAnswerSections> {
+  const { userId, scope, category, state, projectId } = params;
+  const supabase = await getSupabaseServerClient();
+
+  // ---------------------------------------------------------------------------
+  // 1) Load structural context: latest snapshot → active arcs + recent shifts
+  // ---------------------------------------------------------------------------
+  let activeArcs: ArcRow[] = [];
+  let pulses: PulseRow[] = [];
+
+  // Latest snapshot for scope
+  let snapshotQuery = supabase
+    .from('snapshot_state')
+    .select('state_hash, state_payload, generated_at, project_id')
+    .eq('user_id', userId)
+    .eq('scope', scope)
+    .order('generated_at', { ascending: false })
+    .limit(1);
+
+  if (scope === 'project' && projectId) {
+    snapshotQuery = snapshotQuery.eq('project_id', projectId);
+  }
+
+  const { data: snapshotRows } = await snapshotQuery;
+  const latestSnapshot = snapshotRows?.[0] as
+    | { state_hash?: string; state_payload?: { active_arc_ids?: string[] } | null }
+    | undefined;
+
+  const activeArcIds: string[] = Array.isArray(latestSnapshot?.state_payload?.active_arc_ids)
+    ? (latestSnapshot!.state_payload!.active_arc_ids as string[])
+    : [];
+
+  if (activeArcIds.length > 0) {
+    const { data: arcRows } = await supabase
+      .from('arc')
+      .select('id, summary, last_signal_at')
+      .eq('user_id', userId)
+      .in('id', activeArcIds);
+    activeArcs = (arcRows ?? []) as ArcRow[];
+  }
+
+  // Recent shifts (global scope only; evolution across the whole INDEX)
+  if (scope === 'global') {
+    const { data: pulseRows } = await supabase
+      .from('pulse')
+      .select('id, pulse_type, headline, occurred_at')
+      .eq('user_id', userId)
+      .eq('scope', 'global')
+      .in('pulse_type', ['arc_shift', 'structural_threshold', 'tension', 'result_recorded'])
+      .order('occurred_at', { ascending: false })
+      .limit(7);
+    pulses = (pulseRows ?? []) as PulseRow[];
+  }
+
+  const hasDecisions = state.newDecisions.length > 0;
+  const hasTasks = state.newOrChangedTasks.length > 0;
+  const hasBlockers = state.blockersOrStale.length > 0;
+  const hasArcs = activeArcs.length > 0;
+  const hasPulses = pulses.length > 0;
+
+  const hasLedger = hasDecisions || hasTasks || hasBlockers || hasArcs || hasPulses;
+
+  // ---------------------------------------------------------------------------
+  // 2) Interpretation
+  // ---------------------------------------------------------------------------
+  const interpretationParts: string[] = [];
+
+  const scopeLabel = scope === 'project' ? 'this project' : 'across your INDEX';
+
+  if (!hasLedger) {
+    interpretationParts.push(
+      `There are no recent structural changes detected ${scope === 'project' ? 'in this project' : 'across your INDEX'} in the last ${state.timeWindowDaysUsed} days.`
+    );
+  } else {
+    // Category-specific framing
+    if (category === 'STRUCTURAL') {
+      if (hasArcs) {
+        const primaryArc = pickPrimaryArc(activeArcs);
+        interpretationParts.push(
+          `Your current structural focus appears to be "${primaryArc}" ${scope === 'project' ? 'in this project' : 'across your INDEX'}.`
+        );
+      } else {
+        interpretationParts.push(`Your structural ledger is active, but no arcs are currently marked as active ${scope === 'project' ? 'in this project' : 'across your INDEX'}.`);
+      }
+    } else if (category === 'DECISIONS') {
+      if (hasDecisions) {
+        interpretationParts.push(
+          `${state.newDecisions.length} decision${state.newDecisions.length === 1 ? '' : 's'} were recorded in the last ${state.timeWindowDaysUsed} days ${scopeLabel}.`
+        );
+      } else {
+        interpretationParts.push(`No new decisions were recorded in the last ${state.timeWindowDaysUsed} days ${scopeLabel}.`);
+      }
+    } else if (category === 'ATTENTION') {
+      if (hasBlockers) {
+        const blockedCount = state.blockersOrStale.filter((b) => b.reason === 'blocked').length;
+        const staleCount = state.blockersOrStale.filter((b) => b.reason === 'stale').length;
+        interpretationParts.push(
+          `There are ${blockedCount} blockers and ${staleCount} stale tasks that likely need attention ${scopeLabel}.`
+        );
+      } else if (hasTasks) {
+        interpretationParts.push(
+          `There are active tasks but no explicit blockers or stale items detected ${scopeLabel}.`
+        );
+      } else {
+        interpretationParts.push(`No open tasks requiring attention were detected ${scopeLabel}.`);
+      }
+    } else if (category === 'EVOLUTION') {
+      if (hasPulses) {
+        interpretationParts.push(
+          `Recent shifts in your structural ledger indicate motion ${scopeLabel}, including changes in arcs or structural momentum.`
+        );
+      } else {
+        interpretationParts.push(
+          `No structural shifts were recorded recently, but decisions and tasks still show how the work is evolving ${scopeLabel}.`
+        );
+      }
+    }
+
+    // Always mention decisions/tasks if present
+    if (hasDecisions || hasTasks) {
+      const parts: string[] = [];
+      if (hasDecisions) {
+        parts.push(
+          `${state.newDecisions.length} decision${state.newDecisions.length === 1 ? '' : 's'}`
+        );
+      }
+      if (hasTasks) {
+        parts.push(
+          `${state.newOrChangedTasks.length} task${state.newOrChangedTasks.length === 1 ? '' : 's'} created or updated`
+        );
+      }
+      interpretationParts.push(`${parts.join(' and ')} in the last ${state.timeWindowDaysUsed} days.`);
+    }
+  }
+
+  const interpretation = interpretationParts.join(' ');
+
+  // ---------------------------------------------------------------------------
+  // 3) Supporting Signals
+  // ---------------------------------------------------------------------------
+  const supportingLines: string[] = [];
+
+  if (state.newDecisions.length > 0) {
+    supportingLines.push('Decisions:');
+    state.newDecisions.slice(0, 5).forEach((d) => {
+      const projectPrefix = d.project_name ? `${d.project_name} → ` : '';
+      supportingLines.push(`- ${projectPrefix}${d.title}`);
+    });
+  }
+
+  if (state.newOrChangedTasks.length > 0) {
+    supportingLines.push(
+      supportingLines.length > 0 ? '\nTasks:' : 'Tasks:'
+    );
+    state.newOrChangedTasks.slice(0, 5).forEach((t) => {
+      const projectPrefix = t.project_name ? `${t.project_name} → ` : '';
+      supportingLines.push(`- [${t.status}] ${projectPrefix}${t.title}`);
+    });
+  }
+
+  if (state.blockersOrStale.length > 0) {
+    supportingLines.push(
+      supportingLines.length > 0 ? '\nBlockers / Stale:' : 'Blockers / Stale:'
+    );
+    state.blockersOrStale.slice(0, 5).forEach((b) => {
+      const projectPrefix = b.project_name ? `${b.project_name} → ` : '';
+      const reasonLabel = b.reason === 'blocked' ? 'Blocker' : 'Stale';
+      supportingLines.push(`- [${reasonLabel}] ${projectPrefix}${b.title}`);
+    });
+  }
+
+  const supportingSignals =
+    supportingLines.length > 0 ? supportingLines.join('\n') : 'No recent decisions or tasks were found.';
+
+  // ---------------------------------------------------------------------------
+  // 4) Structural Context (arcs + shifts)
+  // ---------------------------------------------------------------------------
+  const contextLines: string[] = [];
+
+  if (activeArcs.length > 0) {
+    contextLines.push('Active arcs:');
+    activeArcs.forEach((arc) => {
+      const title = arc.summary?.trim() || arc.id.substring(0, 8);
+      contextLines.push(`- ${title}`);
+    });
+  }
+
+  if (pulses.length > 0) {
+    if (contextLines.length > 0) contextLines.push('');
+    contextLines.push('Recent shifts:');
+    pulses.forEach((p) => {
+      const label = (p.headline || '').trim() || p.pulse_type.replace(/_/g, ' ');
+      contextLines.push(`- [${p.pulse_type}] ${label}`);
+    });
+  }
+
+  const structuralContext =
+    contextLines.length > 0 ? contextLines.join('\n') : 'No active arcs or recent shifts were found.';
+
+  // ---------------------------------------------------------------------------
+  // 5) Next Attention (optional)
+  // ---------------------------------------------------------------------------
+  let nextAttention: string | null = null;
+
+  if (state.blockersOrStale.length > 0) {
+    const items = state.blockersOrStale.slice(0, 3);
+    const lines: string[] = [];
+    lines.push('Consider focusing on:');
+    items.forEach((item) => {
+      const projectPrefix = item.project_name ? `${item.project_name} → ` : '';
+      const reasonLabel = item.reason === 'blocked' ? 'Blocker' : 'Stale';
+      lines.push(`- [${reasonLabel}] ${projectPrefix}${item.title}`);
+    });
+    nextAttention = lines.join('\n');
+  } else if (state.newOrChangedTasks.length > 0 && category === 'ATTENTION') {
+    const items = state.newOrChangedTasks.slice(0, 3);
+    const lines: string[] = [];
+    lines.push('Next attention candidates:');
+    items.forEach((item) => {
+      const projectPrefix = item.project_name ? `${item.project_name} → ` : '';
+      lines.push(`- ${projectPrefix}${item.title}`);
+    });
+    nextAttention = lines.join('\n');
+  }
+
+  return {
+    interpretation,
+    supportingSignals,
+    structuralContext,
+    nextAttention,
+    hasLedger,
+  };
+}
+
+function pickPrimaryArc(arcs: ArcRow[]): string {
+  if (arcs.length === 0) return 'an active arc';
+  const withTimes = arcs.map((arc) => ({
+    arc,
+    ts: arc.last_signal_at ? new Date(arc.last_signal_at).getTime() : 0,
+  }));
+  withTimes.sort((a, b) => b.ts - a.ts);
+  const primary = withTimes[0]?.arc ?? arcs[0];
+  return primary.summary?.trim() || primary.id.substring(0, 8);
+}
+

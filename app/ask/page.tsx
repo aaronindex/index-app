@@ -139,6 +139,13 @@ export default function AskPage() {
   const [evidenceExpanded, setEvidenceExpanded] = useState(false);
   const [showAllTiles, setShowAllTiles] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+  const [suggestions, setSuggestions] = useState<string[]>([
+    'What arc is most active right now?',
+    'What patterns are emerging?',
+    'What decisions changed the direction?',
+    'What still needs attention?',
+    'How has this project evolved recently?',
+  ]);
 
   const performSearch = async (searchQuery?: string) => {
     const queryToUse = searchQuery || query;
@@ -283,6 +290,47 @@ export default function AskPage() {
     await performSearch();
   };
 
+  const handleSuggestionClick = (text: string) => {
+    setQuery(text);
+    void performSearch(text);
+  };
+
+  // Lightweight, read-only structural probe for context-aware suggestions.
+  // If a snapshot exists with active arcs, keep the default set;
+  // otherwise bias toward decisions/attention questions.
+  useEffect(() => {
+    let cancelled = false;
+    const loadContext = async () => {
+      try {
+        const res = await fetch('/api/capsule?scope=global', {
+          method: 'GET',
+          credentials: 'same-origin',
+        });
+        if (!res.ok) return;
+        const data = await res.json().catch(() => null);
+        if (!data || cancelled) return;
+        const payload = data.state_payload || {};
+        const activeArcIds: unknown = payload.active_arc_ids;
+        const hasArcs = Array.isArray(activeArcIds) && activeArcIds.length > 0;
+
+        if (!hasArcs) {
+          setSuggestions([
+            'What decisions changed the direction?',
+            'What still needs attention?',
+            'What did I decide about pricing?',
+            'What open loops are still unresolved?',
+          ]);
+        }
+      } catch {
+        // Ignore context errors; fall back to static suggestions.
+      }
+    };
+    loadContext();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <main className="min-h-screen bg-[rgb(var(--bg))]">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -316,11 +364,58 @@ export default function AskPage() {
           </div>
         </form>
 
+        {/* Default / empty-state suggestions (no answer yet, no error) */}
+        {!loading && !error && !answer && !stateData && results.length === 0 && (
+          <div className="mb-8">
+            <p className="text-sm text-[rgb(var(--muted))] mb-2">Try asking:</p>
+            <div className="flex flex-col gap-1">
+              {suggestions.map((text) => (
+                <button
+                  key={text}
+                  type="button"
+                  onClick={() => handleSuggestionClick(text)}
+                  className="inline-flex items-center text-sm text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] text-left"
+                >
+                  <span className="mr-2">•</span>
+                  <span>{text}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {error && (
           <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
             <p className="text-red-800 dark:text-red-400">{error}</p>
           </div>
         )}
+
+        {/* No-results improvement with suggestions */}
+        {!loading &&
+          hasSearched &&
+          !error &&
+          !answer &&
+          !stateData &&
+          results.length === 0 && (
+            <div className="mb-8 p-4 border border-zinc-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-950">
+              <p className="text-sm text-[rgb(var(--muted))] mb-3">
+                I couldn’t find an exact match. Try asking about decisions, arcs, patterns, or recent shifts.
+              </p>
+              <div className="flex flex-col gap-1">
+                {suggestions.slice(0, 3).map((text) => (
+                  <button
+                    key={text}
+                    type="button"
+                    onClick={() => handleSuggestionClick(text)}
+                    className="inline-flex items-center text-sm text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] text-left"
+                  >
+                    <span className="mr-2">•</span>
+                    <span>{text}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
         {/* Disambiguation UI */}
         {needsDisambiguation && candidateProjects.length > 0 && (

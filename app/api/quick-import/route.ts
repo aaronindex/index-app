@@ -8,12 +8,57 @@ export const maxDuration = 300;
 import { getSupabaseServerClient } from '@/lib/supabaseServer';
 import { getCurrentUser } from '@/lib/getUser';
 import { parseTranscript } from '@/lib/parsers/transcript';
-import { generateConversationTitle } from '@/lib/ai/title';
 import { chunkText } from '@/lib/chunking';
 import { embedTextsInBatches } from '@/lib/ai/embeddings';
 import { generateDedupeHash } from '@/lib/jobs/importProcessor';
 import { dispatchStructureRecompute } from '@/lib/structure/dispatch';
 import crypto from 'crypto';
+
+function deriveSourceTitleFromTranscript(transcript: string): string | null {
+  if (!transcript || typeof transcript !== 'string') return null;
+
+  const trimmed = transcript.trim();
+  if (!trimmed) return null;
+
+  // Take the first non-empty line
+  const firstLine = trimmed
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .find((line) => line.length > 0);
+
+  if (!firstLine) return null;
+
+  let candidate = firstLine;
+
+  // Optionally cut at the first sentence boundary within the line
+  const sentenceBoundaryMatch = candidate.match(/(.+?[.!?])\s/);
+  if (sentenceBoundaryMatch && sentenceBoundaryMatch[1]) {
+    candidate = sentenceBoundaryMatch[1];
+  }
+
+  // Truncate to roughly 8–12 words (hard cap at 12)
+  const words = candidate.split(/\s+/).filter((w) => w.length > 0);
+  if (words.length === 0) return null;
+
+  const truncatedWords = words.slice(0, 12);
+  candidate = truncatedWords.join(' ');
+
+  // Normalize whitespace and strip excessive trailing punctuation
+  candidate = candidate.replace(/\s+/g, ' ').replace(/[-–—,:;…]+$/g, '').trim();
+
+  return candidate || null;
+}
+
+function fallbackQuickCaptureTitle(): string {
+  const now = new Date();
+  const formatted = now.toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+  return `Quick Capture — ${formatted}`;
+}
 
 async function processQuickImportSync(
   supabase: any,
@@ -282,26 +327,8 @@ export async function POST(request: NextRequest) {
     // Generate title if not provided or empty
     let finalTitle = title?.trim() || '';
     if (!finalTitle) {
-      try {
-        // Get project name if available
-        let projectName: string | undefined;
-        if (projectId) {
-          const { data: project } = await supabase
-            .from('projects')
-            .select('name')
-            .eq('id', projectId)
-            .single();
-          projectName = project?.name;
-        } else if (newProject?.name) {
-          projectName = newProject.name;
-        }
-
-        finalTitle = await generateConversationTitle(parsed.messages, projectName);
-      } catch (error) {
-        console.error('Error generating title:', error);
-        // Fallback to simple title
-        finalTitle = 'Untitled conversation';
-      }
+      const derived = deriveSourceTitleFromTranscript(transcript);
+      finalTitle = derived || fallbackQuickCaptureTitle();
     }
 
     // Check for duplicates

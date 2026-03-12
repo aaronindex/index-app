@@ -8,7 +8,7 @@ import { getRelatedContent } from '@/lib/relatedContent';
 import { checkAskLimit, incrementLimit } from '@/lib/limits';
 import { routeAskQuery } from '@/lib/askRouter';
 import { queryState } from '@/lib/stateQuery';
-import { generateStateSummary } from '@/lib/stateSummary';
+import { buildStructuralAnswer } from '@/lib/askStructuralAnswer';
 import crypto from 'crypto';
 
 export async function POST(request: NextRequest) {
@@ -73,25 +73,51 @@ export async function POST(request: NextRequest) {
     let timeWindowDaysUsed = 7;
 
     if (routerResult.intent === 'state') {
-      // State query: query structured data
-      console.log('[Search API] Executing state query...');
-      
+      // State query: interpret structural ledger (decisions, tasks, arcs, shifts)
+      console.log('[Search API] Executing state (ledger) query...', {
+        category: routerResult.category,
+        scope: routerResult.scope,
+      });
+
       // Try 7 days first, fallback to 14 if empty
       let state = await queryState(user.id, routerResult.resolvedProjectId, 7);
-      if (state.newDecisions.length === 0 && state.newOrChangedTasks.length === 0 && state.blockersOrStale.length === 0) {
+      if (
+        state.newDecisions.length === 0 &&
+        state.newOrChangedTasks.length === 0 &&
+        state.blockersOrStale.length === 0
+      ) {
         state = await queryState(user.id, routerResult.resolvedProjectId, 14);
         timeWindowDaysUsed = 14;
       }
-      
+
       resultCountDecisions = state.newDecisions.length;
-      resultCountTasks = state.newOrChangedTasks.length + state.blockersOrStale.length;
-      
-      // Generate state summary
-      const summary = await generateStateSummary(state, routerResult.scope, false);
-      
+      resultCountTasks =
+        state.newOrChangedTasks.length + state.blockersOrStale.length;
+
+      // Build structured answer sections from ledger state
+      const sections = await buildStructuralAnswer({
+        userId: user.id,
+        scope: routerResult.scope,
+        category: routerResult.category,
+        state,
+        projectId: routerResult.resolvedProjectId || projectId || null,
+      });
+
+      // Compose multi-section summary text for UI:
+      // Interpretation / Supporting Signals / Structural Context / Next Attention
+      const parts: string[] = [];
+      parts.push(`Interpretation:\n${sections.interpretation}`);
+      parts.push(`\nSupporting Signals:\n${sections.supportingSignals}`);
+      parts.push(`\nStructural Context:\n${sections.structuralContext}`);
+      if (sections.nextAttention) {
+        parts.push(`\nNext Attention:\n${sections.nextAttention}`);
+      }
+
+      const stateSummaryText = parts.join('\n\n').trim();
+
       stateData = {
-        stateSummary: summary.text,
-        stateSummarySource: summary.source,
+        stateSummary: stateSummaryText,
+        stateSummarySource: 'ledger_structured',
         currentDirection: state.currentDirection,
         sections: {
           newDecisions: state.newDecisions,
@@ -101,8 +127,14 @@ export async function POST(request: NextRequest) {
         timeWindowDaysUsed: state.timeWindowDaysUsed,
         changeDefinition: state.changeDefinition,
       };
-      
-      status = (resultCountDecisions > 0 || resultCountTasks > 0) ? 'ok' : 'no_results';
+
+      // Treat any ledger evidence as a successful answer (avoid "no results" when ledger has content)
+      status =
+        sections.hasLedger ||
+        resultCountDecisions > 0 ||
+        resultCountTasks > 0
+          ? 'ok'
+          : 'no_results';
     } else {
       // Recall query: semantic search with fallback
       console.log('[Search API] Executing semantic search...');
