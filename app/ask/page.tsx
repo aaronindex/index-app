@@ -37,6 +37,7 @@ interface StateData {
   stateSummary: string;
   stateSummarySource: 'deterministic' | 'llm';
   currentDirection?: string;
+  timeWindowDaysUsed?: number;
   sections: {
     newDecisions: Array<{
       id: string;
@@ -411,111 +412,106 @@ export default function AskPage() {
           </div>
         )}
 
-        {/* Structural State Interpretation (always shown when available) */}
+        {/* Structural cards: Interpretation / Supporting Signals / Structural Context / Next Attention */}
         {stateData && (
-          <div className="mb-8 space-y-6">
-            <div className="border border-zinc-200 dark:border-zinc-800 rounded-lg p-6 bg-gradient-to-br from-zinc-50 to-white dark:from-zinc-950 dark:to-zinc-900">
-              <div className="flex items-center gap-2 mb-4">
-                <span className="text-2xl">✨</span>
-                <h2 className="text-xl font-semibold text-foreground">State Summary</h2>
-              </div>
-              
-              {/* Current Direction */}
-              {stateData.currentDirection && (
-                <div className="mb-6 pb-6 border-b border-zinc-200 dark:border-zinc-800">
-                  <div className="text-xs uppercase tracking-wider text-[rgb(var(--text))] mb-2 font-medium">
-                    CURRENT DIRECTION
-                  </div>
-                  <div className="font-serif text-lg text-[rgb(var(--text))] leading-relaxed">
-                    {stateData.currentDirection}
-                  </div>
-                </div>
-              )}
-              
-              {/* State Summary Text */}
-              <div className="prose prose-zinc dark:prose-invert max-w-none mb-6">
-                <p className="text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap leading-relaxed text-sm">
-                  {stateData.stateSummary}
-                </p>
-              </div>
-
-              {/* Sections */}
-              {stateData.sections.newDecisions.length > 0 && (
-                <div className="mt-6 pt-6 border-t border-zinc-200 dark:border-zinc-800">
-                  <h3 className="text-sm font-semibold text-foreground mb-3">Recent Decisions</h3>
-                  <ul className="space-y-2">
-                    {stateData.sections.newDecisions.map((decision) => (
-                      <li key={decision.id}>
-                        <Link
-                          href={`/projects/${decision.project_id || ''}?tab=signals#${decision.id}`}
-                          className="block text-sm text-[rgb(var(--text))] hover:text-[rgb(var(--muted))] transition-colors"
-                        >
-                          {decision.project_name && (
-                            <span className="text-[rgb(var(--muted))] text-xs">{decision.project_name} → </span>
-                          )}
-                          {decision.title}
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {stateData.sections.newOrChangedTasks.length > 0 && (
-                <div className="mt-6 pt-6 border-t border-zinc-200 dark:border-zinc-800">
-                  <h3 className="text-sm font-semibold text-foreground mb-3">Next Attention</h3>
-                  <ul className="space-y-2">
-                    {stateData.sections.newOrChangedTasks.map((task) => (
-                      <li key={task.id}>
-                        <Link
-                          href={`/projects/${task.project_id || ''}?tab=signals#${task.id}`}
-                          className="block text-sm text-[rgb(var(--text))] hover:text-[rgb(var(--muted))] transition-colors"
-                        >
-                          {task.project_name && (
-                            <span className="text-[rgb(var(--muted))] text-xs">{task.project_name} → </span>
-                          )}
-                          {task.title}
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {stateData.sections.blockersOrStale.length > 0 && (
-                <div className="mt-6 pt-6 border-t border-zinc-200 dark:border-zinc-800">
-                  <h3 className="text-sm font-semibold text-foreground mb-3">Blockers or Stale Tasks</h3>
-                  <ul className="space-y-2">
-                    {stateData.sections.blockersOrStale.map((item) => (
-                      <li key={item.id}>
-                        <Link
-                          href={`/projects/${item.project_id || ''}?tab=signals#${item.id}`}
-                          className="block text-sm text-[rgb(var(--text))] hover:text-[rgb(var(--muted))] transition-colors"
-                        >
-                          <span className="flex items-center gap-2">
-                            {item.reason === 'blocked' && (
-                              <span className="px-1.5 py-0.5 text-xs font-medium rounded bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400">
-                                Blocker
-                              </span>
-                            )}
-                            {item.reason === 'stale' && (
-                              <span className="px-1.5 py-0.5 text-xs font-medium rounded bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-400">
-                                Stale
-                              </span>
-                            )}
-                            {item.project_name && (
-                              <span className="text-[rgb(var(--muted))] text-xs">{item.project_name} → </span>
-                            )}
-                            <span className="flex-1">{item.title}</span>
-                          </span>
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+          <>
+            {/* Interpretation card (primary) */}
+            <div className="mb-6 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 bg-gradient-to-br from-zinc-50 to-white dark:from-zinc-950 dark:to-zinc-900">
+              <h2 className="font-serif text-2xl sm:text-3xl font-semibold text-[rgb(var(--text))] mb-3">
+                {stateData.currentDirection ||
+                  stateData.sections.newDecisions[0]?.title ||
+                  'Interpretation'}
+              </h2>
+              <p className="text-sm sm:text-base text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap leading-relaxed mb-3">
+                {(() => {
+                  const raw = stateData.stateSummary || '';
+                  const split = raw.split('Supporting Signals:')[0] || raw;
+                  return split.replace(/^Interpretation:\s*/i, '').trim() || raw;
+                })()}
+              </p>
+              <p className="text-xs sm:text-[0.75rem] text-[rgb(var(--muted))]">
+                {(() => {
+                  const decisionsCount = stateData.sections.newDecisions.length;
+                  const tasksCount = stateData.sections.newOrChangedTasks.length;
+                  const days = stateData.timeWindowDaysUsed ?? 7;
+                  const decisionLabel = decisionsCount === 1 ? 'decision' : 'decisions';
+                  const taskLabel = tasksCount === 1 ? 'task' : 'tasks';
+                  return `${decisionsCount} ${decisionLabel} • ${tasksCount} ${taskLabel} updated in the last ${days} days`;
+                })()}
+              </p>
             </div>
-          </div>
+
+            {/* Supporting Signals card (decisions only) */}
+            {stateData.sections.newDecisions.length > 0 && (
+              <div className="mb-6 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 bg-[rgb(var(--surface))]">
+                <h3 className="text-sm font-semibold text-[rgb(var(--text))] mb-3">
+                  Supporting Signals
+                </h3>
+                <ul className="space-y-2 list-disc pl-4">
+                  {stateData.sections.newDecisions.map((decision) => (
+                    <li key={decision.id}>
+                      <Link
+                        href={`/projects/${decision.project_id || ''}?tab=signals#${decision.id}`}
+                        className="text-sm text-[rgb(var(--text))] hover:text-[rgb(var(--muted))] transition-colors"
+                      >
+                        {decision.project_name && (
+                          <span className="text-[rgb(var(--muted))] text-xs">
+                            {decision.project_name} →{' '}
+                          </span>
+                        )}
+                        {decision.title}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Structural Context card – compact */}
+            <div className="mb-6 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 bg-[rgb(var(--surface))]">
+              <h3 className="text-sm font-semibold text-[rgb(var(--text))] mb-2">
+                Structural Context
+              </h3>
+              <p className="text-xs sm:text-[0.8rem] text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap leading-relaxed">
+                {(() => {
+                  const raw = stateData.stateSummary || '';
+                  const contextStart = raw.indexOf('Structural Context:');
+                  if (contextStart === -1) return 'No active arcs or recent shifts were found.';
+                  const afterContext = raw.slice(contextStart + 'Structural Context:'.length);
+                  const nextLabelIndex = afterContext.search(/(Next Attention:)/);
+                  const contextBlock =
+                    nextLabelIndex === -1 ? afterContext : afterContext.slice(0, nextLabelIndex);
+                  return contextBlock.trim() || 'No active arcs or recent shifts were found.';
+                })()}
+              </p>
+            </div>
+
+            {/* Next Attention card (tasks) */}
+            {stateData.sections.newOrChangedTasks.length > 0 && (
+              <div className="mb-8 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 bg-[rgb(var(--surface))]">
+                <h3 className="text-sm font-semibold text-[rgb(var(--text))] mb-3">
+                  Next Attention
+                </h3>
+                <ul className="space-y-2">
+                  {stateData.sections.newOrChangedTasks.map((task) => (
+                    <li key={task.id}>
+                      <Link
+                        href={`/projects/${task.project_id || ''}?tab=signals#${task.id}`}
+                        className="block text-sm text-[rgb(var(--text))] hover:text-[rgb(var(--muted))] transition-colors"
+                      >
+                        {task.project_name && (
+                          <span className="text-[rgb(var(--muted))] text-xs">
+                            {task.project_name} →{' '}
+                          </span>
+                        )}
+                        {task.title}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </>
         )}
 
         {/* Synthesized Answer */}
