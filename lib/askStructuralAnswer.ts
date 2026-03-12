@@ -115,11 +115,19 @@ export async function buildStructuralAnswer(params: {
     if (category === 'STRUCTURAL') {
       if (hasArcs) {
         const primaryArc = pickPrimaryArc(activeArcs);
-        interpretationParts.push(
-          `Your current structural focus appears to be "${primaryArc}" ${scope === 'project' ? 'in this project' : 'across your INDEX'}.`
-        );
+        if (primaryArc) {
+          interpretationParts.push(
+            `Your current direction appears to be centered on "${primaryArc}" ${scope === 'project' ? 'in this project' : 'across your INDEX'}.`
+          );
+        } else {
+          interpretationParts.push(
+            `Your current direction appears to be consolidating around a small number of structural arcs ${scope === 'project' ? 'in this project' : 'across your INDEX'}.`
+          );
+        }
       } else {
-        interpretationParts.push(`Your structural ledger is active, but no arcs are currently marked as active ${scope === 'project' ? 'in this project' : 'across your INDEX'}.`);
+        interpretationParts.push(
+          `Your structural ledger is active, but no arcs are currently marked as active ${scope === 'project' ? 'in this project' : 'across your INDEX'}.`
+        );
       }
     } else if (category === 'DECISIONS') {
       if (hasDecisions) {
@@ -155,7 +163,7 @@ export async function buildStructuralAnswer(params: {
       }
     }
 
-    // Always mention decisions/tasks if present
+    // Always mention decisions/tasks if present (after the primary directional sentence)
     if (hasDecisions || hasTasks) {
       const parts: string[] = [];
       if (hasDecisions) {
@@ -168,7 +176,9 @@ export async function buildStructuralAnswer(params: {
           `${state.newOrChangedTasks.length} task${state.newOrChangedTasks.length === 1 ? '' : 's'} created or updated`
         );
       }
-      interpretationParts.push(`${parts.join(' and ')} in the last ${state.timeWindowDaysUsed} days.`);
+      interpretationParts.push(
+        `${parts.join(' and ')} in the last ${state.timeWindowDaysUsed} days.`
+      );
     }
   }
 
@@ -179,6 +189,8 @@ export async function buildStructuralAnswer(params: {
   // ---------------------------------------------------------------------------
   const supportingLines: string[] = [];
 
+  // For direction-style (STRUCTURAL) queries, prioritize decisions as supporting signals.
+  // Tasks and blockers primarily live in Next Attention for that category.
   if (state.newDecisions.length > 0) {
     supportingLines.push('Decisions:');
     state.newDecisions.slice(0, 5).forEach((d) => {
@@ -187,25 +199,27 @@ export async function buildStructuralAnswer(params: {
     });
   }
 
-  if (state.newOrChangedTasks.length > 0) {
-    supportingLines.push(
-      supportingLines.length > 0 ? '\nTasks:' : 'Tasks:'
-    );
-    state.newOrChangedTasks.slice(0, 5).forEach((t) => {
-      const projectPrefix = t.project_name ? `${t.project_name} → ` : '';
-      supportingLines.push(`- [${t.status}] ${projectPrefix}${t.title}`);
-    });
-  }
+  if (category !== 'STRUCTURAL') {
+    if (state.newOrChangedTasks.length > 0) {
+      supportingLines.push(
+        supportingLines.length > 0 ? '\nTasks:' : 'Tasks:'
+      );
+      state.newOrChangedTasks.slice(0, 5).forEach((t) => {
+        const projectPrefix = t.project_name ? `${t.project_name} → ` : '';
+        supportingLines.push(`- [${t.status}] ${projectPrefix}${t.title}`);
+      });
+    }
 
-  if (state.blockersOrStale.length > 0) {
-    supportingLines.push(
-      supportingLines.length > 0 ? '\nBlockers / Stale:' : 'Blockers / Stale:'
-    );
-    state.blockersOrStale.slice(0, 5).forEach((b) => {
-      const projectPrefix = b.project_name ? `${b.project_name} → ` : '';
-      const reasonLabel = b.reason === 'blocked' ? 'Blocker' : 'Stale';
-      supportingLines.push(`- [${reasonLabel}] ${projectPrefix}${b.title}`);
-    });
+    if (state.blockersOrStale.length > 0) {
+      supportingLines.push(
+        supportingLines.length > 0 ? '\nBlockers / Stale:' : 'Blockers / Stale:'
+      );
+      state.blockersOrStale.slice(0, 5).forEach((b) => {
+        const projectPrefix = b.project_name ? `${b.project_name} → ` : '';
+        const reasonLabel = b.reason === 'blocked' ? 'Blocker' : 'Stale';
+        supportingLines.push(`- [${reasonLabel}] ${projectPrefix}${b.title}`);
+      });
+    }
   }
 
   const supportingSignals =
@@ -219,7 +233,7 @@ export async function buildStructuralAnswer(params: {
   if (activeArcs.length > 0) {
     contextLines.push('Active arcs:');
     activeArcs.forEach((arc) => {
-      const title = arc.summary?.trim() || 'Untitled arc';
+      const title = arc.summary?.trim() || 'Primary arc';
       contextLines.push(`- ${title}`);
     });
   }
@@ -227,8 +241,14 @@ export async function buildStructuralAnswer(params: {
   if (pulses.length > 0) {
     if (contextLines.length > 0) contextLines.push('');
     contextLines.push('Recent shifts:');
+
+    // Summarize repeated shifts by human-readable label and count; cap to top 2.
+    const shiftBuckets = new Map<
+      string,
+      { label: string; count: number }
+    >();
+
     pulses.forEach((p) => {
-      const headline = (p.headline || '').trim();
       let humanLabel: string;
       switch (p.pulse_type) {
         case 'arc_shift':
@@ -246,8 +266,19 @@ export async function buildStructuralAnswer(params: {
         default:
           humanLabel = 'Structural change';
       }
-      const line = headline ? `${humanLabel}: ${headline}` : humanLabel;
-      contextLines.push(`- ${line}`);
+      const key = humanLabel;
+      const bucket = shiftBuckets.get(key) || { label: humanLabel, count: 0 };
+      bucket.count += 1;
+      shiftBuckets.set(key, bucket);
+    });
+
+    const summarized = Array.from(shiftBuckets.values())
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 2);
+
+    summarized.forEach((s) => {
+      const suffix = s.count > 1 ? ` (${s.count} recent events)` : '';
+      contextLines.push(`- ${s.label}${suffix}`);
     });
   }
 
@@ -289,14 +320,15 @@ export async function buildStructuralAnswer(params: {
   };
 }
 
-function pickPrimaryArc(arcs: ArcRow[]): string {
-  if (arcs.length === 0) return 'an active arc';
+function pickPrimaryArc(arcs: ArcRow[]): string | null {
+  if (arcs.length === 0) return null;
   const withTimes = arcs.map((arc) => ({
     arc,
     ts: arc.last_signal_at ? new Date(arc.last_signal_at).getTime() : 0,
   }));
   withTimes.sort((a, b) => b.ts - a.ts);
   const primary = withTimes[0]?.arc ?? arcs[0];
-  return primary.summary?.trim() || 'an active arc';
+  const title = primary.summary?.trim();
+  return title && title.length > 0 ? title : null;
 }
 

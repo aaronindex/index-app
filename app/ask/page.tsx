@@ -734,18 +734,7 @@ export default function AskPage() {
           </div>
         )}
 
-        {!hasSearched && !loading && (
-          <div className="text-center py-12">
-            <div className="text-sm text-zinc-500 dark:text-zinc-500 space-y-2">
-              <p className="text-zinc-600 dark:text-zinc-400 mb-3">Example queries:</p>
-              <ul className="list-none space-y-2">
-                <li>"What did I decide about pricing?"</li>
-                <li>"What's blocking my project?"</li>
-                <li>"What's the next step on this topic?"</li>
-              </ul>
-            </div>
-          </div>
-        )}
+        {/* Example queries section removed – "Try asking" suggestions are the only empty-state surface. */}
       </div>
     </main>
   );
