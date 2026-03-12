@@ -105,6 +105,7 @@ export default function AskPage() {
           setStateData(data.stateData || null);
           setIntent(data.intent || 'recall_semantic');
           setAnalysisMode(data.analysisMode ?? null);
+          setAskDebug(data.debug ?? null);
           setRelatedContent(data.relatedContent || null);
           setAskIndexRunId(data.ask_index_run_id || null);
           setHasSearched(true);
@@ -148,6 +149,13 @@ export default function AskPage() {
   const [hasSearched, setHasSearched] = useState(false);
   const [resultScope, setResultScope] = useState<'global' | 'project'>('global');
   const [analysisMode, setAnalysisMode] = useState<AskIndexAnalysisMode | null>(null);
+  /** Develop-only: debug block from API (rawQuestion, normalizedQuery, analysisMode, layoutOrder). */
+  const [askDebug, setAskDebug] = useState<{
+    rawQuestion: string;
+    normalizedQuery: { rawQuestion: string; canonicalType: string; scope: string; timeframe: string };
+    analysisMode: string;
+    layoutOrder: string[];
+  } | null>(null);
   const [suggestions, setSuggestions] = useState<string[]>([
     'What arc is most active right now?',
     'What patterns are emerging?',
@@ -192,6 +200,8 @@ export default function AskPage() {
     setAnswer(null);
     setStateData(null);
     setIntent(null);
+    setAnalysisMode(null);
+    setAskDebug(null);
     setRelatedContent(null);
     setNeedsDisambiguation(false);
     setCandidateProjects([]);
@@ -289,6 +299,7 @@ export default function AskPage() {
       setIntent(data.intent || 'recall_semantic');
       setResultScope((data.scope as 'global' | 'project') || 'global');
       setAnalysisMode((data.analysisMode as AskIndexAnalysisMode) ?? null);
+      setAskDebug(data.debug ?? null);
       setResults(data.results || []);
       setAnswer(data.answer || null);
       setStateData(data.stateData || null);
@@ -307,6 +318,7 @@ export default function AskPage() {
         answer: data.answer || null,
         stateData: data.stateData || null,
         analysisMode: data.analysisMode ?? null,
+        debug: data.debug ?? null,
         relatedContent: data.relatedContent || null,
         ask_index_run_id: data.ask_index_run_id || null,
         intent: data.intent,
@@ -455,6 +467,37 @@ export default function AskPage() {
 
         {/* No explicit "no results" failure state:
             when a query returns no semantic hits, the API falls back to ledger interpretation. */}
+
+        {/* Develop-only: Ask INDEX pipeline debug (normalization, analysis mode, layout order) */}
+        {hasSearched && (stateData || answer) && (
+          <div className="mb-6 rounded-lg border border-amber-200 dark:border-amber-900/50 bg-amber-50/50 dark:bg-amber-950/20 px-4 py-3">
+            <p className="text-[10px] uppercase tracking-wider text-amber-700 dark:text-amber-400/80 mb-2 font-medium">
+              Ask INDEX debug (develop only)
+            </p>
+            <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-xs text-amber-800 dark:text-amber-300/90">
+              <span><strong>Mode:</strong> {analysisMode ?? '—'}</span>
+              <span className="text-amber-600 dark:text-amber-500/80">
+                Layout: {getAskIndexLayoutConfig(analysisMode).sectionOrder.join(' → ')}
+              </span>
+            </div>
+            {askDebug && (
+              <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-[11px] text-amber-800 dark:text-amber-300/80 font-mono">
+                <dt className="text-amber-600 dark:text-amber-500/80">rawQuestion</dt>
+                <dd className="truncate">&quot;{askDebug.rawQuestion}&quot;</dd>
+                <dt className="text-amber-600 dark:text-amber-500/80">canonicalType</dt>
+                <dd>{askDebug.normalizedQuery?.canonicalType ?? '—'}</dd>
+                <dt className="text-amber-600 dark:text-amber-500/80">scope</dt>
+                <dd>{askDebug.normalizedQuery?.scope ?? '—'}</dd>
+                <dt className="text-amber-600 dark:text-amber-500/80">timeframe</dt>
+                <dd>{askDebug.normalizedQuery?.timeframe ?? '—'}</dd>
+                <dt className="text-amber-600 dark:text-amber-500/80">analysisMode</dt>
+                <dd>{askDebug.analysisMode}</dd>
+                <dt className="text-amber-600 dark:text-amber-500/80">layoutOrder</dt>
+                <dd className="break-all">[{askDebug.layoutOrder?.join(', ') ?? '—'}]</dd>
+              </dl>
+            )}
+          </div>
+        )}
 
         {/* Disambiguation UI */}
         {needsDisambiguation && candidateProjects.length > 0 && (
