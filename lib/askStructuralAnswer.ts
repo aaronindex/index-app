@@ -113,20 +113,30 @@ export async function buildStructuralAnswer(params: {
   } else {
     // Category-specific framing
     if (category === 'STRUCTURAL') {
+      const themeFromDecisions =
+        state.newDecisions[0]?.title?.trim() ||
+        state.newOrChangedTasks[0]?.title?.trim() ||
+        null;
+
       if (hasArcs) {
         const primaryArc = pickPrimaryArc(activeArcs);
-        if (primaryArc) {
+        const theme = primaryArc || themeFromDecisions;
+        if (theme) {
           interpretationParts.push(
-            `Your current direction appears to be centered on "${primaryArc}" ${scope === 'project' ? 'in this project' : 'across your INDEX'}.`
+            `The project is currently focused on ${theme}${scope === 'project' ? '' : ' across your INDEX'}.`
           );
         } else {
           interpretationParts.push(
-            `Your current direction appears to be consolidating around a small number of structural arcs ${scope === 'project' ? 'in this project' : 'across your INDEX'}.`
+            `The project is currently converging around a small set of related workstreams ${scope === 'project' ? 'in this project' : 'across your INDEX'}.`
           );
         }
+      } else if (themeFromDecisions) {
+        interpretationParts.push(
+          `The project is currently focused on ${themeFromDecisions}${scope === 'project' ? '' : ' across your INDEX'}.`
+        );
       } else {
         interpretationParts.push(
-          `Your structural ledger is active, but no arcs are currently marked as active ${scope === 'project' ? 'in this project' : 'across your INDEX'}.`
+          `The project is currently focused on a small number of active workstreams ${scope === 'project' ? 'in this project' : 'across your INDEX'}.`
         );
       }
     } else if (category === 'DECISIONS') {
@@ -231,11 +241,16 @@ export async function buildStructuralAnswer(params: {
   const contextLines: string[] = [];
 
   if (activeArcs.length > 0) {
-    contextLines.push('Active arcs:');
-    activeArcs.forEach((arc) => {
-      const title = arc.summary?.trim() || 'Primary arc';
-      contextLines.push(`- ${title}`);
-    });
+    const primaryArc = pickPrimaryArc(activeArcs);
+    const fallbackTheme =
+      primaryArc ||
+      state.newDecisions[0]?.title?.trim() ||
+      state.newOrChangedTasks[0]?.title?.trim() ||
+      'Active workstream';
+
+    const extraCount = activeArcs.length - 1;
+    const suffix = extraCount > 0 ? ` (+${extraCount} other${extraCount > 1 ? 's' : ''})` : '';
+    contextLines.push(`Active arc: ${fallbackTheme}${suffix}`);
   }
 
   if (pulses.length > 0) {

@@ -463,7 +463,7 @@ export default function AskPage() {
 
               {stateData.sections.newOrChangedTasks.length > 0 && (
                 <div className="mt-6 pt-6 border-t border-zinc-200 dark:border-zinc-800">
-                  <h3 className="text-sm font-semibold text-foreground mb-3">New or Changed Tasks</h3>
+                  <h3 className="text-sm font-semibold text-foreground mb-3">Next Attention</h3>
                   <ul className="space-y-2">
                     {stateData.sections.newOrChangedTasks.map((task) => (
                       <li key={task.id}>
