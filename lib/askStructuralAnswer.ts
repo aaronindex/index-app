@@ -104,11 +104,9 @@ export async function buildStructuralAnswer(params: {
   // ---------------------------------------------------------------------------
   const interpretationParts: string[] = [];
 
-  const scopeLabel = scope === 'project' ? 'this project' : 'across your INDEX';
-
   if (!hasLedger) {
     interpretationParts.push(
-      `There are no recent structural changes detected ${scope === 'project' ? 'in this project' : 'across your INDEX'} in the last ${state.timeWindowDaysUsed} days.`
+      'No signals detected yet in this scope.'
     );
   } else {
     // Category-specific framing
@@ -123,7 +121,7 @@ export async function buildStructuralAnswer(params: {
         const theme = primaryArc || themeFromDecisions;
         if (theme) {
           interpretationParts.push(
-            `The project is currently focused on ${theme}${scope === 'project' ? '' : ' across your INDEX'}.`
+            `Recent decisions indicate the project is currently focused on ${theme}.`
           );
         } else {
           interpretationParts.push(
@@ -132,7 +130,7 @@ export async function buildStructuralAnswer(params: {
         }
       } else if (themeFromDecisions) {
         interpretationParts.push(
-          `The project is currently focused on ${themeFromDecisions}${scope === 'project' ? '' : ' across your INDEX'}.`
+          `Recent decisions indicate the project is currently focused on ${themeFromDecisions}.`
         );
       } else {
         interpretationParts.push(
@@ -255,7 +253,7 @@ export async function buildStructuralAnswer(params: {
 
   if (pulses.length > 0) {
     if (contextLines.length > 0) contextLines.push('');
-    contextLines.push('Recent shifts:');
+    contextLines.push('Recent momentum:');
 
     // Summarize repeated shifts by human-readable label and count; cap to top 2.
     const shiftBuckets = new Map<
@@ -292,8 +290,8 @@ export async function buildStructuralAnswer(params: {
       .slice(0, 2);
 
     summarized.forEach((s) => {
-      const suffix = s.count > 1 ? ` (${s.count} recent events)` : '';
-      contextLines.push(`- ${s.label}${suffix}`);
+      const suffix = s.count > 1 ? ` (${s.count} signals)` : '';
+      contextLines.push(`- ${s.label.split(' ')[0]}${suffix}`);
     });
   }
 
