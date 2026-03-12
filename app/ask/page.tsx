@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getSupabaseBrowserClient } from '@/lib/supabaseClient';
 import ConversionTile from '@/app/ask/components/ConversionTile';
+import Card from '@/app/components/ui/Card';
 
 interface SearchResult {
   chunk_id: string;
@@ -106,6 +107,7 @@ export default function AskPage() {
           setHasSearched(true);
           setEvidenceExpanded(false);
           setShowAllTiles(false);
+          setNextAttentionExpanded(false);
         } catch (e) {
           console.error('Error restoring from cache:', e);
         }
@@ -139,6 +141,7 @@ export default function AskPage() {
   const [askIndexRunId, setAskIndexRunId] = useState<string | null>(null);
   const [evidenceExpanded, setEvidenceExpanded] = useState(false);
   const [showAllTiles, setShowAllTiles] = useState(false);
+  const [nextAttentionExpanded, setNextAttentionExpanded] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [resultScope, setResultScope] = useState<'global' | 'project'>('global');
   const [suggestions, setSuggestions] = useState<string[]>([
@@ -286,8 +289,9 @@ export default function AskPage() {
       setStateData(data.stateData || null);
       setRelatedContent(data.relatedContent || null);
       setAskIndexRunId(data.ask_index_run_id || null);
-      setEvidenceExpanded(false); // Collapse evidence by default
-      setShowAllTiles(false); // Show max 2 tiles by default
+      setEvidenceExpanded(false);
+      setShowAllTiles(false);
+      setNextAttentionExpanded(false);
       setNeedsDisambiguation(false);
       setCandidateProjects([]);
 
@@ -373,10 +377,17 @@ export default function AskPage() {
           </p>
         </div>
 
-        <form onSubmit={handleSearch} className="mb-8 space-y-2">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:gap-3 gap-2">
-            <div className="inline-flex items-center gap-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-2 py-1 text-xs sm:text-sm">
-              <span className="text-[rgb(var(--muted))]">Scope</span>
+        <form onSubmit={handleSearch} className="mb-8">
+          <div className="flex gap-0 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 overflow-hidden focus-within:ring-2 focus-within:ring-zinc-500 dark:focus-within:ring-zinc-400">
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="What's still unresolved?"
+              className="flex-1 min-w-0 px-4 py-3 bg-transparent text-foreground focus:outline-none"
+              disabled={loading}
+            />
+            <div className="flex items-center border-l border-zinc-300 dark:border-zinc-700 pl-3 pr-3 py-1">
               <select
                 value={scope === 'global' ? '' : scopeProjectId}
                 onChange={(e) => {
@@ -389,7 +400,7 @@ export default function AskPage() {
                     setScopeProjectId(val);
                   }
                 }}
-                className="bg-transparent text-[rgb(var(--text))] focus:outline-none"
+                className="bg-transparent text-sm text-[rgb(var(--muted))] focus:outline-none cursor-pointer"
                 disabled={loading}
               >
                 <option value="">Across Your INDEX</option>
@@ -400,23 +411,13 @@ export default function AskPage() {
                 ))}
               </select>
             </div>
-            <div className="flex-1 flex gap-3">
-              <input
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="What's still unresolved?"
-                className="flex-1 px-4 py-3 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-950 text-foreground focus:outline-none focus:ring-2 focus:ring-zinc-500 dark:focus:ring-zinc-400"
-                disabled={loading}
-              />
-              <button
-                type="submit"
-                disabled={loading || !query.trim()}
-                className="px-6 py-3 bg-foreground text-background rounded-lg hover:opacity-90 transition-opacity font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loading ? 'Searching...' : 'Search'}
-              </button>
-            </div>
+            <button
+              type="submit"
+              disabled={loading || !query.trim()}
+              className="px-6 py-3 bg-foreground text-background font-medium hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+            >
+              {loading ? 'Searching...' : 'Search'}
+            </button>
           </div>
         </form>
 
@@ -472,27 +473,26 @@ export default function AskPage() {
           <>
             {/* Interpretation card (primary) */}
             <div className="mb-6 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 bg-gradient-to-br from-zinc-50 to-white dark:from-zinc-950 dark:to-zinc-900">
-              {/* Scope label */}
-              <p className="text-[10px] uppercase tracking-wider text-[rgb(var(--muted))] mb-1">
-                Scope · {resultScope === 'project'
+              <p className="text-xs text-[rgb(var(--muted))] mb-3">
+                Scope: {resultScope === 'project'
                   ? stateData.sections.newDecisions[0]?.project_name ||
                     stateData.sections.newOrChangedTasks[0]?.project_name ||
                     'Project'
                   : 'Across Your INDEX'}
               </p>
-              <h2 className="text-xl sm:text-2xl font-semibold text-[rgb(var(--text))] mb-3">
+              <h2 className="font-sans text-lg sm:text-xl font-semibold text-[rgb(var(--text))] mb-2">
                 {stateData.currentDirection ||
                   stateData.sections.newDecisions[0]?.title ||
                   'Interpretation'}
               </h2>
-              <p className="text-sm sm:text-base text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap leading-relaxed mb-3">
+              <p className="text-sm text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap leading-relaxed mb-3">
                 {(() => {
                   const raw = stateData.stateSummary || '';
                   const split = raw.split('Supporting Signals:')[0] || raw;
                   return split.replace(/^Interpretation:\s*/i, '').trim() || raw;
                 })()}
               </p>
-              <p className="text-xs sm:text-[0.75rem] text-[rgb(var(--muted))]">
+              <p className="text-[0.7rem] text-[rgb(var(--muted))] opacity-90">
                 {(() => {
                   const decisionsCount = stateData.sections.newDecisions.length;
                   const tasksCount = stateData.sections.newOrChangedTasks.length;
@@ -510,23 +510,28 @@ export default function AskPage() {
                 <h3 className="text-sm font-semibold text-[rgb(var(--text))] mb-3">
                   Supporting Signals
                 </h3>
-                <ul className="space-y-2 list-disc pl-4">
-                  {stateData.sections.newDecisions.map((decision) => (
-                    <li key={decision.id}>
+                <div className="space-y-0">
+                  {stateData.sections.newDecisions.map((decision, idx) => (
+                    <div
+                      key={decision.id}
+                      className={idx > 0 ? 'pt-4 mt-4 border-t border-zinc-200 dark:border-zinc-700' : ''}
+                    >
                       <Link
                         href={`/projects/${decision.project_id || ''}?tab=signals#${decision.id}`}
-                        className="text-sm text-[rgb(var(--text))] hover:text-[rgb(var(--muted))] transition-colors"
+                        className="block group"
                       >
+                        <span className="text-sm font-medium text-[rgb(var(--text))] group-hover:text-[rgb(var(--muted))] transition-colors block">
+                          {decision.title}
+                        </span>
                         {resultScope === 'global' && decision.project_name && (
-                          <span className="text-[rgb(var(--muted))] text-xs block">
+                          <span className="text-xs text-[rgb(var(--muted))] mt-0.5 block">
                             {decision.project_name}
                           </span>
                         )}
-                        {decision.title}
                       </Link>
-                    </li>
+                    </div>
                   ))}
-                </ul>
+                </div>
               </div>
             )}
 
@@ -535,7 +540,7 @@ export default function AskPage() {
               <h3 className="text-sm font-semibold text-[rgb(var(--text))] mb-2">
                 Structural Context
               </h3>
-              <p className="text-xs sm:text-[0.8rem] text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap leading-relaxed">
+              <p className="text-xs text-zinc-700 dark:text-zinc-300 leading-relaxed">
                 {(() => {
                   const raw = stateData.stateSummary || '';
                   const contextStart = raw.indexOf('Structural Context:');
@@ -544,49 +549,73 @@ export default function AskPage() {
                   const nextLabelIndex = afterContext.search(/(Next Attention:)/);
                   const contextBlock =
                     nextLabelIndex === -1 ? afterContext : afterContext.slice(0, nextLabelIndex);
-                  return contextBlock.trim() || 'No active arcs or recent shifts were found.';
+                  return contextBlock.trim().replace(/\n+/g, ' · ') || 'No active arcs or recent shifts were found.';
                 })()}
               </p>
             </div>
 
-            {/* Next Attention card (tasks) */}
+            {/* Next Attention card (tasks) – top 3, expand for rest */}
             {stateData.sections.newOrChangedTasks.length > 0 && (
               <div className="mb-8 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 bg-[rgb(var(--surface))]">
                 <h3 className="text-sm font-semibold text-[rgb(var(--text))] mb-3">
                   Next Attention
                 </h3>
-                <ul className="space-y-2">
-                  {stateData.sections.newOrChangedTasks.slice(0, 5).map((task) => (
-                    <li key={task.id}>
-                      <Link
-                        href={`/projects/${task.project_id || ''}?tab=signals#${task.id}`}
-                        className="block text-sm text-[rgb(var(--text))] hover:text-[rgb(var(--muted))] transition-colors"
-                      >
-                        {resultScope === 'global' && task.project_name && (
-                          <span className="text-[rgb(var(--muted))] text-xs">
-                            {task.project_name} →{' '}
-                          </span>
-                        )}
-                        {task.title}
-                      </Link>
-                    </li>
+                <div className="space-y-3">
+                  {(nextAttentionExpanded
+                    ? stateData.sections.newOrChangedTasks
+                    : stateData.sections.newOrChangedTasks.slice(0, 3)
+                  ).map((task) => (
+                    <Link
+                      key={task.id}
+                      href={`/projects/${task.project_id || ''}?tab=signals#${task.id}`}
+                      className="block"
+                    >
+                      <Card className="group" hover>
+                        <div className="p-3">
+                          <p className="text-[0.7em] uppercase tracking-wider text-[rgb(var(--muted))] opacity-80 leading-tight mb-0.5">
+                            Task
+                          </p>
+                          <h3 className="font-semibold text-[rgb(var(--text))] text-sm leading-snug group-hover:text-[rgb(var(--muted))] transition-colors">
+                            {task.title}
+                          </h3>
+                          {resultScope === 'global' && task.project_name && (
+                            <p className="text-[11px] text-[rgb(var(--muted))] mt-1">
+                              {task.project_name}
+                            </p>
+                          )}
+                        </div>
+                      </Card>
+                    </Link>
                   ))}
-                </ul>
-                {stateData.sections.newOrChangedTasks.length > 5 && (
-                  <p className="mt-2 text-xs text-[rgb(var(--muted))]">
-                    + {stateData.sections.newOrChangedTasks.length - 5} more tasks
-                  </p>
+                </div>
+                {stateData.sections.newOrChangedTasks.length > 3 && !nextAttentionExpanded && (
+                  <button
+                    type="button"
+                    onClick={() => setNextAttentionExpanded(true)}
+                    className="mt-3 text-sm font-medium text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] transition-colors"
+                  >
+                    Show {stateData.sections.newOrChangedTasks.length - 3} more tasks
+                  </button>
+                )}
+                {stateData.sections.newOrChangedTasks.length > 3 && nextAttentionExpanded && (
+                  <button
+                    type="button"
+                    onClick={() => setNextAttentionExpanded(false)}
+                    className="mt-3 text-sm font-medium text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] transition-colors"
+                  >
+                    Show less
+                  </button>
                 )}
               </div>
             )}
 
-            {/* Follow-up suggestions */}
+            {/* Continue exploring – mini action cards */}
             {hasSearched && (answer || stateData) && (
               <div className="mb-8 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 bg-[rgb(var(--surface))]">
                 <h3 className="text-sm font-semibold text-[rgb(var(--text))] mb-3">
                   Continue exploring
                 </h3>
-                <div className="flex flex-col gap-1">
+                <div className="flex flex-col gap-2">
                   {[
                     'What signals are driving that?',
                     'What changed recently?',
@@ -596,10 +625,9 @@ export default function AskPage() {
                       key={text}
                       type="button"
                       onClick={() => handleSuggestionClick(text)}
-                      className="inline-flex items-center text-sm text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] text-left"
+                      className="w-full text-left px-4 py-3 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-sm text-[rgb(var(--text))] hover:bg-zinc-50 dark:hover:bg-zinc-900 hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors"
                     >
-                      <span className="mr-2">•</span>
-                      <span>{text}</span>
+                      {text}
                     </button>
                   ))}
                 </div>

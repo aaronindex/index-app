@@ -253,47 +253,14 @@ export async function buildStructuralAnswer(params: {
   }
 
   if (pulses.length > 0) {
-    if (contextLines.length > 0) contextLines.push('');
-    contextLines.push('Recent momentum:');
-
-    // Summarize repeated shifts by human-readable label and count; cap to top 2.
-    const shiftBuckets = new Map<
-      string,
-      { label: string; count: number }
-    >();
-
-    pulses.forEach((p) => {
-      let humanLabel: string;
-      switch (p.pulse_type) {
-        case 'arc_shift':
-          humanLabel = 'Direction shift forming';
-          break;
-        case 'structural_threshold':
-          humanLabel = 'Structural momentum detected';
-          break;
-        case 'tension':
-          humanLabel = 'New tension emerging';
-          break;
-        case 'result_recorded':
-          humanLabel = 'Milestone recorded';
-          break;
-        default:
-          humanLabel = 'Structural change';
-      }
-      const key = humanLabel;
-      const bucket = shiftBuckets.get(key) || { label: humanLabel, count: 0 };
-      bucket.count += 1;
-      shiftBuckets.set(key, bucket);
-    });
-
-    const summarized = Array.from(shiftBuckets.values())
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 2);
-
-    summarized.forEach((s) => {
-      const suffix = s.count > 1 ? ` (${s.count} signals)` : '';
-      contextLines.push(`- ${s.label.split(' ')[0]}${suffix}`);
-    });
+    // Single compact line: "Recent momentum: Structural (7 signals)"
+    const primaryType = pulses[0]?.pulse_type;
+    let momentumLabel = 'Structural';
+    if (primaryType === 'arc_shift') momentumLabel = 'Direction shift';
+    else if (primaryType === 'structural_threshold') momentumLabel = 'Structural';
+    else if (primaryType === 'tension') momentumLabel = 'Tension';
+    else if (primaryType === 'result_recorded') momentumLabel = 'Milestone';
+    contextLines.push(`Recent momentum: ${momentumLabel} (${pulses.length} signals)`);
   }
 
   const structuralContext =
