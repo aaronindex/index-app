@@ -7,6 +7,8 @@ import Link from 'next/link';
 import { getSupabaseBrowserClient } from '@/lib/supabaseClient';
 import ConversionTile from '@/app/ask/components/ConversionTile';
 import Card from '@/app/components/ui/Card';
+import type { AskIndexAnalysisMode } from '@/lib/askAnalysisMode';
+import { getAskIndexLayoutConfig, getSectionLabel } from '@/lib/askLayoutConfig';
 
 interface SearchResult {
   chunk_id: string;
@@ -102,6 +104,7 @@ export default function AskPage() {
           setAnswer(data.answer || null);
           setStateData(data.stateData || null);
           setIntent(data.intent || 'recall_semantic');
+          setAnalysisMode(data.analysisMode ?? null);
           setRelatedContent(data.relatedContent || null);
           setAskIndexRunId(data.ask_index_run_id || null);
           setHasSearched(true);
@@ -144,6 +147,7 @@ export default function AskPage() {
   const [nextAttentionExpanded, setNextAttentionExpanded] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [resultScope, setResultScope] = useState<'global' | 'project'>('global');
+  const [analysisMode, setAnalysisMode] = useState<AskIndexAnalysisMode | null>(null);
   const [suggestions, setSuggestions] = useState<string[]>([
     'What arc is most active right now?',
     'What patterns are emerging?',
@@ -284,6 +288,7 @@ export default function AskPage() {
       const normalizedQuery = queryToUse.trim();
       setIntent(data.intent || 'recall_semantic');
       setResultScope((data.scope as 'global' | 'project') || 'global');
+      setAnalysisMode((data.analysisMode as AskIndexAnalysisMode) ?? null);
       setResults(data.results || []);
       setAnswer(data.answer || null);
       setStateData(data.stateData || null);
@@ -301,6 +306,7 @@ export default function AskPage() {
         results: data.results || [],
         answer: data.answer || null,
         stateData: data.stateData || null,
+        analysisMode: data.analysisMode ?? null,
         relatedContent: data.relatedContent || null,
         ask_index_run_id: data.ask_index_run_id || null,
         intent: data.intent,
@@ -468,173 +474,203 @@ export default function AskPage() {
           </div>
         )}
 
-        {/* Structural cards: Interpretation / Supporting Signals / Structural Context / Next Attention */}
-        {stateData && (
-          <>
-            {/* Interpretation card (primary) */}
-            <div className="mb-6 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 bg-gradient-to-br from-zinc-50 to-white dark:from-zinc-950 dark:to-zinc-900">
-              <p className="text-xs text-[rgb(var(--muted))] mb-3">
-                Scope: {resultScope === 'project'
-                  ? stateData.sections.newDecisions[0]?.project_name ||
-                    stateData.sections.newOrChangedTasks[0]?.project_name ||
-                    'Project'
-                  : 'Across Your INDEX'}
-              </p>
-              <h2 className="font-sans text-lg sm:text-xl font-semibold text-[rgb(var(--text))] mb-2">
-                {stateData.currentDirection ||
-                  stateData.sections.newDecisions[0]?.title ||
-                  'Interpretation'}
-              </h2>
-              <p className="text-sm text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap leading-relaxed mb-3">
-                {(() => {
-                  const raw = stateData.stateSummary || '';
-                  const split = raw.split('Supporting Signals:')[0] || raw;
-                  return split.replace(/^Interpretation:\s*/i, '').trim() || raw;
-                })()}
-              </p>
-              <p className="text-[0.7rem] text-[rgb(var(--muted))] opacity-90">
-                {(() => {
-                  const decisionsCount = stateData.sections.newDecisions.length;
-                  const tasksCount = stateData.sections.newOrChangedTasks.length;
-                  const days = stateData.timeWindowDaysUsed ?? 7;
-                  const decisionLabel = decisionsCount === 1 ? 'decision' : 'decisions';
-                  const taskLabel = tasksCount === 1 ? 'task' : 'tasks';
-                  return `${decisionsCount} ${decisionLabel} • ${tasksCount} ${taskLabel} updated in the last ${days} days`;
-                })()}
-              </p>
-            </div>
+        {/* Structural cards: order by analysis mode (Phase 3 layout adaptation) */}
+        {stateData && (() => {
+          const layoutConfig = getAskIndexLayoutConfig(analysisMode);
+          const sectionOrder = layoutConfig.sectionOrder;
 
-            {/* Supporting Signals card (decisions only) */}
-            {stateData.sections.newDecisions.length > 0 && (
-              <div className="mb-6 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 bg-[rgb(var(--surface))]">
-                <h3 className="text-sm font-semibold text-[rgb(var(--text))] mb-3">
-                  Supporting Signals
-                </h3>
-                <div className="space-y-0">
-                  {stateData.sections.newDecisions.map((decision, idx) => (
-                    <div
-                      key={decision.id}
-                      className={idx > 0 ? 'pt-4 mt-4 border-t border-zinc-200 dark:border-zinc-700' : ''}
-                    >
-                      <Link
-                        href={`/projects/${decision.project_id || ''}?tab=signals#${decision.id}`}
-                        className="block group"
-                      >
-                        <span className="text-sm font-medium text-[rgb(var(--text))] group-hover:text-[rgb(var(--muted))] transition-colors block">
-                          {decision.title}
-                        </span>
-                        {resultScope === 'global' && decision.project_name && (
-                          <span className="text-xs text-[rgb(var(--muted))] mt-0.5 block">
-                            {decision.project_name}
-                          </span>
-                        )}
-                      </Link>
+          const showSection = (key: string) => {
+            if (key === 'reading' || key === 'structuralContext') return true;
+            if (key === 'supportingSignals') return stateData!.sections.newDecisions.length > 0;
+            if (key === 'nextAttention') return stateData!.sections.newOrChangedTasks.length > 0;
+            if (key === 'continueExploring') return hasSearched && !!(answer || stateData);
+            return false;
+          };
+
+          const structuralContextText = (() => {
+            const raw = stateData.stateSummary || '';
+            const contextStart = raw.indexOf('Structural Context:');
+            if (contextStart === -1) return 'No active arcs or recent shifts were found.';
+            const afterContext = raw.slice(contextStart + 'Structural Context:'.length);
+            const nextLabelIndex = afterContext.search(/(Next Attention:)/);
+            const contextBlock =
+              nextLabelIndex === -1 ? afterContext : afterContext.slice(0, nextLabelIndex);
+            return contextBlock.trim() || 'No active arcs or recent shifts were found.';
+          })();
+
+          return (
+            <>
+              {sectionOrder.map((key) => {
+                if (!showSection(key)) return null;
+
+                if (key === 'reading') {
+                  return (
+                    <div key="reading" className="mb-6 border border-zinc-200 dark:border-zinc-800 rounded-xl p-6 bg-gradient-to-br from-zinc-50 to-white dark:from-zinc-950 dark:to-zinc-900">
+                      <p className="text-xs text-[rgb(var(--muted))] mb-3">
+                        Scope: {resultScope === 'project'
+                          ? stateData.sections.newDecisions[0]?.project_name ||
+                            stateData.sections.newOrChangedTasks[0]?.project_name ||
+                            'Project'
+                          : 'Across Your INDEX'}
+                      </p>
+                      <h2 className="font-sans text-lg sm:text-xl font-semibold text-[rgb(var(--text))] mb-2">
+                        {stateData.currentDirection ||
+                          stateData.sections.newDecisions[0]?.title ||
+                          'Interpretation'}
+                      </h2>
+                      <p className="text-sm text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap leading-relaxed mb-3">
+                        {(() => {
+                          const raw = stateData.stateSummary || '';
+                          const split = raw.split('Supporting Signals:')[0] || raw;
+                          return split.replace(/^Interpretation:\s*/i, '').trim() || raw;
+                        })()}
+                      </p>
+                      <p className="text-[0.7rem] text-[rgb(var(--muted))] opacity-90">
+                        {(() => {
+                          const decisionsCount = stateData.sections.newDecisions.length;
+                          const tasksCount = stateData.sections.newOrChangedTasks.length;
+                          const days = stateData.timeWindowDaysUsed ?? 7;
+                          const decisionLabel = decisionsCount === 1 ? 'decision' : 'decisions';
+                          const taskLabel = tasksCount === 1 ? 'task' : 'tasks';
+                          return `${decisionsCount} ${decisionLabel} • ${tasksCount} ${taskLabel} updated in the last ${days} days`;
+                        })()}
+                      </p>
                     </div>
-                  ))}
-                </div>
-              </div>
-            )}
+                  );
+                }
 
-            {/* Structural Context card – compact */}
-            <div className="mb-6 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 bg-[rgb(var(--surface))]">
-              <h3 className="text-sm font-semibold text-[rgb(var(--text))] mb-2">
-                Structural Context
-              </h3>
-              <p className="text-xs text-zinc-700 dark:text-zinc-300 leading-relaxed">
-                {(() => {
-                  const raw = stateData.stateSummary || '';
-                  const contextStart = raw.indexOf('Structural Context:');
-                  if (contextStart === -1) return 'No active arcs or recent shifts were found.';
-                  const afterContext = raw.slice(contextStart + 'Structural Context:'.length);
-                  const nextLabelIndex = afterContext.search(/(Next Attention:)/);
-                  const contextBlock =
-                    nextLabelIndex === -1 ? afterContext : afterContext.slice(0, nextLabelIndex);
-                  return contextBlock.trim().replace(/\n+/g, ' · ') || 'No active arcs or recent shifts were found.';
-                })()}
-              </p>
-            </div>
+                if (key === 'supportingSignals') {
+                  return (
+                    <div key="supportingSignals" className="mb-6 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 bg-[rgb(var(--surface))]">
+                      <h3 className="text-sm font-semibold text-[rgb(var(--text))] mb-3">
+                        {getSectionLabel('supportingSignals', layoutConfig)}
+                      </h3>
+                      <div className="space-y-0">
+                        {stateData.sections.newDecisions.map((decision, idx) => (
+                          <div
+                            key={decision.id}
+                            className={idx > 0 ? 'pt-4 mt-4 border-t border-zinc-200 dark:border-zinc-700' : ''}
+                          >
+                            <Link
+                              href={`/projects/${decision.project_id || ''}?tab=signals#${decision.id}`}
+                              className="block group"
+                            >
+                              <span className="text-sm font-medium text-[rgb(var(--text))] group-hover:text-[rgb(var(--muted))] transition-colors block">
+                                {decision.title}
+                              </span>
+                              {resultScope === 'global' && decision.project_name && (
+                                <span className="text-xs text-[rgb(var(--muted))] mt-0.5 block">
+                                  {decision.project_name}
+                                </span>
+                              )}
+                            </Link>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                }
 
-            {/* Next Attention card (tasks) – top 3, expand for rest */}
-            {stateData.sections.newOrChangedTasks.length > 0 && (
-              <div className="mb-8 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 bg-[rgb(var(--surface))]">
-                <h3 className="text-sm font-semibold text-[rgb(var(--text))] mb-3">
-                  Next Attention
-                </h3>
-                <div className="space-y-3">
-                  {(nextAttentionExpanded
-                    ? stateData.sections.newOrChangedTasks
-                    : stateData.sections.newOrChangedTasks.slice(0, 3)
-                  ).map((task) => (
-                    <Link
-                      key={task.id}
-                      href={`/projects/${task.project_id || ''}?tab=signals#${task.id}`}
-                      className="block"
-                    >
-                      <Card className="group" hover>
-                        <div className="p-3">
-                          <p className="text-[0.7em] uppercase tracking-wider text-[rgb(var(--muted))] opacity-80 leading-tight mb-0.5">
-                            Task
-                          </p>
-                          <h3 className="font-semibold text-[rgb(var(--text))] text-sm leading-snug group-hover:text-[rgb(var(--muted))] transition-colors">
-                            {task.title}
-                          </h3>
-                          {resultScope === 'global' && task.project_name && (
-                            <p className="text-[11px] text-[rgb(var(--muted))] mt-1">
-                              {task.project_name}
-                            </p>
-                          )}
-                        </div>
-                      </Card>
-                    </Link>
-                  ))}
-                </div>
-                {stateData.sections.newOrChangedTasks.length > 3 && !nextAttentionExpanded && (
-                  <button
-                    type="button"
-                    onClick={() => setNextAttentionExpanded(true)}
-                    className="mt-3 text-sm font-medium text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] transition-colors"
-                  >
-                    Show {stateData.sections.newOrChangedTasks.length - 3} more tasks
-                  </button>
-                )}
-                {stateData.sections.newOrChangedTasks.length > 3 && nextAttentionExpanded && (
-                  <button
-                    type="button"
-                    onClick={() => setNextAttentionExpanded(false)}
-                    className="mt-3 text-sm font-medium text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] transition-colors"
-                  >
-                    Show less
-                  </button>
-                )}
-              </div>
-            )}
+                if (key === 'structuralContext') {
+                  return (
+                    <div key="structuralContext" className="mb-6 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 bg-[rgb(var(--surface))]">
+                      <h3 className="text-sm font-semibold text-[rgb(var(--text))] mb-2">
+                        {getSectionLabel('structuralContext', layoutConfig)}
+                      </h3>
+                      <p className="text-xs text-zinc-700 dark:text-zinc-300 leading-relaxed whitespace-pre-wrap">
+                        {structuralContextText}
+                      </p>
+                    </div>
+                  );
+                }
 
-            {/* Continue exploring – mini action cards */}
-            {hasSearched && (answer || stateData) && (
-              <div className="mb-8 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 bg-[rgb(var(--surface))]">
-                <h3 className="text-sm font-semibold text-[rgb(var(--text))] mb-3">
-                  Continue exploring
-                </h3>
-                <div className="flex flex-col gap-2">
-                  {[
-                    'What signals are driving that?',
-                    'What changed recently?',
-                    'What needs attention next?',
-                  ].map((text) => (
-                    <button
-                      key={text}
-                      type="button"
-                      onClick={() => handleSuggestionClick(text)}
-                      className="w-full text-left px-4 py-3 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-sm text-[rgb(var(--text))] hover:bg-zinc-50 dark:hover:bg-zinc-900 hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors"
-                    >
-                      {text}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </>
-        )}
+                if (key === 'nextAttention') {
+                  return (
+                    <div key="nextAttention" className="mb-8 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 bg-[rgb(var(--surface))]">
+                      <h3 className="text-sm font-semibold text-[rgb(var(--text))] mb-3">
+                        {getSectionLabel('nextAttention', layoutConfig)}
+                      </h3>
+                      <div className="space-y-3">
+                        {(nextAttentionExpanded
+                          ? stateData.sections.newOrChangedTasks
+                          : stateData.sections.newOrChangedTasks.slice(0, 3)
+                        ).map((task) => (
+                          <Link
+                            key={task.id}
+                            href={`/projects/${task.project_id || ''}?tab=signals#${task.id}`}
+                            className="block"
+                          >
+                            <Card className="group" hover>
+                              <div className="p-3">
+                                <p className="text-[0.7em] uppercase tracking-wider text-[rgb(var(--muted))] opacity-80 leading-tight mb-0.5">
+                                  Task
+                                </p>
+                                <h3 className="font-semibold text-[rgb(var(--text))] text-sm leading-snug group-hover:text-[rgb(var(--muted))] transition-colors">
+                                  {task.title}
+                                </h3>
+                                {resultScope === 'global' && task.project_name && (
+                                  <p className="text-[11px] text-[rgb(var(--muted))] mt-1">
+                                    {task.project_name}
+                                  </p>
+                                )}
+                              </div>
+                            </Card>
+                          </Link>
+                        ))}
+                      </div>
+                      {stateData.sections.newOrChangedTasks.length > 3 && !nextAttentionExpanded && (
+                        <button
+                          type="button"
+                          onClick={() => setNextAttentionExpanded(true)}
+                          className="mt-3 text-sm font-medium text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] transition-colors"
+                        >
+                          Show {stateData.sections.newOrChangedTasks.length - 3} more tasks
+                        </button>
+                      )}
+                      {stateData.sections.newOrChangedTasks.length > 3 && nextAttentionExpanded && (
+                        <button
+                          type="button"
+                          onClick={() => setNextAttentionExpanded(false)}
+                          className="mt-3 text-sm font-medium text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] transition-colors"
+                        >
+                          Show less
+                        </button>
+                      )}
+                    </div>
+                  );
+                }
+
+                if (key === 'continueExploring') {
+                  return (
+                    <div key="continueExploring" className="mb-8 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 bg-[rgb(var(--surface))]">
+                      <h3 className="text-sm font-semibold text-[rgb(var(--text))] mb-3">
+                        {getSectionLabel('continueExploring', layoutConfig)}
+                      </h3>
+                      <div className="flex flex-col gap-2">
+                        {[
+                          'What signals are driving that?',
+                          'What changed recently?',
+                          'What needs attention next?',
+                        ].map((text) => (
+                          <button
+                            key={text}
+                            type="button"
+                            onClick={() => handleSuggestionClick(text)}
+                            className="w-full text-left px-4 py-3 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-950 text-sm text-[rgb(var(--text))] hover:bg-zinc-50 dark:hover:bg-zinc-900 hover:border-zinc-300 dark:hover:border-zinc-600 transition-colors"
+                          >
+                            {text}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                }
+
+                return null;
+              })}
+            </>
+          );
+        })()}
 
         {/* Synthesized Answer */}
         {answer && (

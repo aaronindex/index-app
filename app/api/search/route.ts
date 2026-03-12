@@ -7,6 +7,9 @@ import { synthesizeAnswer } from '@/lib/ai/answer';
 import { getRelatedContent } from '@/lib/relatedContent';
 import { checkAskLimit, incrementLimit } from '@/lib/limits';
 import { routeAskQuery } from '@/lib/askRouter';
+import { normalizeAskIndexQuery } from '@/lib/askNormalize';
+import { buildAskIndexInterpretation } from '@/lib/askAnalysisMode';
+import { getAskIndexLayoutConfig } from '@/lib/askLayoutConfig';
 import { queryState } from '@/lib/stateQuery';
 import { buildStructuralAnswer } from '@/lib/askStructuralAnswer';
 import crypto from 'crypto';
@@ -45,6 +48,12 @@ export async function POST(request: NextRequest) {
     const normalizedQuery = query.trim().toLowerCase().replace(/\s+/g, ' ');
     const queryHash = crypto.createHash('sha256').update(normalizedQuery).digest('hex');
     const threshold = similarityThreshold || 0.5;
+
+    // Normalize question → analysis mode (Phase 1 + 2 pipeline)
+    const requestScope = projectId ? 'project' : 'index';
+    const normalizedAsk = normalizeAskIndexQuery(query.trim(), requestScope);
+    const interpretation = buildAskIndexInterpretation(normalizedAsk);
+    console.log('[Search API] Normalized Ask:', normalizedAsk.canonicalType, '→ analysisMode:', interpretation.analysisMode);
 
     // Route query to determine intent
     const routerResult = await routeAskQuery(query.trim(), user.id, projectId || undefined);
@@ -263,6 +272,16 @@ export async function POST(request: NextRequest) {
         resultCountDecisions,
         timeWindowDaysUsed,
         changeDefinition: 'updated_at',
+      },
+      /** Normalized Ask INDEX query + analysis mode for downstream analysis/layout. */
+      normalizedQuery: normalizedAsk,
+      analysisMode: interpretation.analysisMode,
+      /** Development visibility only; remove or hide before production. */
+      debug: {
+        rawQuestion: query.trim(),
+        normalizedQuery: normalizedAsk,
+        analysisMode: interpretation.analysisMode,
+        layoutOrder: getAskIndexLayoutConfig(interpretation.analysisMode).sectionOrder,
       },
       ask_index_run_id: askIndexRunId,
     });

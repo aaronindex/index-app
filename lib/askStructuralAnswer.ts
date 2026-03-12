@@ -141,7 +141,7 @@ export async function buildStructuralAnswer(params: {
     } else if (category === 'DECISIONS') {
       if (hasDecisions) {
         interpretationParts.push(
-          `${state.newDecisions.length} decision${state.newDecisions.length === 1 ? '' : 's'} were recorded in the last ${state.timeWindowDaysUsed} days ${scopeLabel}.`
+          `Recent decisions in this scope are shaping the current direction.`
         );
       } else {
         interpretationParts.push(`No new decisions were recorded in the last ${state.timeWindowDaysUsed} days ${scopeLabel}.`);
@@ -170,24 +170,6 @@ export async function buildStructuralAnswer(params: {
           `No structural shifts were recorded recently, but decisions and tasks still show how the work is evolving ${scopeLabel}.`
         );
       }
-    }
-
-    // Always mention decisions/tasks if present (after the primary directional sentence)
-    if (hasDecisions || hasTasks) {
-      const parts: string[] = [];
-      if (hasDecisions) {
-        parts.push(
-          `${state.newDecisions.length} decision${state.newDecisions.length === 1 ? '' : 's'}`
-        );
-      }
-      if (hasTasks) {
-        parts.push(
-          `${state.newOrChangedTasks.length} task${state.newOrChangedTasks.length === 1 ? '' : 's'} created or updated`
-        );
-      }
-      interpretationParts.push(
-        `${parts.join(' and ')} in the last ${state.timeWindowDaysUsed} days.`
-      );
     }
   }
 
