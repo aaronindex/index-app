@@ -48,7 +48,7 @@ export default function ReadStructure({
           onClick={setOpen}
           className="text-xs font-normal text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] transition-colors underline underline-offset-2"
         >
-          Read structure
+          Read structure {open ? '▾' : '▸'}
         </button>
       )}
       <div

@@ -3,7 +3,7 @@
 
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import ExtensionNudgeBanner from './ExtensionNudgeBanner';
 import PostImportModal from './PostImportModal';
@@ -38,7 +38,9 @@ type LandingData = {
     active_arc_count: number;
     project_count: number;
     lastChangeAt: string | null;
-     signals?: Array<{ id: string; label: string }>;
+    signals?: Array<{ id: string; label: string }>;
+    arc?: string | null;
+    sourceCount?: number;
   };
   shifts: ShiftItem[];
   timelineEvents: TimelineEvent[];
@@ -181,14 +183,17 @@ function HomeAskModule() {
     redirectToAsk(query);
   };
 
+  const inputRef = useRef<HTMLInputElement>(null);
+
   return (
-    <div className="mb-6">
+    <div className="mb-8">
       <h2 className="font-serif text-lg font-semibold text-[rgb(var(--text))] mb-3">
         Ask INDEX
       </h2>
       <form onSubmit={handleSubmit} className="mb-3">
         <div className="flex gap-0 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 overflow-hidden focus-within:ring-2 focus-within:ring-zinc-500 dark:focus-within:ring-zinc-400">
           <input
+            ref={inputRef}
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -234,7 +239,7 @@ function HomeAskModule() {
             type="button"
             onClick={() => {
               setQuery(prompt);
-              redirectToAsk(prompt);
+              inputRef.current?.focus();
             }}
             className="hover:text-[rgb(var(--text))] transition-colors underline underline-offset-2"
           >
@@ -447,11 +452,20 @@ export default function MagicHomeScreen({ initialData = null, initialShowFocusMo
                 </p>
               )}
               {!directionText?.trim() ? (
-                <div className="text-sm text-[rgb(var(--muted))] font-sans">
-                  <p>No direction yet.</p>
-                  <p className="mt-1 text-xs">
-                    Direction appears as decisions accumulate.
-                  </p>
+                <div className="text-sm font-sans space-y-3">
+                  <div className="text-[rgb(var(--muted))]">
+                    <p>No direction yet.</p>
+                    <p className="mt-1 text-xs">
+                      Direction appears as decisions accumulate.
+                    </p>
+                  </div>
+                  {directionSignals.length > 0 && (
+                    <ReadStructure
+                      signals={directionSignals.map((s) => ({ title: s.label }))}
+                      arc={data?.direction?.arc ?? undefined}
+                      sourceCount={data?.direction?.sourceCount}
+                    />
+                  )}
                 </div>
               ) : (
                 <div className="text-sm text-[rgb(var(--text))] whitespace-pre-wrap font-sans space-y-3">
@@ -459,7 +473,8 @@ export default function MagicHomeScreen({ initialData = null, initialShowFocusMo
                   {directionSignals.length > 0 && (
                     <ReadStructure
                       signals={directionSignals.map((s) => ({ title: s.label }))}
-                      arc={undefined}
+                      arc={data?.direction?.arc ?? undefined}
+                      sourceCount={data?.direction?.sourceCount}
                     />
                   )}
                 </div>

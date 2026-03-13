@@ -435,11 +435,18 @@ export async function loadProjectView(params: {
         })
       : { pulseHeadlines: {} as Record<string, string> };
 
+  function isSystemPhrase(s: string): boolean {
+    const lower = s.toLowerCase().trim();
+    if (lower.length < 10) return false;
+    if (/\b(threshold|momentum increased|structural threshold|in project)\b/.test(lower)) return true;
+    if (/^(result recorded|structural shift|arc shift|tension emerging|structure updated)(\s|$)/i.test(lower)) return true;
+    return false;
+  }
   const pulseEvents = (projectPulses ?? []).map((p: { id: string; pulse_type: string; headline: string | null; occurred_at: string }) => {
     const semantic = pulseOverlay.pulseHeadlines[p.id]?.trim();
     const editorial = (p.headline ?? '').trim();
     const signalRef = semantic || editorial;
-    const label = signalRef || pulseTypeFallback(p.pulse_type);
+    const label = (signalRef && !isSystemPhrase(signalRef)) ? signalRef : pulseTypeFallback(p.pulse_type);
     return {
       id: p.id,
       occurred_at: p.occurred_at,

@@ -20,6 +20,8 @@ export type HomePageData = {
     project_count: number;
     lastChangeAt: string | null;
     signals?: Array<{ id: string; label: string }>;
+    arc?: string | null;
+    sourceCount?: number;
   };
   shifts: Array<{ id: string; occurred_at: string; label: string; pulse_type: string }>;
   timelineEvents: Array<{
@@ -39,17 +41,25 @@ export type HomePageData = {
   weekly_digest_enabled: boolean;
 };
 
+/** Treat system-generated phrases as empty so we show user-facing fallback. */
+function isSystemPhrase(s: string): boolean {
+  const lower = s.toLowerCase().trim();
+  if (lower.length < 10) return false;
+  if (/\b(threshold|momentum increased|structural threshold|in project)\b/.test(lower)) return true;
+  if (/^(result recorded|structural shift|arc shift|tension emerging|structure updated)(\s|$)/i.test(lower)) return true;
+  return false;
+}
+
 /**
  * Build timeline/shift labels for tooltips and lists.
- * Priority: user-recognizable content (decision title, source title, highlight/summary).
- * Avoid system phrases like "threshold reached", "momentum increased"; use short fallback only when no context.
+ * Priority: decision title, signal/source title, or editorial highlight; fallback only when no human-readable content.
  */
 function getTypedHeadline(p: HomePulse, semanticHeadline?: string | null): string {
   const semantic = (semanticHeadline || '').trim();
   const editorial = (p.headline || '').trim();
   const context = semantic || editorial;
 
-  if (context) return context;
+  if (context && !isSystemPhrase(context)) return context;
 
   switch (p.pulse_type) {
     case 'result_recorded':
@@ -233,6 +243,8 @@ export async function getHomePageData(
 
   // Resolve a small set of signals informing Direction (global, across arcs)
   let directionSignals: Array<{ id: string; label: string }> = [];
+  let directionArc: string | null = null;
+  let directionSourceCount = 0;
   try {
     const latestStateHash = homeView.latestSnapshot?.state_hash ?? null;
     const activeArcIds = Array.isArray(payload?.active_arc_ids) ? payload!.active_arc_ids! : [];
@@ -308,6 +320,15 @@ export async function getHomePageData(
             label,
           };
         });
+        directionSourceCount = new Set(
+          contributingSignals.map((s) => s.project_id).filter(Boolean)
+        ).size;
+        const { data: arcRows } = await serviceClientForSignals
+          .from('arc')
+          .select('id, summary')
+          .in('id', activeArcIds)
+          .limit(1);
+        directionArc = (arcRows?.[0] as { summary?: string | null } | undefined)?.summary?.trim() ?? null;
       }
     }
   } catch {
@@ -327,6 +348,8 @@ export async function getHomePageData(
       project_count,
       lastChangeAt,
       signals: directionSignals,
+      arc: directionArc,
+      sourceCount: directionSourceCount > 0 ? directionSourceCount : undefined,
     },
     shifts,
     timelineEvents,
