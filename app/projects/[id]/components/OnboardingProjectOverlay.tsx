@@ -39,7 +39,7 @@ export default function OnboardingProjectOverlay() {
             Signals are the ledger of your thinking.
           </h2>
           <p className="text-sm text-[rgb(var(--muted))] mb-6">
-            Decisions, tasks, insights, and results accumulate here.
+            Decisions, tasks, and insights accumulate here.
           </p>
           <button
             type="button"
@@ -73,7 +73,7 @@ export default function OnboardingProjectOverlay() {
             Structure reflects the work.
           </h2>
           <p className="text-sm text-[rgb(var(--muted))] mb-6">
-            Arcs and direction emerge from signals.
+            Arcs emerge from signals.
           </p>
           <button
             type="button"

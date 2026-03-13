@@ -241,13 +241,23 @@ export default function OverviewTab({ projectId, projectName, projectDescription
                 <h3 className="font-serif text-xl font-semibold text-[rgb(var(--text))] mb-3">
                   Nothing surfaced yet.
                 </h3>
-                <p className="text-sm text-[rgb(var(--muted))] mb-2">
-                  As you work, INDEX will surface the decisions and tasks that matter most.
-                  This overview becomes useful after reduction — not before.
+                <p className="text-sm text-[rgb(var(--muted))] mb-4">
+                  Import another source or distill signals from a conversation.
                 </p>
-                <p className="text-xs text-[rgb(var(--muted))] italic mt-4">
-                  Start with a conversation or extract insights.
-                </p>
+                <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                  <Button
+                    variant="primary"
+                    onClick={() => router.push(`/import?project=${projectId}`)}
+                  >
+                    Import source
+                  </Button>
+                  <Link
+                    href={`/projects/${projectId}?tab=chats`}
+                    className="inline-flex items-center justify-center px-4 py-2 border border-[rgb(var(--ring)/0.3)] text-[rgb(var(--text))] rounded-lg hover:opacity-90 transition-opacity font-medium"
+                  >
+                    View conversations
+                  </Link>
+                </div>
               </>
             ) : (
               <>

@@ -5,13 +5,13 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import OnboardingController from './onboarding/OnboardingController';
 import ExtensionNudgeBanner from './ExtensionNudgeBanner';
 import PostImportModal from './PostImportModal';
 import { isOnboardingInProgress } from '@/lib/onboarding/state';
 import { showError } from './ErrorNotification';
 import GenerateDigestButton from '../tools/components/GenerateDigestButton';
 import ReadStructure from './ReadStructure';
+// OnboardingController now mounted globally via GlobalOnboarding in root layout
 
 type TimelineEvent = {
   id: string;
@@ -349,8 +349,6 @@ export default function MagicHomeScreen({ initialData = null, initialShowFocusMo
         </div>
       )}
 
-      {/* Onboarding tour mount: show when onboarding not completed; parent persists via markOnboardingCompleted on complete. */}
-      <OnboardingController />
       {!onboardingInProgress && <ExtensionNudgeBanner />}
 
       {/* Page title — same hierarchy as other page titles */}

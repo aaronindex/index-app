@@ -64,7 +64,7 @@ export default function OnboardingController() {
             Thinking happens everywhere. INDEX keeps what matters.
           </h2>
           <p className="text-sm text-[rgb(var(--muted))] mb-6 whitespace-pre-wrap">
-            Import conversations or captures.{'\n'}
+            Import a conversation.{'\n'}
             Distill signals.{'\n'}
             Watch structure emerge.
           </p>
@@ -97,7 +97,7 @@ export default function OnboardingController() {
             INDEX reflects where your thinking is headed.
           </h2>
           <p className="text-sm text-[rgb(var(--muted))] mb-6">
-            Direction evolves as signals accumulate.
+            Direction evolves as decisions accumulate.
           </p>
           <button
             type="button"

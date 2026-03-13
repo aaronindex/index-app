@@ -11,6 +11,7 @@ import Footer from "./components/Footer";
 import CookieNotice from "./components/CookieNotice";
 import AttributionCapture from "./components/AttributionCapture";
 import ExtensionNudgePill from "./components/ExtensionNudgePill";
+import GlobalOnboarding from "./components/GlobalOnboarding";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -113,6 +114,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
             <CookieNotice />
             <AttributionCapture />
             <ExtensionNudgePill />
+            <GlobalOnboarding />
           </ErrorBoundary>
         </ThemeProvider>
       </body>
