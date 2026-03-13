@@ -694,9 +694,9 @@ export default function AskPage() {
                   const nextReads = followUps && followUps.length > 0
                     ? followUps
                     : [
-                        { label: 'What signals are driving that?', nextQuery: 'What signals are driving that?', operator: 'drill_down' as const, canonicalType: 'signals' as const },
-                        { label: 'What changed recently?', nextQuery: 'What changed recently?', operator: 'reframe' as const, canonicalType: 'change' as const },
-                        { label: 'What needs attention next?', nextQuery: 'What needs attention next?', operator: 'advance' as const, canonicalType: 'attention' as const },
+                        { label: 'What signals are driving that?', nextQuery: 'What signals are driving that?', operator: 'drill_down' as const, targetCanonicalType: 'signals' as const },
+                        { label: 'What changed recently?', nextQuery: 'What changed recently?', operator: 'reframe' as const, targetCanonicalType: 'change' as const },
+                        { label: 'What needs attention next?', nextQuery: 'What needs attention next?', operator: 'advance' as const, targetCanonicalType: 'attention' as const },
                       ];
                   return (
                     <div key="continueExploring" className="mb-8 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 bg-[rgb(var(--surface))]">

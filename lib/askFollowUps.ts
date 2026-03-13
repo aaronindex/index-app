@@ -19,8 +19,8 @@ export interface AskIndexFollowUp {
   label: string;
   nextQuery: string;
   operator: AskIndexFollowUpOperator;
-  /** Canonical type this follow-up leads to (used to avoid repeating current query type). */
-  canonicalType: CanonicalQueryType;
+  /** Target canonical type this follow-up leads to; used to avoid same-intent duplication. */
+  targetCanonicalType: CanonicalQueryType;
 }
 
 type ScopeForFollowUps = 'index' | 'project';
@@ -48,11 +48,11 @@ function selectWithOperatorDiversity(candidates: AskIndexFollowUp[]): AskIndexFo
  * Fallback follow-ups by canonical type (one per type) for filling to MIN_FOLLOW_UPS.
  */
 const FALLBACK_BY_TYPE: Record<CanonicalQueryType, AskIndexFollowUp> = {
-  signals: { label: 'What signals are driving that?', nextQuery: 'What signals support this?', operator: 'drill_down', canonicalType: 'signals' },
-  attention: { label: 'What needs attention next?', nextQuery: 'What needs attention?', operator: 'advance', canonicalType: 'attention' },
-  tension: { label: 'Where is the tension?', nextQuery: 'Where is the tension?', operator: 'stress_test', canonicalType: 'tension' },
-  direction: { label: 'Where is this going?', nextQuery: 'Where is this going?', operator: 'reframe', canonicalType: 'direction' },
-  change: { label: 'What changed recently?', nextQuery: 'What changed recently?', operator: 'reframe', canonicalType: 'change' },
+  signals: { label: 'What signals are driving that?', nextQuery: 'What signals support this?', operator: 'drill_down', targetCanonicalType: 'signals' },
+  attention: { label: 'What needs attention next?', nextQuery: 'What needs attention?', operator: 'advance', targetCanonicalType: 'attention' },
+  tension: { label: 'Where is the tension?', nextQuery: 'Where is the tension?', operator: 'stress_test', targetCanonicalType: 'tension' },
+  direction: { label: 'Where is this going?', nextQuery: 'Where is this going?', operator: 'reframe', targetCanonicalType: 'direction' },
+  change: { label: 'What changed recently?', nextQuery: 'What changed recently?', operator: 'reframe', targetCanonicalType: 'change' },
 };
 
 /**
@@ -63,7 +63,7 @@ function fillToMinimum(
   currentCanonicalType: CanonicalQueryType | undefined | null
 ): AskIndexFollowUp[] {
   if (result.length >= MIN_FOLLOW_UPS) return result;
-  const typesInResult = new Set(result.map((f) => f.canonicalType));
+  const typesInResult = new Set(result.map((f) => f.targetCanonicalType));
   const out = [...result];
   for (const t of PREFERRED_TYPE_ORDER) {
     if (out.length >= MIN_FOLLOW_UPS) break;
@@ -76,7 +76,8 @@ function fillToMinimum(
 
 /**
  * Deterministic follow-ups by analysis mode and scope.
- * Removes follow-ups that match the current query's canonical type; fills to 3 if needed.
+ * Next Reads never point back to the same lens: filter by targetCanonicalType !== current.
+ * Fills to 3 items when needed; prefers operator diversity when refilling.
  */
 export function getAskIndexFollowUps(
   analysisMode: AskIndexAnalysisMode | undefined | null,
@@ -89,7 +90,7 @@ export function getAskIndexFollowUps(
   const base = Array.isArray(set.base) ? set.base : set.base(scope, options);
   const scopeItem = set.scopeAware?.(scope, options);
   const combined = scopeItem ? [...base, scopeItem] : base;
-  const filtered = currentType ? combined.filter((f) => f.canonicalType !== currentType) : combined;
+  const filtered = currentType ? combined.filter((f) => f.targetCanonicalType !== currentType) : combined;
   const withDiversity = selectWithOperatorDiversity(filtered);
   return fillToMinimum(withDiversity, currentType);
 }
@@ -102,54 +103,54 @@ type FollowUpSet = {
 const FOLLOW_UP_SETS: Record<AskIndexAnalysisMode, FollowUpSet> = {
   direction: {
     base: [
-      { label: 'Review supporting decisions', nextQuery: 'What decisions support this?', operator: 'drill_down', canonicalType: 'signals' },
-      { label: 'Check recent shifts', nextQuery: 'What changed recently?', operator: 'reframe', canonicalType: 'change' },
-      { label: 'See what needs attention', nextQuery: 'What needs attention?', operator: 'advance', canonicalType: 'attention' },
-      { label: 'Check for structural tension', nextQuery: 'Where is the tension?', operator: 'stress_test', canonicalType: 'tension' },
+      { label: 'Review supporting decisions', nextQuery: 'What decisions support this?', operator: 'drill_down', targetCanonicalType: 'signals' },
+      { label: 'Check recent shifts', nextQuery: 'What changed recently?', operator: 'reframe', targetCanonicalType: 'change' },
+      { label: 'See what needs attention', nextQuery: 'What needs attention?', operator: 'advance', targetCanonicalType: 'attention' },
+      { label: 'Check for structural tension', nextQuery: 'Where is the tension?', operator: 'stress_test', targetCanonicalType: 'tension' },
     ],
   },
   change: {
     base: [
-      { label: 'Review recent signals', nextQuery: 'What signals support this change?', operator: 'drill_down', canonicalType: 'signals' },
-      { label: 'See emerging direction', nextQuery: 'Where is this going?', operator: 'reframe', canonicalType: 'direction' },
-      { label: 'See what needs attention', nextQuery: 'What needs attention?', operator: 'advance', canonicalType: 'attention' },
+      { label: 'Review recent signals', nextQuery: 'What signals support this change?', operator: 'drill_down', targetCanonicalType: 'signals' },
+      { label: 'See emerging direction', nextQuery: 'Where is this going?', operator: 'reframe', targetCanonicalType: 'direction' },
+      { label: 'See what needs attention', nextQuery: 'What needs attention?', operator: 'advance', targetCanonicalType: 'attention' },
     ],
     scopeAware(scope, options) {
       if (scope === 'project') {
-        return { label: 'Expand across your INDEX', nextQuery: 'What changed across my INDEX?', operator: 'expand_scope', canonicalType: 'change' };
+        return { label: 'Expand across your INDEX', nextQuery: 'What changed across my INDEX?', operator: 'expand_scope', targetCanonicalType: 'change' };
       }
       if (scope === 'index' && options?.projectId) {
-        return { label: 'Narrow to this project', nextQuery: 'What changed in this project?', operator: 'expand_scope', canonicalType: 'change' };
+        return { label: 'Narrow to this project', nextQuery: 'What changed in this project?', operator: 'expand_scope', targetCanonicalType: 'change' };
       }
       return null;
     },
   },
   attention: {
     base: [
-      { label: 'Review active tasks', nextQuery: 'What tasks support this?', operator: 'drill_down', canonicalType: 'signals' },
-      { label: 'Check recent shifts', nextQuery: 'What changed recently?', operator: 'reframe', canonicalType: 'change' },
-      { label: 'Check for unresolved tension', nextQuery: 'Where is the tension?', operator: 'stress_test', canonicalType: 'tension' },
-      { label: 'See what direction this supports', nextQuery: 'Where is this going?', operator: 'advance', canonicalType: 'direction' },
+      { label: 'Review active tasks', nextQuery: 'What tasks support this?', operator: 'drill_down', targetCanonicalType: 'signals' },
+      { label: 'Check recent shifts', nextQuery: 'What changed recently?', operator: 'reframe', targetCanonicalType: 'change' },
+      { label: 'Check for unresolved tension', nextQuery: 'Where is the tension?', operator: 'stress_test', targetCanonicalType: 'tension' },
+      { label: 'See what direction this supports', nextQuery: 'Where is this going?', operator: 'advance', targetCanonicalType: 'direction' },
     ],
   },
   signals: {
     base: [
-      { label: 'Review supporting signals', nextQuery: 'What signals support this?', operator: 'drill_down', canonicalType: 'signals' },
-      { label: 'See what this suggests', nextQuery: 'Where is this going?', operator: 'reframe', canonicalType: 'direction' },
-      { label: 'See what needs attention', nextQuery: 'What needs attention?', operator: 'advance', canonicalType: 'attention' },
+      { label: 'Review supporting signals', nextQuery: 'What signals support this?', operator: 'drill_down', targetCanonicalType: 'signals' },
+      { label: 'See what this suggests', nextQuery: 'Where is this going?', operator: 'reframe', targetCanonicalType: 'direction' },
+      { label: 'See what needs attention', nextQuery: 'What needs attention?', operator: 'advance', targetCanonicalType: 'attention' },
     ],
     scopeAware(scope) {
       if (scope === 'project') {
-        return { label: 'Expand across your INDEX', nextQuery: 'What signals appear across my INDEX?', operator: 'expand_scope', canonicalType: 'signals' };
+        return { label: 'Expand across your INDEX', nextQuery: 'What signals appear across my INDEX?', operator: 'expand_scope', targetCanonicalType: 'signals' };
       }
       return null;
     },
   },
   tension: {
     base: [
-      { label: 'Review conflicting signals', nextQuery: 'What signals show tension here?', operator: 'drill_down', canonicalType: 'tension' },
-      { label: 'See what needs attention', nextQuery: 'What needs attention?', operator: 'advance', canonicalType: 'attention' },
-      { label: 'See which direction is dominant', nextQuery: 'Where is this going?', operator: 'reframe', canonicalType: 'direction' },
+      { label: 'Review conflicting signals', nextQuery: 'What signals show tension here?', operator: 'drill_down', targetCanonicalType: 'tension' },
+      { label: 'See what needs attention', nextQuery: 'What needs attention?', operator: 'advance', targetCanonicalType: 'attention' },
+      { label: 'See which direction is dominant', nextQuery: 'Where is this going?', operator: 'reframe', targetCanonicalType: 'direction' },
     ],
   },
 };
