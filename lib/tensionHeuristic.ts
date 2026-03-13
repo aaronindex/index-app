@@ -33,8 +33,8 @@ export function detectTensionFromText(text: string | null | undefined): { left: 
   }
 
   // 2. "Path A : ... Path B : ..." or "path a ... path b"
-  const pathA = /path\s+a\s*:?\s*([^.]{10,120}?)(?=\s*path\s+b|$)/is.exec(raw);
-  const pathB = /path\s+b\s*:?\s*([^.]{10,120}?)(?=\s*path\s+a|$)/is.exec(raw);
+  const pathA = /path\s+a\s*:?\s*([^.]{10,120}?)(?=\s*path\s+b|$)/i.exec(raw);
+  const pathB = /path\s+b\s*:?\s*([^.]{10,120}?)(?=\s*path\s+a|$)/i.exec(raw);
   if (pathA?.[1] && pathB?.[1]) {
     const a = norm(pathA[1]);
     const b = norm(pathB[1]);
@@ -42,8 +42,8 @@ export function detectTensionFromText(text: string | null | undefined): { left: 
   }
 
   // 3. "one option ... another option" — extract phrases after each
-  const oneOpt = /one\s+option\s*:?\s*([^.]{8,80}?)(?=\s*[.;]|\s+another\s+option)/is.exec(raw);
-  const anotherOpt = /another\s+option\s*:?\s*([^.]{8,80}?)(?=\s*[.;]|$)/is.exec(raw);
+  const oneOpt = /one\s+option\s*:?\s*([^.]{8,80}?)(?=\s*[.;]|\s+another\s+option)/i.exec(raw);
+  const anotherOpt = /another\s+option\s*:?\s*([^.]{8,80}?)(?=\s*[.;]|$)/i.exec(raw);
   if (oneOpt?.[1] && anotherOpt?.[1]) {
     const left = norm(oneOpt[1]);
     const right = norm(anotherOpt[1]);
@@ -51,7 +51,7 @@ export function detectTensionFromText(text: string | null | undefined): { left: 
   }
 
   // 4. "tradeoff between X and Y" or "X and Y" as pair
-  const tradeoff = /tradeoff\s+between\s+([^.]{8,60}?)\s+and\s+([^.]{8,60}?)(?=\s*[.;]|$)/is.exec(raw);
+  const tradeoff = /tradeoff\s+between\s+([^.]{8,60}?)\s+and\s+([^.]{8,60}?)(?=\s*[.;]|$)/i.exec(raw);
   if (tradeoff && tradeoff[1] && tradeoff[2]) {
     const left = norm(tradeoff[1]);
     const right = norm(tradeoff[2]);
@@ -59,7 +59,7 @@ export function detectTensionFromText(text: string | null | undefined): { left: 
   }
 
   // 5. "two possible paths: ... and ..." — weak; only use if we can split on " and " or " / "
-  const twoPaths = /two\s+possible\s+paths\s*:?\s*([^.]{15,200}?)(?=\s*[.;]|$)/is.exec(raw);
+  const twoPaths = /two\s+possible\s+paths\s*:?\s*([^.]{15,200}?)(?=\s*[.;]|$)/i.exec(raw);
   if (twoPaths?.[1]) {
     const block = twoPaths[1];
     const andSplit = block.split(/\s+and\s+|\s*\/\s*/i);
@@ -71,7 +71,7 @@ export function detectTensionFromText(text: string | null | undefined): { left: 
   }
 
   // 6. "original strategy vs alternative" style
-  const origAlt = /original\s+strategy\s+vs\.?\s+([^.]{8,60}?)(?=\s*[.;]|$)/is.exec(raw);
+  const origAlt = /original\s+strategy\s+vs\.?\s+([^.]{8,60}?)(?=\s*[.;]|$)/i.exec(raw);
   if (origAlt?.[1]) {
     const right = norm(origAlt[1]);
     if (right.length >= 5) return { left: 'Original strategy', right };
