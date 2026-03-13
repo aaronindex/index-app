@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { showSuccess } from '@/app/components/ErrorNotification';
+import { normalizeTensionText } from '@/lib/tensionDisplay';
 
 interface ReadTabProps {
   projectId: string;
@@ -269,9 +270,9 @@ export default function ReadTab({
           <ul className="space-y-4 text-sm">
             {tensions.map((t, i) => (
               <li key={i} className="text-[rgb(var(--text))]">
-                <div>{t.left}</div>
+                <div>{normalizeTensionText(t.left)}</div>
                 <div className="text-xs text-[rgb(var(--muted))] my-0.5">vs</div>
-                <div>{t.right}</div>
+                <div>{normalizeTensionText(t.right)}</div>
               </li>
             ))}
           </ul>

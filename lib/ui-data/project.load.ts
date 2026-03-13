@@ -391,12 +391,12 @@ export async function loadProjectView(params: {
 
   // Project timeline: pulses (for this project) + outcomes as events with labels
   const PULSE_TYPES_PROJECT = ['arc_shift', 'structural_threshold', 'tension', 'result_recorded'] as const;
-  /** Short fallback when no semantic/editorial content (user-facing, no system jargon). */
+  /** Short fallback when no semantic/editorial content; avoid duplicating tooltip type line. */
   function pulseTypeFallback(pt: string): string {
     switch (pt) {
       case 'arc_shift':
       case 'structural_threshold':
-        return 'Structural shift';
+        return 'Structural shift detected';
       case 'tension':
         return 'Tension emerging';
       case 'result_recorded':

@@ -66,7 +66,7 @@ function getTypedHeadline(p: HomePulse, semanticHeadline?: string | null): strin
       return 'Result recorded';
     case 'structural_threshold':
     case 'arc_shift':
-      return 'Structural shift';
+      return 'Structural shift detected';
     case 'tension':
       return 'Tension emerging';
     default:
@@ -205,6 +205,7 @@ export async function getHomePageData(
     'momentum increased',
     'arc shift',
     'structural shift',
+    'structural shift detected',
     'milestone recorded',
     'tension emerging',
     'signals reinforced direction',
