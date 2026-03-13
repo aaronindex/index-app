@@ -1,6 +1,9 @@
 // app/ask/page.tsx
 'use client';
 
+/** Set NEXT_PUBLIC_INDEX_DEBUG=true in .env.local to show Ask INDEX debug panel. */
+const ASK_INDEX_DEBUG = process.env.NEXT_PUBLIC_INDEX_DEBUG === 'true';
+
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -475,8 +478,8 @@ export default function AskPage() {
         {/* No explicit "no results" failure state:
             when a query returns no semantic hits, the API falls back to ledger interpretation. */}
 
-        {/* Develop-only: Ask INDEX pipeline debug (normalization, analysis mode, layout order) */}
-        {hasSearched && (stateData || answer) && (
+        {/* Ask INDEX debug panel: only when NEXT_PUBLIC_INDEX_DEBUG=true */}
+        {ASK_INDEX_DEBUG && hasSearched && (stateData || answer) && (
           <div className="mb-6 rounded-lg border border-amber-200 dark:border-amber-900/50 bg-amber-50/50 dark:bg-amber-950/20 px-4 py-3">
             <p className="text-[10px] uppercase tracking-wider text-amber-700 dark:text-amber-400/80 mb-2 font-medium">
               Ask INDEX debug (develop only)
@@ -532,7 +535,7 @@ export default function AskPage() {
           const showSection = (key: string) => {
             if (key === 'reading' || key === 'structuralContext') return true;
             if (key === 'supportingSignals') return stateData!.sections.newDecisions.length > 0;
-            if (key === 'nextAttention') return stateData!.sections.newOrChangedTasks.length > 0;
+            if (key === 'nextAttention') return stateData!.sections.newOrChangedTasks.length > 0 || analysisMode === 'attention';
             if (key === 'continueExploring') return hasSearched && !!(answer || stateData);
             return false;
           };
@@ -562,6 +565,9 @@ export default function AskPage() {
                             stateData.sections.newOrChangedTasks[0]?.project_name ||
                             'Project'
                           : 'Across Your INDEX'}
+                      </p>
+                      <p className="text-[0.65rem] uppercase tracking-wider text-[rgb(var(--muted))] mb-1">
+                        Current Focus
                       </p>
                       <h2 className="font-sans text-lg sm:text-xl font-semibold text-[rgb(var(--text))] mb-2">
                         {stateData.currentDirection ||
@@ -635,56 +641,65 @@ export default function AskPage() {
                 }
 
                 if (key === 'nextAttention') {
+                  const hasTasks = stateData.sections.newOrChangedTasks.length > 0;
                   return (
                     <div key="nextAttention" className="mb-8 border border-zinc-200 dark:border-zinc-800 rounded-xl p-5 bg-[rgb(var(--surface))]">
                       <h3 className="text-sm font-semibold text-[rgb(var(--text))] mb-3">
                         {getSectionLabel('nextAttention', layoutConfig)}
                       </h3>
-                      <div className="space-y-3">
-                        {(nextAttentionExpanded
-                          ? stateData.sections.newOrChangedTasks
-                          : stateData.sections.newOrChangedTasks.slice(0, 3)
-                        ).map((task) => (
-                          <Link
-                            key={task.id}
-                            href={`/projects/${task.project_id || ''}?tab=signals#${task.id}`}
-                            className="block"
-                          >
-                            <Card className="group" hover>
-                              <div className="p-3">
-                                <p className="text-[0.7em] uppercase tracking-wider text-[rgb(var(--muted))] opacity-80 leading-tight mb-0.5">
-                                  Task
-                                </p>
-                                <h3 className="font-semibold text-[rgb(var(--text))] text-sm leading-snug group-hover:text-[rgb(var(--muted))] transition-colors">
-                                  {task.title}
-                                </h3>
-                                {resultScope === 'global' && task.project_name && (
-                                  <p className="text-[11px] text-[rgb(var(--muted))] mt-1">
-                                    {task.project_name}
-                                  </p>
-                                )}
-                              </div>
-                            </Card>
-                          </Link>
-                        ))}
-                      </div>
-                      {stateData.sections.newOrChangedTasks.length > 3 && !nextAttentionExpanded && (
-                        <button
-                          type="button"
-                          onClick={() => setNextAttentionExpanded(true)}
-                          className="mt-3 text-sm font-medium text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] transition-colors"
-                        >
-                          Show {stateData.sections.newOrChangedTasks.length - 3} more tasks
-                        </button>
-                      )}
-                      {stateData.sections.newOrChangedTasks.length > 3 && nextAttentionExpanded && (
-                        <button
-                          type="button"
-                          onClick={() => setNextAttentionExpanded(false)}
-                          className="mt-3 text-sm font-medium text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] transition-colors"
-                        >
-                          Show less
-                        </button>
+                      {hasTasks ? (
+                        <>
+                          <div className="space-y-3">
+                            {(nextAttentionExpanded
+                              ? stateData.sections.newOrChangedTasks
+                              : stateData.sections.newOrChangedTasks.slice(0, 3)
+                            ).map((task) => (
+                              <Link
+                                key={task.id}
+                                href={`/projects/${task.project_id || ''}?tab=signals#${task.id}`}
+                                className="block"
+                              >
+                                <Card className="group" hover>
+                                  <div className="p-3">
+                                    <p className="text-[0.7em] uppercase tracking-wider text-[rgb(var(--muted))] opacity-80 leading-tight mb-0.5">
+                                      Task
+                                    </p>
+                                    <h3 className="font-semibold text-[rgb(var(--text))] text-sm leading-snug group-hover:text-[rgb(var(--muted))] transition-colors">
+                                      {task.title}
+                                    </h3>
+                                    {resultScope === 'global' && task.project_name && (
+                                      <p className="text-[11px] text-[rgb(var(--muted))] mt-1">
+                                        {task.project_name}
+                                      </p>
+                                    )}
+                                  </div>
+                                </Card>
+                              </Link>
+                            ))}
+                          </div>
+                          {stateData.sections.newOrChangedTasks.length > 3 && !nextAttentionExpanded && (
+                            <button
+                              type="button"
+                              onClick={() => setNextAttentionExpanded(true)}
+                              className="mt-3 text-sm font-medium text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] transition-colors"
+                            >
+                              Show {stateData.sections.newOrChangedTasks.length - 3} more tasks
+                            </button>
+                          )}
+                          {stateData.sections.newOrChangedTasks.length > 3 && nextAttentionExpanded && (
+                            <button
+                              type="button"
+                              onClick={() => setNextAttentionExpanded(false)}
+                              className="mt-3 text-sm font-medium text-[rgb(var(--muted))] hover:text-[rgb(var(--text))] transition-colors"
+                            >
+                              Show less
+                            </button>
+                          )}
+                        </>
+                      ) : (
+                        <p className="text-sm text-[rgb(var(--muted))]">
+                          No urgent tasks are clearly surfaced right now. The current structure appears more directional than task-driven.
+                        </p>
                       )}
                     </div>
                   );

@@ -1,7 +1,7 @@
 // lib/askStructuralAnswer.ts
 // Structured ledger interpretation for Ask Index state queries.
-// Builds multi-section answers (Interpretation / Supporting Signals / Structural Context / Next Attention)
-// from decisions, tasks, arcs, and recent shifts.
+// Uses canonical ontology: Signal, Arc, Direction, Tension, Attention, Momentum, Shift.
+// Interpretations describe structure (1–2 sentences); no redundant scope, no user-inference.
 
 import { getSupabaseServerClient } from '@/lib/supabaseServer';
 import type { StateQueryResult } from './stateQuery';
@@ -101,87 +101,61 @@ export async function buildStructuralAnswer(params: {
   const hasPulses = pulses.length > 0;
 
   const hasLedger = hasDecisions || hasTasks || hasBlockers || hasArcs || hasPulses;
-  const scopeLabel = scope === 'project' ? 'in this project' : 'across your INDEX';
 
   // ---------------------------------------------------------------------------
-  // 2) Interpretation
+  // 2) Interpretation (canonical ontology: Signal, Arc, Direction, Tension, Attention, Momentum, Shift)
   // ---------------------------------------------------------------------------
   const interpretationParts: string[] = [];
 
   if (!hasLedger) {
-    interpretationParts.push(
-      'No signals detected yet in this scope.'
-    );
+    interpretationParts.push('No signals detected yet.');
   } else if (analysisMode === 'tension') {
-    // Tension mode: acknowledge tension framing; do not invent tension.
-    interpretationParts.push(
-      hasPulses
-        ? 'Recent shifts suggest some structural movement; no strong conflicting pull is clearly surfaced in the current ledger.'
-        : 'Current signals are relatively aligned, with no major conflicting pull clearly detected in this scope.'
-    );
+    if (hasPulses) {
+      interpretationParts.push('Recent signals suggest a shift; no strong tension is clearly surfaced in the ledger.');
+    } else {
+      interpretationParts.push('Signals are relatively aligned, with no major unresolved pull between directions.');
+    }
   } else {
-    // Category-specific framing
     if (category === 'STRUCTURAL') {
       const themeFromDecisions =
         state.newDecisions[0]?.title?.trim() ||
         state.newOrChangedTasks[0]?.title?.trim() ||
         null;
-
-      if (hasArcs) {
-        const primaryArc = pickPrimaryArc(activeArcs);
-        const theme = primaryArc || themeFromDecisions;
-        if (theme) {
-          interpretationParts.push(
-            `Recent decisions indicate the project is currently focused on ${theme}.`
-          );
-        } else {
-          interpretationParts.push(
-            `The project is currently converging around a small set of related workstreams ${scope === 'project' ? 'in this project' : 'across your INDEX'}.`
-          );
-        }
+      const primaryArc = hasArcs ? pickPrimaryArc(activeArcs) : null;
+      const theme = primaryArc || themeFromDecisions;
+      if (theme) {
+        interpretationParts.push(`Signals are converging around ${theme}. The current arc suggests movement toward this direction.`);
       } else if (themeFromDecisions) {
-        interpretationParts.push(
-          `Recent decisions indicate the project is currently focused on ${themeFromDecisions}.`
-        );
+        interpretationParts.push(`Recent decisions reinforce a direction toward ${themeFromDecisions}.`);
       } else {
-        interpretationParts.push(
-          `The project is currently focused on a small number of active workstreams ${scope === 'project' ? 'in this project' : 'across your INDEX'}.`
-        );
+        interpretationParts.push('Signals indicate a small set of active arcs; direction will clarify as more signals accumulate.');
       }
     } else if (category === 'DECISIONS') {
       if (hasDecisions) {
-        interpretationParts.push(
-          `Recent decisions in this scope are shaping the current direction.`
-        );
+        interpretationParts.push('Recent signals suggest the current direction is being shaped by these decisions.');
       } else {
-        interpretationParts.push(`No new decisions were recorded in the last ${state.timeWindowDaysUsed} days ${scopeLabel}.`);
+        interpretationParts.push(`No new decision signals in the last ${state.timeWindowDaysUsed} days.`);
       }
     } else if (category === 'ATTENTION') {
-      // Structural pressure language: momentum, focus, signals — not task-system or diagnostic.
       if (hasBlockers) {
         const blockedCount = state.blockersOrStale.filter((b) => b.reason === 'blocked').length;
         const staleCount = state.blockersOrStale.filter((b) => b.reason === 'stale').length;
-        interpretationParts.push(
-          `Structural pressure is concentrated around ${blockedCount} blocked and ${staleCount} stalled items ${scopeLabel}; the ledger suggests attention is being pulled there.`
-        );
+        interpretationParts.push(`Attention is concentrated around ${blockedCount} blocked and ${staleCount} stalled signals; momentum is asking for focus there.`);
       } else if (hasTasks) {
-        interpretationParts.push(
-          `Recent tasks indicate where momentum is asking for focus ${scopeLabel}. Current signals suggest attention is concentrated around advancing active work.`
-        );
+        const primaryArc = hasArcs ? pickPrimaryArc(activeArcs) : null;
+        if (primaryArc) {
+          interpretationParts.push(`Attention is currently centered on moving ${primaryArc} forward.`);
+        } else {
+          interpretationParts.push('Attention is gathering around a small set of active tasks.');
+        }
       } else {
-        interpretationParts.push(
-          `Current signals suggest no strong concentration of attention in this scope yet. The ledger is relatively quiet on where to focus.`
-        );
+        interpretationParts.push('No task-level attention is clearly surfaced; the structure appears more directional than task-driven.');
       }
     } else if (category === 'EVOLUTION') {
       if (hasPulses) {
-        interpretationParts.push(
-          `Recent shifts in your structural ledger indicate motion ${scopeLabel}, including changes in arcs or structural momentum.`
-        );
+        interpretationParts.push(`Recent signals indicate a shift; momentum has moved in the arcs.`);
       } else {
-        interpretationParts.push(
-          `No structural shifts were recorded recently, but decisions and tasks still show how the work is evolving ${scopeLabel}.`
-        );
+        interpretationParts.push('No recent shift in signal patterns; decisions and tasks still show how the work is evolving.');
       }
     }
   }
@@ -227,7 +201,7 @@ export async function buildStructuralAnswer(params: {
   }
 
   const supportingSignals =
-    supportingLines.length > 0 ? supportingLines.join('\n') : 'No recent decisions or tasks were found.';
+    supportingLines.length > 0 ? supportingLines.join('\n') : 'No recent decision or task signals.';
 
   // ---------------------------------------------------------------------------
   // 4) Structural Context (arcs + shifts)
@@ -259,7 +233,7 @@ export async function buildStructuralAnswer(params: {
   }
 
   const structuralContext =
-    contextLines.length > 0 ? contextLines.join('\n') : 'No active arcs or recent shifts were found.';
+    contextLines.length > 0 ? contextLines.join('\n') : 'No active arcs or recent signal momentum.';
 
   // ---------------------------------------------------------------------------
   // 5) Next Attention (optional)
@@ -269,7 +243,7 @@ export async function buildStructuralAnswer(params: {
   if (state.blockersOrStale.length > 0) {
     const items = state.blockersOrStale.slice(0, 3);
     const lines: string[] = [];
-    lines.push('Consider focusing on:');
+    lines.push('Attention gathering around:');
     items.forEach((item) => {
       const projectPrefix = item.project_name ? `${item.project_name} → ` : '';
       const reasonLabel = item.reason === 'blocked' ? 'Blocker' : 'Stale';
@@ -279,7 +253,7 @@ export async function buildStructuralAnswer(params: {
   } else if (state.newOrChangedTasks.length > 0 && category === 'ATTENTION') {
     const items = state.newOrChangedTasks.slice(0, 3);
     const lines: string[] = [];
-    lines.push('Next attention candidates:');
+    lines.push('Several active tasks concentrate attention around:');
     items.forEach((item) => {
       const projectPrefix = item.project_name ? `${item.project_name} → ` : '';
       lines.push(`- ${projectPrefix}${item.title}`);

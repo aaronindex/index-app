@@ -53,7 +53,6 @@ export const ASK_INDEX_LAYOUTS: Record<AskIndexAnalysisMode, AskIndexLayoutConfi
       'structuralContext',
       'continueExploring',
     ],
-    labels: { nextAttention: 'Needs Attention' },
   },
   signals: {
     sectionOrder: [

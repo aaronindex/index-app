@@ -48,9 +48,7 @@ function generateDeterministicSummary(state: StateQueryResult, scope: 'project' 
   }
   
   if (lines.length === 0) {
-    return scope === 'project' 
-      ? `No changes in this project in the last ${state.timeWindowDaysUsed} days.`
-      : `No changes across your projects in the last ${state.timeWindowDaysUsed} days.`;
+    return `No changes in the last ${state.timeWindowDaysUsed} days.`;
   }
   
   return lines.join(' ');
