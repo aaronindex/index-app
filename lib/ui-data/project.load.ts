@@ -7,6 +7,7 @@ import { collectStructuralSignals } from '../structure/signals';
 import type { StructuralSignal } from '../structure/signals';
 import type { StructuralStatePayload } from '@/lib/structure/hash';
 import { getSemanticOverlay } from '@/lib/semantic-overlay/get-overlay';
+import { detectTensionFromText } from '@/lib/tensionHeuristic';
 
 export type ProjectViewData = {
   project: {
@@ -353,7 +354,7 @@ export async function loadProjectView(params: {
     }
   }
 
-  // Basic tension detection (v1): two or more arcs in project → competing directions
+  // Tension detection v1.1: (1) 2+ arcs → competing directions; (2) text heuristic → explicit fork/tradeoff
   const tensions: Array<{ left: string; right: string }> = [];
   if (activeArcs.length >= 2) {
     const a = activeArcs[0];
@@ -363,15 +364,39 @@ export async function loadProjectView(params: {
     tensions.push({ left, right });
   }
 
+  // v1.1: single-source competing-option language (snapshot + project decisions)
+  const textParts: string[] = [];
+  if (snapshotText?.trim()) textParts.push(snapshotText.trim());
+  const { data: projectDecisions } = await supabaseClient
+    .from('decisions')
+    .select('title, content')
+    .eq('user_id', user_id)
+    .eq('project_id', project_id)
+    .limit(30);
+  for (const d of projectDecisions ?? []) {
+    const t = (d.title ?? '').trim();
+    const c = (d.content ?? '').trim();
+    if (t) textParts.push(t);
+    if (c) textParts.push(c);
+  }
+  const combinedText = textParts.join('\n\n');
+  const textTension = detectTensionFromText(combinedText);
+  if (textTension) {
+    const same = tensions.some(
+      (t) =>
+        t.left === textTension.left && t.right === textTension.right
+    );
+    if (!same) tensions.push(textTension);
+  }
+
   // Project timeline: pulses (for this project) + outcomes as events with labels
   const PULSE_TYPES_PROJECT = ['arc_shift', 'structural_threshold', 'tension', 'result_recorded'] as const;
-  /** Pulse labels for project timeline: structural weather, one line. */
-  function pulseTypeLabel(pt: string): string {
+  /** Short fallback when no semantic/editorial content (user-facing, no system jargon). */
+  function pulseTypeFallback(pt: string): string {
     switch (pt) {
       case 'arc_shift':
-        return 'Direction shift';
       case 'structural_threshold':
-        return 'Momentum increased';
+        return 'Structural shift';
       case 'tension':
         return 'Tension emerging';
       case 'result_recorded':
@@ -411,11 +436,10 @@ export async function loadProjectView(params: {
       : { pulseHeadlines: {} as Record<string, string> };
 
   const pulseEvents = (projectPulses ?? []).map((p: { id: string; pulse_type: string; headline: string | null; occurred_at: string }) => {
-    const baseLabel = pulseTypeLabel(p.pulse_type);
     const semantic = pulseOverlay.pulseHeadlines[p.id]?.trim();
     const editorial = (p.headline ?? '').trim();
     const signalRef = semantic || editorial;
-    const label = signalRef ? `${baseLabel} — ${signalRef}` : baseLabel;
+    const label = signalRef || pulseTypeFallback(p.pulse_type);
     return {
       id: p.id,
       occurred_at: p.occurred_at,

@@ -95,3 +95,16 @@ export function getSectionLabel(
 ): string {
   return config.labels?.[sectionKey] ?? DEFAULT_LABELS[sectionKey];
 }
+
+const ASK_READING_EYEBROW: Record<AskIndexAnalysisMode, string> = {
+  direction: 'CURRENT FOCUS',
+  change: 'RECENT SHIFT',
+  attention: 'NEXT ATTENTION',
+  signals: 'SIGNALS IN VIEW',
+  tension: 'ACTIVE TENSION',
+};
+
+export function getAskReadingEyebrow(analysisMode: AskIndexAnalysisMode | undefined | null): string {
+  if (!analysisMode || !(analysisMode in ASK_READING_EYEBROW)) return ASK_READING_EYEBROW.direction;
+  return ASK_READING_EYEBROW[analysisMode];
+}

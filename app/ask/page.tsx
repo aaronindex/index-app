@@ -12,7 +12,7 @@ import ConversionTile from '@/app/ask/components/ConversionTile';
 import Card from '@/app/components/ui/Card';
 import type { AskIndexAnalysisMode } from '@/lib/askAnalysisMode';
 import type { AskIndexFollowUp } from '@/lib/askFollowUps';
-import { getAskIndexLayoutConfig, getSectionLabel } from '@/lib/askLayoutConfig';
+import { getAskIndexLayoutConfig, getSectionLabel, getAskReadingEyebrow } from '@/lib/askLayoutConfig';
 import ReadStructure from '@/app/components/ReadStructure';
 
 interface SearchResult {
@@ -99,11 +99,17 @@ export default function AskPage() {
     if (typeof window === 'undefined' || initialQHandled.current) return;
     const urlParams = new URLSearchParams(window.location.search);
     const urlQuery = urlParams.get('q');
+    const urlProject = urlParams.get('project');
     if (!urlQuery?.trim()) return;
     initialQHandled.current = true;
     setQuery(urlQuery);
+    if (urlProject?.trim()) {
+      setScope('project');
+      setScopeProjectId(urlProject.trim());
+    }
     const cacheKey = `ask_index_${urlQuery}`;
     const cached = sessionStorage.getItem(cacheKey);
+    const projectOverride = urlProject?.trim() ? { projectId: urlProject.trim() } : undefined;
     if (cached) {
       try {
         const data = JSON.parse(cached);
@@ -123,10 +129,10 @@ export default function AskPage() {
         setReadStructureExpanded(false);
       } catch (e) {
         console.error('Error restoring from cache:', e);
-        void performSearch(urlQuery);
+        void performSearch(urlQuery, projectOverride);
       }
     } else {
-      void performSearch(urlQuery);
+      void performSearch(urlQuery, projectOverride);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -203,7 +209,7 @@ export default function AskPage() {
     loadProjects();
   }, []);
 
-  const performSearch = async (searchQuery?: string) => {
+  const performSearch = async (searchQuery?: string, options?: { projectId?: string }) => {
     const queryToUse = searchQuery || query;
     if (!queryToUse.trim()) return;
 
@@ -226,6 +232,9 @@ export default function AskPage() {
       setQuery(searchQuery);
     }
 
+    const projectIdForRequest =
+      options?.projectId ?? (scope === 'project' && scopeProjectId ? scopeProjectId : undefined);
+
     console.log('[Ask Page] Starting search for:', queryToUse.trim());
 
     // Track start time for latency
@@ -240,7 +249,7 @@ export default function AskPage() {
           limit: 10,
           similarityThreshold: 0.5, // Lower threshold for better recall
           includeAnswer: true, // Request synthesized answer
-          projectId: scope === 'project' && scopeProjectId ? scopeProjectId : undefined,
+          projectId: projectIdForRequest,
         }),
       });
 
@@ -342,9 +351,11 @@ export default function AskPage() {
         intent: data.intent,
       }));
 
-      // Update URL with query param
+      // Update URL with query and optional project scope
       const url = new URL(window.location.href);
       url.searchParams.set('q', normalizedQuery);
+      if (projectIdForRequest) url.searchParams.set('project', projectIdForRequest);
+      else url.searchParams.delete('project');
       router.replace(url.pathname + url.search, { scroll: false });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Search failed');
@@ -575,7 +586,7 @@ export default function AskPage() {
                           : 'Across Your INDEX'}
                       </p>
                       <p className="text-[0.65rem] uppercase tracking-wider text-[rgb(var(--muted))] mb-1">
-                        Current Focus
+                        {getAskReadingEyebrow(analysisMode)}
                       </p>
                       <h2 className="font-sans text-lg sm:text-xl font-semibold text-[rgb(var(--text))] mb-2">
                         {stateData.currentDirection ||

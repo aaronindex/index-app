@@ -40,25 +40,27 @@ export type HomePageData = {
 };
 
 /**
- * Build human-readable Shift labels: one line, structural weather tone.
- * Pattern: [structural action] [light context]. Avoid sterile labels; prefer observing thinking.
+ * Build timeline/shift labels for tooltips and lists.
+ * Priority: user-recognizable content (decision title, source title, highlight/summary).
+ * Avoid system phrases like "threshold reached", "momentum increased"; use short fallback only when no context.
  */
 function getTypedHeadline(p: HomePulse, semanticHeadline?: string | null): string {
   const semantic = (semanticHeadline || '').trim();
   const editorial = (p.headline || '').trim();
   const context = semantic || editorial;
 
+  if (context) return context;
+
   switch (p.pulse_type) {
-    case 'structural_threshold':
-      return context ? `Momentum increased around ${context}` : 'Momentum increased';
-    case 'arc_shift':
-      return context ? `Signals reinforced direction: ${context}` : 'A new thread of thinking appeared';
     case 'result_recorded':
-      return context ? `Result recorded for ${context}` : 'Result recorded';
+      return 'Result recorded';
+    case 'structural_threshold':
+    case 'arc_shift':
+      return 'Structural shift';
     case 'tension':
-      return context ? `Tension emerging: ${context}` : 'Tension emerging';
+      return 'Tension emerging';
     default:
-      return context || 'Structure updated';
+      return 'Structure updated';
   }
 }
 
@@ -192,6 +194,7 @@ export async function getHomePageData(
     'result recorded',
     'momentum increased',
     'arc shift',
+    'structural shift',
     'milestone recorded',
     'tension emerging',
     'signals reinforced direction',

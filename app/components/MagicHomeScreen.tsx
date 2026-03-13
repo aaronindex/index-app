@@ -11,6 +11,7 @@ import { isOnboardingInProgress } from '@/lib/onboarding/state';
 import { showError } from './ErrorNotification';
 import GenerateDigestButton from '../tools/components/GenerateDigestButton';
 import ReadStructure from './ReadStructure';
+import { getSupabaseBrowserClient } from '@/lib/supabaseClient';
 // OnboardingController now mounted globally via GlobalOnboarding in root layout
 
 type TimelineEvent = {
@@ -144,12 +145,40 @@ const ASK_EXAMPLE_PROMPTS = [
 
 function HomeAskModule() {
   const [query, setQuery] = useState('');
+  const [scope, setScope] = useState<'global' | 'project'>('global');
+  const [scopeProjectId, setScopeProjectId] = useState('');
+  const [projects, setProjects] = useState<Array<{ id: string; name: string }>>([]);
+
+  useEffect(() => {
+    const loadProjects = async () => {
+      try {
+        const supabase = getSupabaseBrowserClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        const { data } = await supabase
+          .from('projects')
+          .select('id, name')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
+        setProjects(data || []);
+      } catch {
+        // ignore
+      }
+    };
+    loadProjects();
+  }, []);
+
+  const redirectToAsk = (q: string) => {
+    const trimmed = q.trim();
+    if (!trimmed) return;
+    const params = new URLSearchParams({ q: trimmed });
+    if (scope === 'project' && scopeProjectId) params.set('project', scopeProjectId);
+    window.location.href = `/ask?${params.toString()}`;
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const trimmed = query.trim();
-    if (!trimmed) return;
-    window.location.href = `/ask?q=${encodeURIComponent(trimmed)}`;
+    redirectToAsk(query);
   };
 
   return (
@@ -157,27 +186,62 @@ function HomeAskModule() {
       <h2 className="font-serif text-lg font-semibold text-[rgb(var(--text))] mb-3">
         Ask INDEX
       </h2>
-      <form onSubmit={handleSubmit} className="space-y-3">
-        <input
-          type="text"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="What would you like to understand?"
-          className="w-full px-4 py-2.5 text-sm border border-[rgb(var(--ring)/0.16)] rounded-lg bg-[rgb(var(--bg))] text-[rgb(var(--text))] placeholder:text-[rgb(var(--muted))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--ring)/0.2)]"
-        />
-        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-[rgb(var(--muted))]">
-          {ASK_EXAMPLE_PROMPTS.map((prompt) => (
-            <button
-              key={prompt}
-              type="button"
-              onClick={() => setQuery(prompt)}
-              className="hover:text-[rgb(var(--text))] transition-colors underline underline-offset-2"
+      <form onSubmit={handleSubmit} className="mb-3">
+        <div className="flex gap-0 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 overflow-hidden focus-within:ring-2 focus-within:ring-zinc-500 dark:focus-within:ring-zinc-400">
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="What's still unresolved?"
+            className="flex-1 min-w-0 px-4 py-3 bg-transparent text-foreground focus:outline-none"
+          />
+          <div className="flex items-center border-l border-zinc-300 dark:border-zinc-700 pl-3 pr-3 py-1">
+            <select
+              value={scope === 'global' ? '' : scopeProjectId}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (!val) {
+                  setScope('global');
+                  setScopeProjectId('');
+                } else {
+                  setScope('project');
+                  setScopeProjectId(val);
+                }
+              }}
+              className="bg-transparent text-sm text-[rgb(var(--muted))] focus:outline-none cursor-pointer"
             >
-              {prompt}
-            </button>
-          ))}
+              <option value="">Across Your INDEX</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <button
+            type="submit"
+            disabled={!query.trim()}
+            className="px-6 py-3 bg-foreground text-background font-medium hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+          >
+            Search
+          </button>
         </div>
       </form>
+      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-[rgb(var(--muted))]">
+        {ASK_EXAMPLE_PROMPTS.map((prompt) => (
+          <button
+            key={prompt}
+            type="button"
+            onClick={() => {
+              setQuery(prompt);
+              redirectToAsk(prompt);
+            }}
+            className="hover:text-[rgb(var(--text))] transition-colors underline underline-offset-2"
+          >
+            {prompt}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
@@ -351,15 +415,15 @@ export default function MagicHomeScreen({ initialData = null, initialShowFocusMo
 
       {!onboardingInProgress && <ExtensionNudgeBanner />}
 
-      {/* Page title — same hierarchy as other page titles */}
-          <h1 className="font-serif text-xl font-semibold text-[rgb(var(--text))] mb-2">
-            Across your INDEX
-          </h1>
+      {/* Ask INDEX first — primary entry point; redirects to /ask?q= for full experience */}
+      <HomeAskModule />
 
-          {/* Ask INDEX — redirects to /ask?q= for full experience */}
-          <HomeAskModule />
+      {/* Section: Across your INDEX */}
+      <h1 className="font-serif text-xl font-semibold text-[rgb(var(--text))] mb-2">
+        Across your INDEX
+      </h1>
 
-          <hr className="my-6 border-[rgb(var(--ring)/0.08)]" />
+      <hr className="my-6 border-[rgb(var(--ring)/0.08)]" />
 
           {/* 1. Direction (global snapshot) — Updated, status line, optional last change, body */}
           <div data-onboarding="direction-panel">
