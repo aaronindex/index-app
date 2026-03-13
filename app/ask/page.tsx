@@ -13,6 +13,7 @@ import Card from '@/app/components/ui/Card';
 import type { AskIndexAnalysisMode } from '@/lib/askAnalysisMode';
 import type { AskIndexFollowUp } from '@/lib/askFollowUps';
 import { getAskIndexLayoutConfig, getSectionLabel } from '@/lib/askLayoutConfig';
+import ReadStructure from '@/app/components/ReadStructure';
 
 interface SearchResult {
   chunk_id: string;
@@ -45,6 +46,7 @@ interface StateData {
   stateSummary: string;
   stateSummarySource: 'deterministic' | 'llm';
   currentDirection?: string;
+  primaryArc?: string | null;
   sections: {
     newDecisions: Array<{
       id: string;
@@ -117,6 +119,7 @@ export default function AskPage() {
           setEvidenceExpanded(false);
           setShowAllTiles(false);
           setNextAttentionExpanded(false);
+          setReadStructureExpanded(false);
         } catch (e) {
           console.error('Error restoring from cache:', e);
         }
@@ -151,6 +154,7 @@ export default function AskPage() {
   const [evidenceExpanded, setEvidenceExpanded] = useState(false);
   const [showAllTiles, setShowAllTiles] = useState(false);
   const [nextAttentionExpanded, setNextAttentionExpanded] = useState(false);
+  const [readStructureExpanded, setReadStructureExpanded] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [resultScope, setResultScope] = useState<'global' | 'project'>('global');
   const [analysisMode, setAnalysisMode] = useState<AskIndexAnalysisMode | null>(null);
@@ -317,6 +321,7 @@ export default function AskPage() {
       setEvidenceExpanded(false);
       setShowAllTiles(false);
       setNextAttentionExpanded(false);
+      setReadStructureExpanded(false);
       setNeedsDisambiguation(false);
       setCandidateProjects([]);
 
@@ -591,6 +596,15 @@ export default function AskPage() {
                           return `${decisionsCount} ${decisionLabel} • ${tasksCount} ${taskLabel} updated in the last ${days} days`;
                         })()}
                       </p>
+                      <ReadStructure
+                        signals={[
+                          ...stateData.sections.newDecisions.map((d) => ({ title: d.title, type: 'decision' as const })),
+                          ...stateData.sections.newOrChangedTasks.map((t) => ({ title: t.title, type: 'task' as const })),
+                        ]}
+                        arc={stateData.primaryArc ?? undefined}
+                        open={readStructureExpanded}
+                        onToggle={() => setReadStructureExpanded((v) => !v)}
+                      />
                     </div>
                   );
                 }

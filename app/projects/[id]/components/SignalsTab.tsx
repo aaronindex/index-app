@@ -205,7 +205,7 @@ export default function SignalsTab({
                         </p>
                       )}
                       <p className="text-xs font-medium text-[rgb(var(--muted))] mb-3">
-                        {ids.length} signals contributing
+                        Derived from {ids.length} signals
                       </p>
                       {!isExpanded ? (
                         <button

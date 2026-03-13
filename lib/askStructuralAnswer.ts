@@ -30,6 +30,8 @@ export interface StructuralAnswerSections {
   nextAttention: string | null;
   /** True when any ledger evidence (decisions, tasks, arcs, shifts) was available. */
   hasLedger: boolean;
+  /** Primary arc name for Read Structure (from active arcs). */
+  primaryArc: string | null;
 }
 
 export async function buildStructuralAnswer(params: {
@@ -261,12 +263,15 @@ export async function buildStructuralAnswer(params: {
     nextAttention = lines.join('\n');
   }
 
+  const primaryArc = activeArcs.length > 0 ? pickPrimaryArc(activeArcs) : null;
+
   return {
     interpretation,
     supportingSignals,
     structuralContext,
     nextAttention,
     hasLedger,
+    primaryArc,
   };
 }
 

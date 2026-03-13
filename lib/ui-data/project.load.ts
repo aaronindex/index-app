@@ -353,15 +353,15 @@ export async function loadProjectView(params: {
 
   // Project timeline: pulses (for this project) + outcomes as events with labels
   const PULSE_TYPES_PROJECT = ['arc_shift', 'structural_threshold', 'tension', 'result_recorded'] as const;
-  /** Pulse-specific labels for project timeline; fallback only when type unknown. */
+  /** Pulse labels for project timeline: structural weather, one line. */
   function pulseTypeLabel(pt: string): string {
     switch (pt) {
       case 'arc_shift':
-        return 'Arc shift detected';
+        return 'Direction shift';
       case 'structural_threshold':
-        return 'Structural threshold crossed';
+        return 'Momentum increased';
       case 'tension':
-        return 'Tension detected';
+        return 'Tension emerging';
       case 'result_recorded':
         return 'Result recorded';
       default:
@@ -371,12 +371,14 @@ export async function loadProjectView(params: {
 
   let projectTimelineEvents: Array<{ id: string; occurred_at: string; kind: 'pulse' | 'result'; label: string }> = [];
 
+  // Include pulses for this project (project_id = project_id) OR global unattributed pulses (project_id is null).
+  // Minimal pulses (arc_shift, structural_threshold) are created without project_id, so they only appear when we include null.
   const { data: projectPulses } = await supabaseClient
     .from('pulse')
     .select('id, pulse_type, headline, occurred_at, state_hash')
     .eq('user_id', user_id)
     .eq('scope', 'global')
-    .eq('project_id', project_id)
+    .or(`project_id.eq.${project_id},project_id.is.null`)
     .in('pulse_type', [...PULSE_TYPES_PROJECT])
     .order('occurred_at', { ascending: false })
     .limit(50);

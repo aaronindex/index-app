@@ -191,33 +191,67 @@ export default function ReadTab({
   const tasksCount = totalOpenTasks;
   const arcsCount = activeArcs.length;
 
+  // Interpretive snapshot: 1–2 sentences describing structural behavior, not inventory.
+  const projectSnapshotLine = (() => {
+    const hasArc = arcsCount > 0;
+    const hasDecision = decisionsCount > 0;
+    const hasTasks = tasksCount > 0;
+    if (!hasArc && !hasDecision && !hasTasks) {
+      return 'The project is still in early formation; thinking will settle as more signals accumulate.';
+    }
+    const arcPart =
+      arcsCount === 0
+        ? 'Thinking has not yet settled around a clear arc.'
+        : arcsCount === 1
+          ? 'Work is centered on one arc.'
+          : `Thinking is split across ${arcsCount} arcs.`;
+    const decisionPart = hasDecision
+      ? decisionsCount === 1
+        ? 'A key decision remains open.'
+        : `${decisionsCount} decisions remain open.`
+      : '';
+    const taskPart = hasTasks ? (tasksCount === 1 ? 'One task is in motion.' : 'Execution is building.') : '';
+    const parts = [arcPart];
+    if (decisionPart) parts.push(decisionPart);
+    if (taskPart) parts.push(taskPart);
+    const line = parts.join(' ');
+    return line.endsWith('.') ? line : line + '.';
+  })();
+
   return (
     <div className="space-y-8 max-w-3xl">
-      {/* Collapse block: visible transformation summary */}
-      <div className="border border-[rgb(var(--ring)/0.08)] rounded-lg px-4 py-2.5 mt-1 mb-6">
-        <div className="flex flex-col items-center text-center gap-1.5">
-          <div className="text-sm font-medium text-[rgb(var(--text))]">
-            {typeof sourceCount === 'number' && sourceCount > 0
-              ? `Distilled from ${sourceCount} ${sourceCount === 1 ? 'source' : 'sources'}`
-              : 'Distilled'}
-          </div>
-          {typeof sourceCount === 'number' && sourceCount > 0 && (
-            <div className="text-base leading-none">↓</div>
+      {/* 1. Project Snapshot — first, interpretive */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-serif text-lg font-semibold text-[rgb(var(--text))]">
+            Project Snapshot
+          </h2>
+          <button
+            type="button"
+            onClick={() => {
+              setOutcomeText('');
+              setOutcomeError(null);
+              setShowOutcomeModal(true);
+            }}
+            className="px-2.5 py-1 text-xs font-medium rounded border border-[rgb(var(--ring)/0.16)] text-[rgb(var(--text))] hover:bg-[rgb(var(--surface2))] transition-colors"
+          >
+            Record result
+          </button>
+        </div>
+        <div className="border border-[rgb(var(--ring)/0.08)] rounded-lg p-4">
+          {snapshotUpdatedLabel && (
+            <p className="text-xs text-[rgb(var(--muted))] mb-2">{snapshotUpdatedLabel}</p>
           )}
-          <div className="text-xs text-[rgb(var(--text))] font-medium">
-            <span className="font-semibold">{decisionsCount}</span>{' '}
-            {decisionsCount === 1 ? 'decision' : 'decisions'}
-            {' · '}
-            <span className="font-semibold">{tasksCount}</span>{' '}
-            {tasksCount === 1 ? 'task' : 'tasks'}
-            {' · '}
-            <span className="font-semibold">{arcsCount}</span>{' '}
-            {arcsCount === 1 ? 'arc' : 'arcs'}
+          <div className="text-sm text-[rgb(var(--text))] whitespace-pre-wrap space-y-1">
+            {latestSnapshotOutcomeText && latestSnapshotOutcomeText.trim().length > 0 && (
+              <p className="font-medium">{latestSnapshotOutcomeText.trim()}</p>
+            )}
+            <p>{projectSnapshotLine}</p>
           </div>
         </div>
       </div>
 
-      {/* Active Arcs */}
+      {/* 2. Active Arcs */}
       <div>
         <h2 className="font-serif text-lg font-semibold text-[rgb(var(--text))] mb-3">
           Active Arcs
@@ -251,51 +285,6 @@ export default function ReadTab({
         ) : (
           <p className="text-sm text-[rgb(var(--muted))]">No active arcs.</p>
         )}
-      </div>
-
-      {/* Snapshot */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="font-serif text-lg font-semibold text-[rgb(var(--text))]">
-            Project Snapshot
-          </h2>
-          <button
-            type="button"
-            onClick={() => {
-              setOutcomeText('');
-              setOutcomeError(null);
-              setShowOutcomeModal(true);
-            }}
-            className="px-2.5 py-1 text-xs font-medium rounded border border-[rgb(var(--ring)/0.16)] text-[rgb(var(--text))] hover:bg-[rgb(var(--surface2))] transition-colors"
-          >
-            Record result
-          </button>
-        </div>
-        <div className="border border-[rgb(var(--ring)/0.08)] rounded-lg p-4">
-          {snapshotUpdatedLabel && (
-            <p className="text-xs text-[rgb(var(--muted))] mb-2">{snapshotUpdatedLabel}</p>
-          )}
-          <div className="text-sm text-[rgb(var(--text))] whitespace-pre-wrap space-y-1">
-            {latestSnapshotOutcomeText && latestSnapshotOutcomeText.trim().length > 0 && (
-              <p className="font-medium">{latestSnapshotOutcomeText.trim()}</p>
-            )}
-            <p>
-              {arcsCount === 0
-                ? 'No arcs active.'
-                : arcsCount === 1
-                ? 'One arc active.'
-                : `${arcsCount} arcs active.`}
-            </p>
-            <p>Exploration ongoing.</p>
-            <p>
-              {decisionsCount === 0
-                ? 'No unresolved decisions.'
-                : decisionsCount === 1
-                ? 'One unresolved decision.'
-                : `${decisionsCount} unresolved decisions.`}
-            </p>
-          </div>
-        </div>
       </div>
 
       {showOutcomeModal && (
@@ -505,8 +494,17 @@ export default function ReadTab({
 
       <hr className="my-6 border-[rgb(var(--ring)/0.08)]" />
 
-      {/* Project timeline: pulses + results (events with labels) */}
+      {/* 5. Project timeline: pulses + results */}
       <ProjectEventTimeline events={projectTimelineEvents} />
+
+      {/* 6. Distillation metadata — quiet, secondary */}
+      <p className="text-xs text-[rgb(var(--muted))] font-normal">
+        {typeof sourceCount === 'number' && sourceCount > 0
+          ? `${sourceCount} ${sourceCount === 1 ? 'source' : 'sources'} · `
+          : ''}
+        {decisionsCount} {decisionsCount === 1 ? 'decision' : 'decisions'} · {tasksCount}{' '}
+        {tasksCount === 1 ? 'task' : 'tasks'} · {arcsCount} {arcsCount === 1 ? 'arc' : 'arcs'}
+      </p>
 
       {/* Empty state if no data */}
       {openDecisions.length === 0 && totalOpenTasks === 0 && hasConversations === true && (
@@ -584,7 +582,10 @@ function ProjectEventTimeline(props: { events: ProjectTimelineEvent[] }) {
                   />
                   <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                     <div className="max-w-[260px] min-w-[180px] rounded-md border border-[rgb(var(--ring)/0.12)] bg-[rgb(var(--surface))] px-2 py-1 shadow-sm font-sans">
-                      <div className="text-[10px] font-medium text-[rgb(var(--text))]">
+                      <div className="text-[10px] text-[rgb(var(--muted))]">
+                        {item.kind === 'result' ? 'Result recorded' : 'Structural shift'}
+                      </div>
+                      <div className="text-[10px] font-medium text-[rgb(var(--text))] mt-0.5">
                         {dateLabel}
                       </div>
                       <div className="mt-1 text-[10px] text-[rgb(var(--muted))] whitespace-normal break-words">

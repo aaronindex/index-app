@@ -11,6 +11,7 @@ import PostImportModal from './PostImportModal';
 import { isOnboardingInProgress } from '@/lib/onboarding/state';
 import { showError } from './ErrorNotification';
 import GenerateDigestButton from '../tools/components/GenerateDigestButton';
+import ReadStructure from './ReadStructure';
 
 type TimelineEvent = {
   id: string;
@@ -197,7 +198,10 @@ function GlobalTimeline({ events }: { events: TimelineEvent[] }) {
                 />
                 <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                   <div className="max-w-[260px] min-w-[220px] rounded-md border border-[rgb(var(--ring)/0.12)] bg-[rgb(var(--surface))] px-2 py-1 shadow-sm font-sans">
-                    <div className="text-[10px] font-medium text-[rgb(var(--text))]">
+                    <div className="text-[10px] text-[rgb(var(--muted))]">
+                      {item.isResult ? 'Result recorded' : 'Structural shift'}
+                    </div>
+                    <div className="text-[10px] font-medium text-[rgb(var(--text))] mt-0.5">
                       {formatFullDate(item.occurred_at)}
                     </div>
                     <div className="mt-1 text-[10px] text-[rgb(var(--muted))] whitespace-normal break-words">
@@ -341,18 +345,10 @@ export default function MagicHomeScreen({ initialData = null, initialShowFocusMo
                 <div className="text-sm text-[rgb(var(--text))] whitespace-pre-wrap font-sans space-y-3">
                   <div>{directionText}</div>
                   {directionSignals.length > 0 && (
-                    <div>
-                      <details className="text-xs text-[rgb(var(--muted))]">
-                        <summary className="cursor-pointer list-none marker:hidden underline underline-offset-2">
-                          Signals informing this direction
-                        </summary>
-                        <ul className="mt-1 list-disc list-inside space-y-0.5">
-                          {directionSignals.map((s) => (
-                            <li key={s.id}>{s.label}</li>
-                          ))}
-                        </ul>
-                      </details>
-                    </div>
+                    <ReadStructure
+                      signals={directionSignals.map((s) => ({ title: s.label }))}
+                      arc={undefined}
+                    />
                   )}
                 </div>
               )}

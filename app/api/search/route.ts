@@ -138,6 +138,7 @@ export async function POST(request: NextRequest) {
       stateSummary: stateSummaryText,
       stateSummarySource: 'ledger_structured',
       currentDirection: state.currentDirection,
+      primaryArc: sections.primaryArc ?? null,
       sections: {
         newDecisions: state.newDecisions,
         newOrChangedTasks: state.newOrChangedTasks,
