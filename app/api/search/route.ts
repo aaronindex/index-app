@@ -128,7 +128,10 @@ export async function POST(request: NextRequest) {
     const followUps = getAskIndexFollowUps(
       interpretation.analysisMode,
       routerResult.scope === 'global' ? 'index' : 'project',
-      { projectId: routerResult.resolvedProjectId || projectId }
+      {
+        projectId: routerResult.resolvedProjectId || projectId,
+        currentCanonicalType: normalizedAsk.canonicalType,
+      }
     );
 
     stateData = {
