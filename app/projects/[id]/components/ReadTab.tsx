@@ -13,6 +13,8 @@ interface ReadTabProps {
   snapshotText: string | null;
   snapshotGeneratedAt: string | null;
   activeArcs: Array<{ id: string; title: string | null; status: string | null }>;
+  /** Tensions (competing directions) from basic detection; shown below Snapshot when present. */
+  tensions?: Array<{ left: string; right: string }>;
   projectSnapshots: Array<{
     id: string;
     generated_at: string | null;
@@ -68,6 +70,7 @@ export default function ReadTab({
   snapshotText,
   snapshotGeneratedAt,
   activeArcs,
+  tensions = [],
   projectSnapshots,
   projectTimelineEvents = [],
   latestSnapshotOutcomeText,
@@ -191,7 +194,7 @@ export default function ReadTab({
   const tasksCount = totalOpenTasks;
   const arcsCount = activeArcs.length;
 
-  // Interpretive snapshot: 1–2 sentences describing structural behavior, not inventory.
+  // Interpretive snapshot: max 2 sentences. Sentence 1 = arc + decision; sentence 2 = momentum/execution.
   const projectSnapshotLine = (() => {
     const hasArc = arcsCount > 0;
     const hasDecision = decisionsCount > 0;
@@ -199,23 +202,29 @@ export default function ReadTab({
     if (!hasArc && !hasDecision && !hasTasks) {
       return 'The project is still in early formation; thinking will settle as more signals accumulate.';
     }
-    const arcPart =
-      arcsCount === 0
-        ? 'Thinking has not yet settled around a clear arc.'
-        : arcsCount === 1
-          ? 'Work is centered on one arc.'
-          : `Thinking is split across ${arcsCount} arcs.`;
-    const decisionPart = hasDecision
-      ? decisionsCount === 1
-        ? 'A key decision remains open.'
-        : `${decisionsCount} decisions remain open.`
+    // Sentence 1: combine arc state + decision state for natural rhythm
+    let sent1: string;
+    if (hasArc && hasDecision) {
+      sent1 =
+        arcsCount === 1
+          ? decisionsCount === 1
+            ? 'Work is centered on one arc while a key decision remains open.'
+            : `Work is centered on one arc while ${decisionsCount} decisions remain open.`
+          : decisionsCount === 1
+            ? `Thinking is split across ${arcsCount} arcs with a key decision open.`
+            : `Thinking is split across ${arcsCount} arcs with ${decisionsCount} decisions open.`;
+    } else if (hasArc) {
+      sent1 = arcsCount === 1 ? 'Work is centered on one arc.' : `Thinking is split across ${arcsCount} arcs.`;
+    } else {
+      sent1 = decisionsCount === 1 ? 'A key decision remains open.' : `${decisionsCount} decisions remain open.`;
+    }
+    // Sentence 2: momentum / execution (only if there are tasks)
+    const sent2 = hasTasks
+      ? tasksCount === 1
+        ? 'One task is in motion.'
+        : 'Execution is beginning to build.'
       : '';
-    const taskPart = hasTasks ? (tasksCount === 1 ? 'One task is in motion.' : 'Execution is building.') : '';
-    const parts = [arcPart];
-    if (decisionPart) parts.push(decisionPart);
-    if (taskPart) parts.push(taskPart);
-    const line = parts.join(' ');
-    return line.endsWith('.') ? line : line + '.';
+    return sent2 ? `${sent1} ${sent2}` : sent1;
   })();
 
   return (
@@ -250,6 +259,24 @@ export default function ReadTab({
           </div>
         </div>
       </div>
+
+      {/* Tensions emerging — competing directions (below Snapshot, subtle) */}
+      {tensions.length > 0 && (
+        <div>
+          <h2 className="font-serif text-lg font-semibold text-[rgb(var(--text))] mb-3">
+            Tensions emerging
+          </h2>
+          <ul className="space-y-4 text-sm">
+            {tensions.map((t, i) => (
+              <li key={i} className="text-[rgb(var(--text))]">
+                <div>{t.left}</div>
+                <div className="text-xs text-[rgb(var(--muted))] my-0.5">vs</div>
+                <div>{t.right}</div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* 2. Active Arcs */}
       <div>
@@ -555,7 +582,7 @@ function ProjectEventTimeline(props: { events: ProjectTimelineEvent[] }) {
       </h2>
       <p className="mt-1 text-sm text-[rgb(var(--muted))]">
         {hasEvents
-          ? 'Dots reflect structural changes. Spacing shows time between them.'
+          ? 'Dots mark structural shifts. Spacing reflects time between them.'
           : 'Pulses and results will appear here as the project moves forward.'}
       </p>
       <div className="relative h-12 mt-2">

@@ -33,6 +33,8 @@ export type ProjectViewData = {
     status: string | null;
     contributingSignals?: Array<{ id: string; kind: string; label: string }>;
   }>;
+  /** Lightweight tension detection: competing directions when 2+ arcs (v1 heuristic). */
+  tensions: Array<{ left: string; right: string }>;
   timelineEvents: Array<{
     kind: 'decision' | 'result';
     occurred_at: string;
@@ -351,6 +353,16 @@ export async function loadProjectView(params: {
     }
   }
 
+  // Basic tension detection (v1): two or more arcs in project → competing directions
+  const tensions: Array<{ left: string; right: string }> = [];
+  if (activeArcs.length >= 2) {
+    const a = activeArcs[0];
+    const b = activeArcs[1];
+    const left = (a?.title ?? null)?.trim() || 'Direction A';
+    const right = (b?.title ?? null)?.trim() || 'Direction B';
+    tensions.push({ left, right });
+  }
+
   // Project timeline: pulses (for this project) + outcomes as events with labels
   const PULSE_TYPES_PROJECT = ['arc_shift', 'structural_threshold', 'tension', 'result_recorded'] as const;
   /** Pulse labels for project timeline: structural weather, one line. */
@@ -579,6 +591,7 @@ export async function loadProjectView(params: {
     projectSnapshots,
     latestSnapshotOutcomeText,
     activeArcs,
+    tensions,
     timelineEvents,
     projectTimelineEvents,
   };

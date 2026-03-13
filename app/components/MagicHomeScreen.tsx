@@ -135,6 +135,53 @@ function formatDigestDate(iso: string | null | undefined): string {
   }
 }
 
+const ASK_EXAMPLE_PROMPTS = [
+  'What needs attention?',
+  'Where is momentum building?',
+  'What decisions remain unresolved?',
+  'What changed recently?',
+];
+
+function HomeAskModule() {
+  const [query, setQuery] = useState('');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = query.trim();
+    if (!trimmed) return;
+    window.location.href = `/ask?q=${encodeURIComponent(trimmed)}`;
+  };
+
+  return (
+    <div className="mb-6">
+      <h2 className="font-serif text-lg font-semibold text-[rgb(var(--text))] mb-3">
+        Ask INDEX
+      </h2>
+      <form onSubmit={handleSubmit} className="space-y-3">
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="What would you like to understand?"
+          className="w-full px-4 py-2.5 text-sm border border-[rgb(var(--ring)/0.16)] rounded-lg bg-[rgb(var(--bg))] text-[rgb(var(--text))] placeholder:text-[rgb(var(--muted))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--ring)/0.2)]"
+        />
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-[rgb(var(--muted))]">
+          {ASK_EXAMPLE_PROMPTS.map((prompt) => (
+            <button
+              key={prompt}
+              type="button"
+              onClick={() => setQuery(prompt)}
+              className="hover:text-[rgb(var(--text))] transition-colors underline underline-offset-2"
+            >
+              {prompt}
+            </button>
+          ))}
+        </div>
+      </form>
+    </div>
+  );
+}
+
 function GlobalTimeline({ events }: { events: TimelineEvent[] }) {
   if (events.length === 0) {
     return (
@@ -143,7 +190,7 @@ function GlobalTimeline({ events }: { events: TimelineEvent[] }) {
           Timeline
         </h2>
         <p className="mt-1 text-sm text-[rgb(var(--muted))]">
-          Dots reflect structural changes. Spacing shows time between them.
+          Dots mark structural shifts. Spacing reflects time between them.
         </p>
         <div className="relative h-12 mt-2">
           <div className="absolute top-1/2 left-0 right-0 h-px bg-[rgb(var(--ring)/0.12)]" />
@@ -178,7 +225,7 @@ function GlobalTimeline({ events }: { events: TimelineEvent[] }) {
         Timeline
       </h2>
       <p className="mt-1 text-sm text-[rgb(var(--muted))]">
-        Dots reflect structural changes. Spacing shows time between them.
+        Dots mark structural shifts. Spacing reflects time between them.
       </p>
       <div className="relative h-12 mt-2">
         <div className="absolute top-1/2 left-0 right-0 h-px bg-[rgb(var(--ring)/0.12)]" />
@@ -310,6 +357,9 @@ export default function MagicHomeScreen({ initialData = null, initialShowFocusMo
           <h1 className="font-serif text-xl font-semibold text-[rgb(var(--text))] mb-2">
             Across your INDEX
           </h1>
+
+          {/* Ask INDEX — redirects to /ask?q= for full experience */}
+          <HomeAskModule />
 
           <hr className="my-6 border-[rgb(var(--ring)/0.08)]" />
 

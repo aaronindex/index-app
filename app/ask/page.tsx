@@ -4,7 +4,7 @@
 /** Set NEXT_PUBLIC_INDEX_DEBUG=true in .env.local to show Ask INDEX debug panel. */
 const ASK_INDEX_DEBUG = process.env.NEXT_PUBLIC_INDEX_DEBUG === 'true';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getSupabaseBrowserClient } from '@/lib/supabaseClient';
@@ -93,37 +93,40 @@ export default function AskPage() {
     document.title = 'Ask Index | INDEX';
   }, []);
 
-  // Restore from sessionStorage on mount if URL has q param
+  // On mount: if URL has q param, populate input and either restore from cache or run search
+  const initialQHandled = useRef(false);
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    
+    if (typeof window === 'undefined' || initialQHandled.current) return;
     const urlParams = new URLSearchParams(window.location.search);
     const urlQuery = urlParams.get('q');
-    if (urlQuery && !hasSearched) {
-      const cacheKey = `ask_index_${urlQuery}`;
-      const cached = sessionStorage.getItem(cacheKey);
-      if (cached) {
-        try {
-          const data = JSON.parse(cached);
-          setQuery(urlQuery);
-          setResults(data.results || []);
-          setAnswer(data.answer || null);
-          setStateData(data.stateData || null);
-          setIntent(data.intent || 'recall_semantic');
-          setAnalysisMode(data.analysisMode ?? null);
-          setAskDebug(data.debug ?? null);
-          setFollowUps(Array.isArray(data.followUps) ? data.followUps : null);
-          setRelatedContent(data.relatedContent || null);
-          setAskIndexRunId(data.ask_index_run_id || null);
-          setHasSearched(true);
-          setEvidenceExpanded(false);
-          setShowAllTiles(false);
-          setNextAttentionExpanded(false);
-          setReadStructureExpanded(false);
-        } catch (e) {
-          console.error('Error restoring from cache:', e);
-        }
+    if (!urlQuery?.trim()) return;
+    initialQHandled.current = true;
+    setQuery(urlQuery);
+    const cacheKey = `ask_index_${urlQuery}`;
+    const cached = sessionStorage.getItem(cacheKey);
+    if (cached) {
+      try {
+        const data = JSON.parse(cached);
+        setResults(data.results || []);
+        setAnswer(data.answer || null);
+        setStateData(data.stateData || null);
+        setIntent(data.intent || 'recall_semantic');
+        setAnalysisMode(data.analysisMode ?? null);
+        setAskDebug(data.debug ?? null);
+        setFollowUps(Array.isArray(data.followUps) ? data.followUps : null);
+        setRelatedContent(data.relatedContent || null);
+        setAskIndexRunId(data.ask_index_run_id || null);
+        setHasSearched(true);
+        setEvidenceExpanded(false);
+        setShowAllTiles(false);
+        setNextAttentionExpanded(false);
+        setReadStructureExpanded(false);
+      } catch (e) {
+        console.error('Error restoring from cache:', e);
+        void performSearch(urlQuery);
       }
+    } else {
+      void performSearch(urlQuery);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -602,6 +605,12 @@ export default function AskPage() {
                           ...stateData.sections.newOrChangedTasks.map((t) => ({ title: t.title, type: 'task' as const })),
                         ]}
                         arc={stateData.primaryArc ?? undefined}
+                        sourceCount={(() => {
+                          const ids = new Set<string>();
+                          stateData.sections.newDecisions.forEach((d) => { if (d.project_id) ids.add(d.project_id); });
+                          stateData.sections.newOrChangedTasks.forEach((t) => { if (t.project_id) ids.add(t.project_id); });
+                          return ids.size > 0 ? ids.size : undefined;
+                        })()}
                         open={readStructureExpanded}
                         onToggle={() => setReadStructureExpanded((v) => !v)}
                       />
