@@ -548,13 +548,20 @@ export async function loadProjectView(params: {
     return out.length >= 8 ? out : '';
   }
   // Timeline tooltip label priority: 1) Source title, 2) Decision title, 3) Signal/highlight, 4) Arc title, 5) Generic.
-  // Source/decision: latest conversation or decision in this project that occurred before the pulse time.
-  const pulseEvents = (projectPulses ?? []).map((p: { id: string; pulse_type: string; headline: string | null; occurred_at: string; state_hash?: string }) => {
+  // Spread source/decision across pulses (round-robin among candidates) so we get variety instead of same title for all.
+  const pulsesChrono = [...(projectPulses ?? [])].sort(
+    (a, b) => new Date((a as { occurred_at: string }).occurred_at).getTime() - new Date((b as { occurred_at: string }).occurred_at).getTime()
+  );
+  const pulseEvents = pulsesChrono.map((p: { id: string; pulse_type: string; headline: string | null; occurred_at: string; state_hash?: string }, i: number) => {
     const pulseTime = p.occurred_at;
-    const sourceTitle =
-      projectConvsByTime.find((c) => (c.started_at ?? '').localeCompare(pulseTime) <= 0)?.title?.trim() || '';
-    const decisionTitle =
-      projectDecisionsByTime.find((d) => (d.created_at ?? '').localeCompare(pulseTime) <= 0)?.title?.trim() || '';
+    const convCandidates = projectConvsByTime
+      .filter((c) => (c.started_at ?? '').localeCompare(pulseTime) <= 0)
+      .sort((a, b) => (a.started_at ?? '').localeCompare(b.started_at ?? ''));
+    const decisionCandidates = projectDecisionsByTime
+      .filter((d) => (d.created_at ?? '').localeCompare(pulseTime) <= 0)
+      .sort((a, b) => (a.created_at ?? '').localeCompare(b.created_at ?? ''));
+    const sourceTitle = convCandidates[i % Math.max(1, convCandidates.length)]?.title?.trim() ?? '';
+    const decisionTitle = decisionCandidates[i % Math.max(1, decisionCandidates.length)]?.title?.trim() ?? '';
     const arcTitle = (p.state_hash && arcTitleByStateHash[p.state_hash]?.trim()) || '';
     const semantic = pulseOverlay.pulseHeadlines[p.id]?.trim();
     const editorial = (p.headline ?? '').trim();
