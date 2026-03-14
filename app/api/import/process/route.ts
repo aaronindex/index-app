@@ -148,10 +148,15 @@ export async function POST(request: NextRequest) {
       const nowIso = new Date().toISOString();
       const thinkingWindow = coarseWindowToThinkingRange({ choice: thinkingTime, nowIso });
 
+      const { generateSourceTitle } = await import('@/lib/ai/title');
+
       // Process each conversation
       for (let i = 0; i < conversationsToImport.length; i++) {
         const conv = conversationsToImport[i];
         const progressPercent = 10 + Math.floor((i / conversationsToImport.length) * 80);
+
+        const contentText = conv.messages.map((m: { content: string }) => m.content).filter(Boolean).join('\n\n');
+        const resolvedTitle = (await generateSourceTitle(contentText)) ?? conv.title;
 
         // Create conversation with thinking window from user choice
         const { data: conversation, error: convError } = await supabase
@@ -159,7 +164,7 @@ export async function POST(request: NextRequest) {
           .insert({
             user_id: user.id,
             import_id: importId,
-            title: conv.title,
+            title: resolvedTitle,
             source: 'chatgpt',
             started_at: thinkingWindow.start_at,
             ended_at: thinkingWindow.end_at,

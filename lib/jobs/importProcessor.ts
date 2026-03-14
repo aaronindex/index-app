@@ -2,6 +2,7 @@
 // Step-by-step import job processor with idempotency and rate limiting
 
 import { getSupabaseServerClient } from '@/lib/supabaseServer';
+import { generateSourceTitle } from '@/lib/ai/title';
 import { parseChatGPTExport } from '@/lib/parsers/chatgpt';
 import { chunkText } from '@/lib/chunking';
 import { embedTexts } from '@/lib/ai/embeddings';
@@ -270,6 +271,9 @@ async function processInsertConversationsStep(
       const stableId = parsedConv.id || null;
       const dedupeKey = stableId || `${payload.import_id}-${parsedConv.title}`;
 
+      const contentText = parsedConv.messages.map((m) => m.content).filter(Boolean).join('\n\n');
+      const resolvedTitle = (await generateSourceTitle(contentText)) ?? parsedConv.title;
+
       // Check if conversation already exists (idempotent)
       const { data: existing } = await supabase
         .from('conversations')
@@ -316,7 +320,7 @@ async function processInsertConversationsStep(
           .insert({
             user_id: payload.user_id,
             import_id: payload.import_id,
-            title: parsedConv.title,
+            title: resolvedTitle,
             source: 'chatgpt',
             started_at,
             ended_at,

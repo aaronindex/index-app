@@ -14,6 +14,7 @@ import { generateDedupeHash } from '@/lib/jobs/importProcessor';
 import { dispatchStructureRecompute } from '@/lib/structure/dispatch';
 import crypto from 'crypto';
 
+import { generateSourceTitle } from '@/lib/ai/title';
 import {
   deriveSourceTitle,
   deriveFromTranscriptFirstLine,
@@ -286,13 +287,18 @@ export async function POST(request: NextRequest) {
 
     const supabase = await getSupabaseServerClient();
 
-    // Generate title if not provided or empty: content-derived (decision/topic phrase) → transcript first line → first user sentence → fallback
+    // Generate title if not provided or empty: LLM topic label → content-derived → transcript first line → first user → fallback
     let finalTitle = title?.trim() || '';
     if (!finalTitle) {
-      const fromContent = deriveSourceTitle(transcript);
-      const fromTranscript = deriveFromTranscriptFirstLine(transcript);
-      const fromFirstUser = deriveFromFirstUserMessage(parsed.messages);
-      finalTitle = fromContent || fromTranscript || fromFirstUser || uniqueTimestampedFallback('Quick Capture');
+      const llmTitle = await generateSourceTitle(transcript);
+      if (llmTitle) {
+        finalTitle = llmTitle;
+      } else {
+        const fromContent = deriveSourceTitle(transcript);
+        const fromTranscript = deriveFromTranscriptFirstLine(transcript);
+        const fromFirstUser = deriveFromFirstUserMessage(parsed.messages);
+        finalTitle = fromContent || fromTranscript || fromFirstUser || uniqueTimestampedFallback('Quick Capture');
+      }
     }
 
     // Check for duplicates

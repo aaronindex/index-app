@@ -105,8 +105,9 @@ function readablePhraseFromSnapshot(snapshotText: string | null | undefined, max
 }
 
 /**
- * Best label for timeline/shift.
- * Priority: 1) Arc title, 2) Semantic headline, 3) Snapshot phrase when pulse matches latest state, 4) Generic fallback.
+ * Best label for timeline/shift tooltip.
+ * Priority: 1) Source/signal/semantic headline, 2) Arc title, 3) Snapshot phrase, 4) Generic fallback.
+ * Avoids repeating the same arc title when many shifts share one arc.
  */
 function getTimelineLabel(
   p: HomePulse,
@@ -115,12 +116,13 @@ function getTimelineLabel(
   latestStateHash: string | null,
   arcTitle?: string | null
 ): string {
+  const candidate = getTypedHeadline(p, semanticHeadline);
+  const normalized = candidate.trim().toLowerCase();
+  if (candidate && !GENERIC_TOOLTIP_LABELS.has(normalized)) return candidate;
+
   const arcLabel = (arcTitle ?? '').trim();
   if (arcLabel && !isSystemPhrase(arcLabel)) return arcLabel;
 
-  const candidate = getTypedHeadline(p, semanticHeadline);
-  const normalized = candidate.trim().toLowerCase();
-  if (!GENERIC_TOOLTIP_LABELS.has(normalized)) return candidate;
   if (latestStateHash && p.state_hash === latestStateHash && snapshotTextForLatestState) {
     const phrase = readablePhraseFromSnapshot(snapshotTextForLatestState);
     if (phrase) return phrase;

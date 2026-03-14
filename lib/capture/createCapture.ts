@@ -13,6 +13,7 @@ import type {
   CaptureSourceType,
   CreateCaptureRequest,
 } from './capture.types';
+import { generateSourceTitle } from '@/lib/ai/title';
 import { deriveSourceTitle, GENERIC_SOURCE_TITLES, uniqueTimestampedFallback } from '@/lib/sourceTitle';
 
 export type CaptureOutcomesCounts = {
@@ -109,7 +110,8 @@ export async function createCapture(opts: {
     } else {
       const trimmed = content.trim();
       if (trimmed) {
-        const fromContent = deriveSourceTitle(trimmed);
+        const llmTitle = await generateSourceTitle(trimmed);
+        const fromContent = llmTitle ?? deriveSourceTitle(trimmed);
         conversationTitle = fromContent ?? uniqueTimestampedFallback('Captured source');
       } else {
         conversationTitle = uniqueTimestampedFallback('Captured source');

@@ -155,3 +155,59 @@ function generateFallbackTitle(): string {
   const day = now.getDate();
   return `Conversation ${month} ${day}`;
 }
+
+const SOURCE_TITLE_MAX_CHARS = 60;
+const SOURCE_TITLE_INPUT_CHARS = 1200;
+
+/**
+ * Generate a short, topic-style title for a source using a small LLM call.
+ * Used during source ingestion. Returns null on failure so callers can fall back to heuristic.
+ */
+export async function generateSourceTitle(content: string): Promise<string | null> {
+  const excerpt = (typeof content === 'string' ? content : '').trim().slice(0, SOURCE_TITLE_INPUT_CHARS);
+  if (!excerpt) return null;
+
+  const userPrompt = `Generate a concise title summarizing this source.
+
+Rules:
+3 to 7 words
+Title Case
+No punctuation unless necessary
+Capture the main topic or decision
+Avoid generic labels like "User", "Conversation", or project name
+Do not repeat the first line verbatim
+Return only the title.
+
+Source:
+${excerpt}`;
+
+  try {
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) return null;
+
+    const response = await openaiRequest('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [{ role: 'user', content: userPrompt }],
+        temperature: 0.5,
+        max_tokens: 30,
+      }),
+    });
+
+    if (!response.ok) return null;
+
+    const data = await response.json();
+    let title = data.choices?.[0]?.message?.content?.trim() ?? '';
+    title = title.replace(/^["']|["']$/g, '').trim();
+    if (title.length > SOURCE_TITLE_MAX_CHARS) title = title.slice(0, SOURCE_TITLE_MAX_CHARS).trim();
+    if (!title || title.length < 2) return null;
+    return title;
+  } catch {
+    return null;
+  }
+}
