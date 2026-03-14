@@ -202,9 +202,6 @@ export default function ConversationViewClient({
                     onHighlight={(text, start, end) =>
                       handleHighlight(text, start, end, message.id)
                     }
-                    onRedact={(text, start, end) =>
-                      handleRedact(text, start, end, message.id)
-                    }
                     existingHighlights={highlights
                       .filter((h) => h.message_id === message.id)
                       .map((h) => ({

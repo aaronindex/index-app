@@ -186,9 +186,14 @@ export default function SourceDistillAction({
 
   if (showAsDistilled) {
     return (
-      <span className="text-xs text-[rgb(var(--muted))]">
+      <button
+        type="button"
+        disabled
+        aria-label="Already distilled"
+        className="px-3 py-1.5 text-xs font-medium border border-[rgb(var(--ring)/0.2)] rounded-lg opacity-60 cursor-not-allowed text-[rgb(var(--muted))]"
+      >
         ✓ Distilled
-      </span>
+      </button>
     );
   }
 

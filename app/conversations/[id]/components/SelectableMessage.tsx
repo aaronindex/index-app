@@ -402,22 +402,6 @@ export default function SelectableMessage({
           >
             Highlight
           </button>
-          {onRedact && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                e.preventDefault();
-                handleRedact();
-              }}
-              onTouchStart={(e) => {
-                e.stopPropagation();
-              }}
-              className="px-4 py-2 text-sm font-medium bg-red-600 text-white rounded-lg hover:opacity-90 active:opacity-75 transition-opacity touch-manipulation flex-1 max-w-[140px]"
-              style={{ touchAction: 'manipulation' }}
-            >
-              Redact
-            </button>
-          )}
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -472,22 +456,6 @@ export default function SelectableMessage({
           >
             Highlight
           </button>
-          {onRedact && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation(); // Prevent event from bubbling to document
-                e.preventDefault(); // Prevent any default behavior
-                handleRedact();
-              }}
-              onTouchStart={(e) => {
-                e.stopPropagation(); // Prevent event from bubbling
-              }}
-              className="px-3 py-2 text-xs font-medium bg-red-600 text-white rounded-lg shadow-lg hover:opacity-90 active:opacity-75 transition-opacity touch-manipulation"
-              style={{ touchAction: 'manipulation' }}
-            >
-              Redact
-            </button>
-          )}
         </div>
       )}
     </div>

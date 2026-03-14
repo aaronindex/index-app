@@ -109,6 +109,14 @@ export default async function ConversationPage({
     .eq('user_id', user.id)
     .order('created_at', { ascending: false });
 
+  // Already distilled if this conversation has any decisions, tasks, or highlights (disable re-distill)
+  const [{ count: decisionCount }, { count: taskCount }] = await Promise.all([
+    supabase.from('decisions').select('*', { count: 'exact', head: true }).eq('conversation_id', id).eq('user_id', user.id),
+    supabase.from('tasks').select('*', { count: 'exact', head: true }).eq('conversation_id', id).eq('user_id', user.id),
+  ]);
+  const isDistilled =
+    (decisionCount ?? 0) > 0 || (taskCount ?? 0) > 0 || (highlights?.length ?? 0) > 0;
+
   // Tags are generated but not displayed in UI (internal signal layer only)
 
 
@@ -143,7 +151,7 @@ export default async function ConversationPage({
             <div className="space-y-4">
               {/* Row 1: Actions (right-aligned) */}
               <div className="flex items-center justify-end gap-3">
-                <ExtractInsightsButton conversationId={id} projectId={project?.id || null} />
+                <ExtractInsightsButton conversationId={id} projectId={project?.id || null} isDistilled={isDistilled} />
                 <ConversationOverflowMenu
                   conversationId={id}
                   conversationTitle={conversation.title}

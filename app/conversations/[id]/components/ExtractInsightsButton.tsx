@@ -9,6 +9,8 @@ import FirstStructuralMomentModal from './FirstStructuralMomentModal';
 interface ExtractInsightsButtonProps {
   conversationId: string;
   projectId: string | null;
+  /** When true, show disabled "✓ Distilled" and do not call extraction API (prevents duplicate signals). */
+  isDistilled?: boolean;
 }
 
 type ExtractedDetail =
@@ -33,7 +35,7 @@ type ExtractionResult = {
   details?: ExtractedDetail[];
 };
 
-export default function ExtractInsightsButton({ conversationId, projectId }: ExtractInsightsButtonProps) {
+export default function ExtractInsightsButton({ conversationId, projectId, isDistilled = false }: ExtractInsightsButtonProps) {
   const router = useRouter();
   const extractInFlightRef = useRef(false);
   const extractTimeoutRef = useRef(false);
@@ -153,6 +155,19 @@ export default function ExtractInsightsButton({ conversationId, projectId }: Ext
       setExtracting(false);
     }
   };
+
+  if (isDistilled) {
+    return (
+      <button
+        type="button"
+        disabled
+        aria-label="Already distilled"
+        className="px-6 py-2 text-sm bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-500 rounded-lg cursor-not-allowed font-medium min-w-[120px]"
+      >
+        ✓ Distilled
+      </button>
+    );
+  }
 
   if (!projectId) {
     return (
