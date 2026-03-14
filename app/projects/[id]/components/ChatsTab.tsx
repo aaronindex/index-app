@@ -1,13 +1,14 @@
 // app/projects/[id]/components/ChatsTab.tsx
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import ActiveFilterPills from './ActiveFilterPills';
 import ToggleInactiveButton from './ToggleInactiveButton';
 import SectionHeader from '@/app/components/ui/SectionHeader';
 import SourceDistillAction from './SourceDistillAction';
+import { getTunnelStep, getTunnelDistillCount } from '@/lib/onboarding/state';
 
 type Status = 'priority' | 'open' | 'complete' | 'dormant';
 
@@ -49,9 +50,23 @@ interface ChatsTabProps {
 
 type Filter = 'active' | 'all' | 'inactive';
 
+const TUNNEL_UPDATE = 'index_tunnel_update';
+
 export default function ChatsTab({ conversations, projectId }: ChatsTabProps) {
   const router = useRouter();
   const [filter, setFilter] = useState<Filter>('active');
+  const [tunnelStep, setTunnelStep] = useState<ReturnType<typeof getTunnelStep>>(null);
+  const [tunnelDistillCount, setTunnelDistillCount] = useState(0);
+
+  useEffect(() => {
+    const update = () => {
+      setTunnelStep(getTunnelStep());
+      setTunnelDistillCount(getTunnelDistillCount());
+    };
+    update();
+    window.addEventListener(TUNNEL_UPDATE, update);
+    return () => window.removeEventListener(TUNNEL_UPDATE, update);
+  }, []);
 
   const { activeItems, inactiveItems } = useMemo(() => {
     const active = conversations.filter((c) => !c.is_inactive);
@@ -126,45 +141,51 @@ export default function ChatsTab({ conversations, projectId }: ChatsTabProps) {
         </div>
       ) : (
         <div className="space-y-2.5">
-          {filteredConversations.map((conversation) => (
-            <div
-              key={conversation.id}
-              className={`rounded-xl bg-[rgb(var(--surface))] shadow-sm ring-1 ring-[rgb(var(--ring)/0.08)] px-4 py-3 transition-all ${
-                conversation.is_inactive
-                  ? 'opacity-60'
-                  : 'hover:shadow-md hover:ring-[rgb(var(--ring)/0.12)]'
-              }`}
-            >
-              <div className="flex items-start justify-between gap-4">
-                <Link
-                  href={`/conversations/${conversation.id}`}
-                  className="flex-1 min-w-0"
-                >
-                  <div className="flex items-center gap-3 mb-1.5">
-                    <h3 className="font-medium text-sm text-[rgb(var(--text))]">
-                      {conversation.title || 'Untitled Chat'}
-                    </h3>
-                    <StatusPill status={conversation.status} />
-                    {conversation.is_inactive && (
-                      <span className="px-2 py-0.5 text-xs font-medium rounded-md bg-[rgb(var(--surface2))] text-[rgb(var(--muted))]">
-                        Inactive
-                      </span>
-                    )}
+          {filteredConversations.map((conversation, index) => {
+            const firstUndistilledIndex = filteredConversations.findIndex((c) => !(c.is_distilled ?? false));
+            const highlightDistill = tunnelStep === 3 && tunnelDistillCount === 0 && firstUndistilledIndex >= 0 && index === firstUndistilledIndex;
+            return (
+              <div
+                key={conversation.id}
+                className={`rounded-xl bg-[rgb(var(--surface))] shadow-sm ring-1 ring-[rgb(var(--ring)/0.08)] px-4 py-3 transition-all ${
+                  conversation.is_inactive
+                    ? 'opacity-60'
+                    : 'hover:shadow-md hover:ring-[rgb(var(--ring)/0.12)]'
+                }`}
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <Link
+                    href={`/conversations/${conversation.id}`}
+                    className="flex-1 min-w-0"
+                  >
+                    <div className="flex items-center gap-3 mb-1.5">
+                      <h3 className="font-medium text-sm text-[rgb(var(--text))]">
+                        {conversation.title || 'Untitled Chat'}
+                      </h3>
+                      <StatusPill status={conversation.status} />
+                      {conversation.is_inactive && (
+                        <span className="px-2 py-0.5 text-xs font-medium rounded-md bg-[rgb(var(--surface2))] text-[rgb(var(--muted))]">
+                          Inactive
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-4 text-xs text-[rgb(var(--muted))]">
+                      <span>Updated: {formatDate(conversation.updated_at)}</span>
+                    </div>
+                  </Link>
+                  <div className="shrink-0 pt-0.5">
+                    <SourceDistillAction
+                      conversationId={conversation.id}
+                      projectId={projectId}
+                      isDistilled={conversation.is_distilled ?? false}
+                      highlightDistill={highlightDistill}
+                      onDistilled={() => router.refresh()}
+                    />
                   </div>
-                  <div className="flex items-center gap-4 text-xs text-[rgb(var(--muted))]">
-                    <span>Updated: {formatDate(conversation.updated_at)}</span>
-                  </div>
-                </Link>
-                <div className="shrink-0 pt-0.5">
-                  <SourceDistillAction
-                    conversationId={conversation.id}
-                    projectId={projectId}
-                    isDistilled={conversation.is_distilled ?? false}
-                  />
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

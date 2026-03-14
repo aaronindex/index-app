@@ -461,7 +461,7 @@ export default function MagicHomeScreen({ initialData = null, initialShowFocusMo
                     </p>
                   </div>
                   <ReadStructure
-                    arc={directionArc || (activeArcCount > 0 ? 'Current focus' : '')}
+                    arc={directionArc ?? ''}
                     signals={(directionSignals ?? []).map((s) => ({ title: s.label }))}
                     sourceCount={data?.direction?.sourceCount}
                   />
@@ -470,7 +470,7 @@ export default function MagicHomeScreen({ initialData = null, initialShowFocusMo
                 <div className="text-sm text-[rgb(var(--text))] whitespace-pre-wrap font-sans space-y-3">
                   <div>{directionText}</div>
                   <ReadStructure
-                    arc={directionArc || (activeArcCount > 0 ? 'Current focus' : '')}
+                    arc={directionArc ?? ''}
                     signals={(directionSignals ?? []).map((s) => ({ title: s.label }))}
                     sourceCount={data?.direction?.sourceCount}
                   />

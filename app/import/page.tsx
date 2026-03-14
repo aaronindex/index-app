@@ -7,7 +7,13 @@ import { getSupabaseBrowserClient } from '@/lib/supabaseClient';
 import { parseTranscript } from '@/lib/parsers/transcript';
 import Card from '@/app/components/ui/Card';
 import { trackEvent } from '@/lib/analytics';
-import { getOnboardingStep, setOnboardingStep } from '@/lib/onboarding/state';
+import {
+  getTunnelStep,
+  setTunnelStep,
+  getTunnelImportCount,
+  setTunnelImportCount,
+  setOnboardingProjectId,
+} from '@/lib/onboarding/state';
 
 export default function ImportPage() {
   const router = useRouter();
@@ -27,7 +33,9 @@ export default function ImportPage() {
   const [quickSuccess, setQuickSuccess] = useState<{ conversationId: string; title: string; messageCount: number } | null>(null);
   const [quickThinkingTimeChoice, setQuickThinkingTimeChoice] = useState<'today' | 'yesterday' | 'last_week' | 'last_month'>('today');
   const [projects, setProjects] = useState<Array<{ id: string; name: string }>>([]);
-  const [onboardingStep, setOnboardingStepState] = useState<number | null>(null);
+  const [tunnelStep, setTunnelStepState] = useState<number | null>(null);
+  const [tunnelImportCount, setTunnelImportCountState] = useState(0);
+  const [showTunnelStep2Modal, setShowTunnelStep2Modal] = useState(false);
 
   // Update page title
   useEffect(() => {
@@ -35,7 +43,8 @@ export default function ImportPage() {
   }, []);
 
   useEffect(() => {
-    setOnboardingStepState(getOnboardingStep());
+    setTunnelStepState(getTunnelStep());
+    setTunnelImportCountState(getTunnelImportCount());
   }, []);
 
   // Fetch projects on mount
@@ -185,6 +194,7 @@ export default function ImportPage() {
       const conversationId = typeof data.conversationId === 'string' ? data.conversationId : '';
       const title = typeof data.title === 'string' ? data.title : '';
       const messageCount = typeof data.messageCount === 'number' ? data.messageCount : 0;
+      const projectIdFromApi = typeof data.projectId === 'string' ? data.projectId : null;
 
       if (data.processed && conversationId) {
         void fetch('/api/thinking-time/resolve', {
@@ -205,14 +215,34 @@ export default function ImportPage() {
           message_count: messageCount,
         });
 
-        setQuickSuccess({
-          conversationId,
-          title,
-          messageCount,
-        });
-        if (getOnboardingStep() === 2) setOnboardingStep(3);
-        // Auto-open source detail so user can distill immediately
-        router.replace(`/conversations/${conversationId}`);
+        const step = getTunnelStep();
+        const importCount = getTunnelImportCount();
+
+        if (step === 2) {
+          const nextCount = importCount + 1;
+          if (nextCount === 1) {
+            setTunnelImportCount(1);
+            setTunnelImportCountState(1);
+            setShowTunnelStep2Modal(true);
+            setQuickSuccess({ conversationId, title, messageCount });
+          } else {
+            const projectId = projectIdFromApi ?? (quickProjectAction === 'existing' ? quickProjectId : null);
+            if (projectId) {
+              setTunnelImportCount(2);
+              setTunnelImportCountState(2);
+              setTunnelStep(3);
+              setTunnelStepState(3);
+              setOnboardingProjectId(projectId);
+              router.replace(`/projects/${projectId}?tab=chats`);
+            } else {
+              setQuickSuccess({ conversationId, title, messageCount });
+              setQuickError('Select or create a project to continue onboarding. Then import again.');
+            }
+          }
+        } else {
+          setQuickSuccess({ conversationId, title, messageCount });
+          router.replace(`/conversations/${conversationId}`);
+        }
       }
     } catch (err) {
       if (timeoutId) clearTimeout(timeoutId);
@@ -239,24 +269,37 @@ export default function ImportPage() {
     }
   };
 
-  const showStep2Copy = onboardingStep === 2;
-
   return (
     <main className="min-h-screen bg-[rgb(var(--bg))]">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {showStep2Copy && (
-          <div className="mb-8 p-6 rounded-2xl bg-[rgb(var(--surface))] ring-1 ring-[rgb(var(--ring)/0.12)]">
-            <h1 className="font-serif text-2xl font-semibold text-[rgb(var(--text))] mb-2">
-              Bring one piece of thinking into INDEX.
-            </h1>
-            <p className="text-sm text-[rgb(var(--muted))]">
-              A conversation, idea, or working thread.
+      {showTunnelStep2Modal && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="tunnel-step2-heading"
+        >
+          <div className="bg-[rgb(var(--surface))] rounded-2xl max-w-md w-full p-8 shadow-xl ring-1 ring-[rgb(var(--ring)/0.12)]">
+            <h2 id="tunnel-step2-heading" className="font-serif text-xl font-semibold text-[rgb(var(--text))] mb-4">
+              Source imported
+            </h2>
+            <p className="text-sm text-[rgb(var(--muted))] mb-6">
+              Import one more source to begin revealing structure.
             </p>
+            <button
+              type="button"
+              onClick={() => {
+                setShowTunnelStep2Modal(false);
+                setQuickSuccess(null);
+              }}
+              className="w-full px-6 py-3 bg-[rgb(var(--text))] text-[rgb(var(--bg))] rounded-lg hover:opacity-90 transition-opacity font-medium"
+            >
+              Import another
+            </button>
           </div>
-        )}
-        {!showStep2Copy && (
-          <h1 className="font-serif text-3xl font-semibold text-[rgb(var(--text))] mb-8">Import</h1>
-        )}
+        </div>
+      )}
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <h1 className="font-serif text-3xl font-semibold text-[rgb(var(--text))] mb-8">Import</h1>
 
         {quickError && (
           <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">

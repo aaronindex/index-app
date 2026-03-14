@@ -3,8 +3,14 @@
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { track } from '@/lib/analytics/track';
-import { getOnboardingStep, setOnboardingStep } from '@/lib/onboarding/state';
+import {
+  getTunnelStep,
+  getTunnelDistillCount,
+  setTunnelDistillCount,
+  setTunnelStep,
+} from '@/lib/onboarding/state';
 import FirstStructuralMomentModal from '@/app/conversations/[id]/components/FirstStructuralMomentModal';
+import { dispatchTunnelUpdate } from './OnboardingProjectOverlay';
 
 type ExtractedDetail =
   | { type: 'decision'; id: string; title?: string | null; content?: string | null }
@@ -33,6 +39,8 @@ interface SourceDistillActionProps {
   projectId: string;
   isDistilled: boolean;
   onDistilled?: () => void;
+  /** When true, visually highlight the Distill button (tunnel step 3). */
+  highlightDistill?: boolean;
 }
 
 export default function SourceDistillAction({
@@ -40,6 +48,7 @@ export default function SourceDistillAction({
   projectId,
   isDistilled,
   onDistilled,
+  highlightDistill = false,
 }: SourceDistillActionProps) {
   const router = useRouter();
   const extractInFlightRef = useRef(false);
@@ -127,6 +136,20 @@ export default function SourceDistillAction({
           highlights_count: insights.suggestedHighlights ?? 0,
         });
 
+        const tunnelStep = getTunnelStep();
+        if (tunnelStep === 3) {
+          const nextCount = getTunnelDistillCount() + 1;
+          setTunnelDistillCount(nextCount);
+          dispatchTunnelUpdate();
+          setLocalDistilled(true);
+          if (nextCount === 2) {
+            setTunnelStep(4);
+            dispatchTunnelUpdate();
+            onDistilled?.();
+            router.refresh();
+          }
+          return;
+        }
         if (typedResult.firstReduce && typedResult.counts) {
           const c = typedResult.counts;
           setFirstStructuralCounts({
@@ -134,7 +157,6 @@ export default function SourceDistillAction({
             openLoops: c.openLoops ?? 0,
             suggestedHighlights: c.suggestedHighlights ?? 0,
           });
-          if (getOnboardingStep() === 3) setOnboardingStep(4);
           setShowFirstStructuralModal(true);
         } else {
           setShowSuccessModal(true);
@@ -177,8 +199,13 @@ export default function SourceDistillAction({
           type="button"
           onClick={handleDistill}
           disabled={extracting}
-          className="px-3 py-1.5 text-xs font-medium border border-[rgb(var(--ring)/0.25)] text-[rgb(var(--text))] rounded-lg hover:bg-[rgb(var(--ring)/0.06)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className={`px-3 py-1.5 text-xs font-medium border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors ${
+            highlightDistill
+              ? 'border-purple-500 dark:border-purple-400 bg-purple-50 dark:bg-purple-900/20 text-purple-800 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/30 ring-2 ring-purple-400/50 dark:ring-purple-500/50'
+              : 'border-[rgb(var(--ring)/0.25)] text-[rgb(var(--text))] hover:bg-[rgb(var(--ring)/0.06)]'
+          }`}
           aria-label="Distill signals from this source"
+          data-onboarding="distill-signals"
         >
           {extracting ? 'Distilling…' : 'Distill signals'}
         </button>
@@ -200,23 +227,6 @@ export default function SourceDistillAction({
             }
             doRefresh();
           }}
-          onboardingStep4={
-            getOnboardingStep() === 4
-              ? {
-                  projectId,
-                  onViewSignals: () => {
-                    setOnboardingStep(5);
-                    fetch('/api/profile/first-reduce-acknowledged', { method: 'POST', credentials: 'same-origin' }).catch(() => {});
-                    router.push(`/projects/${projectId}?tab=signals`);
-                  },
-                  onImportAnother: () => {
-                    setOnboardingStep(2);
-                    fetch('/api/profile/first-reduce-acknowledged', { method: 'POST', credentials: 'same-origin' }).catch(() => {});
-                    router.push('/import');
-                  },
-                }
-              : undefined
-          }
         />
       )}
 

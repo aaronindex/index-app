@@ -1,92 +1,85 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter, useParams, useSearchParams } from 'next/navigation';
-import { getOnboardingStep, setOnboardingStep } from '@/lib/onboarding/state';
+import { useParams, useSearchParams } from 'next/navigation';
+import { getTunnelStep, getTunnelDistillCount } from '@/lib/onboarding/state';
+
+const TUNNEL_UPDATE = 'index_tunnel_update';
+
+/** Dispatch when tunnel state (e.g. distill count) changes so overlay re-renders. */
+export function dispatchTunnelUpdate(): void {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent(TUNNEL_UPDATE));
+  }
+}
 
 export default function OnboardingProjectOverlay() {
-  const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
   const projectId = typeof params?.id === 'string' ? params.id : null;
   const tab = searchParams.get('tab') || 'read';
   const activeTab = tab === 'signals' ? 'signals' : tab === 'chats' ? 'chats' : 'read';
 
-  const [step, setStepState] = useState<number | null>(null);
+  const [step, setStep] = useState<ReturnType<typeof getTunnelStep>>(null);
+  const [distillCount, setDistillCount] = useState(0);
+
+  const update = () => {
+    setStep(getTunnelStep());
+    setDistillCount(getTunnelDistillCount());
+  };
 
   useEffect(() => {
-    setStepState(getOnboardingStep());
+    update();
+    window.addEventListener(TUNNEL_UPDATE, update);
+    return () => window.removeEventListener(TUNNEL_UPDATE, update);
   }, []);
 
-  const showStep5 = step === 5 && activeTab === 'signals' && projectId;
-  const showStep6 = step === 6 && activeTab === 'read' && projectId;
+  const showStep3Modal = step === 3 && activeTab === 'chats' && projectId && distillCount === 0;
+  const showStep3Confirmation = step === 3 && activeTab === 'chats' && projectId && distillCount === 1;
 
   if (!projectId) return null;
 
-  if (showStep5) {
+  if (showStep3Modal) {
     return (
       <div
         className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm"
         role="dialog"
         aria-modal="true"
-        aria-labelledby="onboarding-step5-heading"
+        aria-labelledby="tunnel-step3-heading"
       >
-        <div className="bg-[rgb(var(--surface))] rounded-2xl max-w-md w-full p-8 shadow-xl ring-1 ring-[rgb(var(--ring)/0.12)] text-center">
+        <div className="bg-[rgb(var(--surface))] rounded-2xl max-w-md w-full p-8 shadow-xl ring-1 ring-[rgb(var(--ring)/0.12)]">
           <h2
-            id="onboarding-step5-heading"
+            id="tunnel-step3-heading"
             className="font-serif text-xl font-semibold text-[rgb(var(--text))] mb-4"
           >
-            Signals are the ledger of your thinking.
+            Extract signals from your sources
           </h2>
-          <p className="text-sm text-[rgb(var(--muted))] mb-6">
-            Decisions, tasks, and insights accumulate here.
+          <p className="text-sm text-[rgb(var(--text))] mb-3">
+            Distill each source to extract decisions, tasks, and structural signals.
           </p>
-          <button
-            type="button"
-            onClick={() => {
-              setOnboardingStep(6);
-              setStepState(6);
-              router.push(`/projects/${projectId}?tab=read`);
-            }}
-            className="px-6 py-3 bg-[rgb(var(--text))] text-[rgb(var(--bg))] rounded-lg hover:opacity-90 transition-opacity font-medium"
-          >
-            See structure
-          </button>
+          <p className="text-sm text-[rgb(var(--muted))] mb-6 font-medium">
+            Start with the first source.
+          </p>
+          <p className="text-xs text-[rgb(var(--muted))]">
+            Use the <strong className="text-[rgb(var(--text))]">Distill signals</strong> button on each source.
+          </p>
         </div>
       </div>
     );
   }
 
-  if (showStep6) {
+  if (showStep3Confirmation) {
     return (
       <div
-        className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="onboarding-step6-heading"
+        className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[90] px-4 py-3 rounded-xl bg-[rgb(var(--surface))] shadow-lg ring-1 ring-[rgb(var(--ring)/0.12)]"
+        role="status"
       >
-        <div className="bg-[rgb(var(--surface))] rounded-2xl max-w-md w-full p-8 shadow-xl ring-1 ring-[rgb(var(--ring)/0.12)] text-center">
-          <h2
-            id="onboarding-step6-heading"
-            className="font-serif text-xl font-semibold text-[rgb(var(--text))] mb-4"
-          >
-            Structure reflects the work.
-          </h2>
-          <p className="text-sm text-[rgb(var(--muted))] mb-6">
-            Arcs emerge from signals.
-          </p>
-          <button
-            type="button"
-            onClick={() => {
-              setOnboardingStep(7);
-              setStepState(7);
-              router.push('/home');
-            }}
-            className="px-6 py-3 bg-[rgb(var(--text))] text-[rgb(var(--bg))] rounded-lg hover:opacity-90 transition-opacity font-medium"
-          >
-            Continue
-          </button>
-        </div>
+        <p className="text-sm font-medium text-[rgb(var(--text))]">
+          Signals extracted.
+        </p>
+        <p className="text-xs text-[rgb(var(--muted))] mt-0.5">
+          Distill the remaining source.
+        </p>
       </div>
     );
   }

@@ -4,7 +4,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { track } from '@/lib/analytics/track';
-import { getOnboardingStep, setOnboardingStep } from '@/lib/onboarding/state';
 import FirstStructuralMomentModal from './FirstStructuralMomentModal';
 
 interface ExtractInsightsButtonProps {
@@ -131,7 +130,6 @@ export default function ExtractInsightsButton({ conversationId, projectId }: Ext
             openLoops: c.openLoops ?? 0,
             suggestedHighlights: c.suggestedHighlights ?? 0,
           });
-          if (getOnboardingStep() === 3) setOnboardingStep(4);
           setShowFirstStructuralModal(true);
         } else {
           setShowSuccessModal(true);
@@ -270,27 +268,6 @@ export default function ExtractInsightsButton({ conversationId, projectId }: Ext
             setFirstStructuralCounts(null);
             router.refresh();
           }}
-          onboardingStep4={
-            projectId && getOnboardingStep() === 4
-              ? {
-                  projectId,
-                  onViewSignals: () => {
-                    setOnboardingStep(5);
-                    setShowFirstStructuralModal(false);
-                    setFirstStructuralCounts(null);
-                    fetch('/api/profile/first-reduce-acknowledged', { method: 'POST', credentials: 'same-origin' }).catch(() => {});
-                    router.push(`/projects/${projectId}?tab=signals`);
-                  },
-                  onImportAnother: () => {
-                    setOnboardingStep(2);
-                    setShowFirstStructuralModal(false);
-                    setFirstStructuralCounts(null);
-                    fetch('/api/profile/first-reduce-acknowledged', { method: 'POST', credentials: 'same-origin' }).catch(() => {});
-                    router.push('/import');
-                  },
-                }
-              : undefined
-          }
         />
       )}
 

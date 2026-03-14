@@ -1,6 +1,8 @@
 // lib/parsers/chatgpt.ts
 // Parser for ChatGPT export JSON format
 
+import { deriveFromFirstUserMessage, uniqueTimestampedFallback, GENERIC_SOURCE_TITLES } from '@/lib/sourceTitle';
+
 export interface ChatGPTMessage {
   id: string;
   role?: 'user' | 'assistant' | 'system';
@@ -68,15 +70,31 @@ export function parseChatGPTExport(data: any): ParsedConversation[] {
 
   console.log(`[ChatGPT Parser] Root type: ${rootType}, Found ${conversationArray.length} potential conversations`);
 
-  // Parse each conversation
+  // Parse each conversation (pass index for unique fallback when title cannot be derived)
   conversationArray.forEach((item, index) => {
-    const parsed = parseSingleConversation(item);
+    const parsed = parseSingleConversation(item, index);
     if (parsed) {
       conversations.push(parsed);
     } else {
       console.warn(`[ChatGPT Parser] Conversation ${index} failed to parse. Keys:`, item ? Object.keys(item) : 'null');
     }
   });
+
+  // Disambiguate duplicate titles so each source is distinct (e.g. "Path Selection (2)")
+  const titleCount = new Map<string, number>();
+  for (const c of conversations) {
+    const t = c.title.trim() || 'Untitled';
+    titleCount.set(t, (titleCount.get(t) ?? 0) + 1);
+  }
+  const titleNextIndex = new Map<string, number>();
+  for (const c of conversations) {
+    const t = c.title.trim() || 'Untitled';
+    if ((titleCount.get(t) ?? 0) > 1) {
+      const next = titleNextIndex.get(t) ?? 1;
+      titleNextIndex.set(t, next + 1);
+      if (next > 1) c.title = `${c.title.trim()} (${next})`;
+    }
+  }
 
   if (conversations.length === 0 && conversationArray.length > 0) {
     // Log first item structure for debugging
@@ -104,8 +122,10 @@ export function parseChatGPTExport(data: any): ParsedConversation[] {
 
 /**
  * Parse a single conversation from ChatGPT export
+ * @param conv - raw conversation object
+ * @param index - 0-based index in the batch (used for unique fallback when title cannot be derived)
  */
-function parseSingleConversation(conv: any): ParsedConversation | null {
+function parseSingleConversation(conv: any, index: number = 0): ParsedConversation | null {
   if (!conv || typeof conv !== 'object') return null;
 
   // Check if conversation is valid: must have (id or conversation_id) AND (mapping with messages OR messages array)
@@ -307,16 +327,14 @@ function parseSingleConversation(conv: any): ParsedConversation | null {
 
   if (messages.length === 0) return null;
 
-  // Avoid using generic export titles (e.g. "User") — derive from first user message when possible
-  const genericTitles = new Set(['user', 'assistant', 'ai', 'untitled', 'untitled conversation']);
-  let finalTitle = (title || '').trim() || 'Untitled Conversation';
-  if (genericTitles.has(finalTitle.toLowerCase())) {
-    const firstUser = messages.find((m) => m.role === 'user');
-    if (firstUser?.content?.trim()) {
-      const derived = firstUser.content.split('\n')[0].trim().substring(0, 60);
-      if (derived && !genericTitles.has(derived.toLowerCase())) finalTitle = derived;
-    }
-  }
+  // Prefer content-derived title; avoid generic export titles (e.g. "User", "Untitled Conversation")
+  const rawTitle = (title || '').trim();
+  const isGeneric = !rawTitle || GENERIC_SOURCE_TITLES.has(rawTitle.toLowerCase());
+  const derived = deriveFromFirstUserMessage(messages);
+  const finalTitle =
+    rawTitle && !isGeneric
+      ? rawTitle
+      : derived ?? uniqueTimestampedFallback('Import', index + 1);
 
   // Determine start/end times
   const timestamps = messages

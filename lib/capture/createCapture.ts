@@ -13,6 +13,7 @@ import type {
   CaptureSourceType,
   CreateCaptureRequest,
 } from './capture.types';
+import { GENERIC_SOURCE_TITLES, uniqueTimestampedFallback } from '@/lib/sourceTitle';
 
 export type CaptureOutcomesCounts = {
   decisions: number;
@@ -112,13 +113,17 @@ export async function createCapture(opts: {
         const sentenceMatch = /[.!?]/.exec(firstLine);
         const endIndex = sentenceMatch ? sentenceMatch.index + 1 : firstLine.length;
         const firstSentence = firstLine.slice(0, endIndex).trim();
-        conversationTitle = (firstSentence || '').slice(0, 140) || 'Captured source';
+        const candidate = (firstSentence || '').slice(0, 140).trim();
+        conversationTitle =
+          candidate && !GENERIC_SOURCE_TITLES.has(candidate.toLowerCase())
+            ? candidate
+            : uniqueTimestampedFallback('Captured source');
       } else {
-        conversationTitle = 'Captured source';
+        conversationTitle = uniqueTimestampedFallback('Captured source');
       }
     }
   } catch {
-    conversationTitle = 'Captured source';
+    conversationTitle = uniqueTimestampedFallback('Captured source');
   }
 
   // Create conversation as canonical capture source

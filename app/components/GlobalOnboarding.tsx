@@ -2,12 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { getSupabaseBrowserClient } from '@/lib/supabaseClient';
-import OnboardingController from './onboarding/OnboardingController';
+import TunnelOnboarding from './onboarding/TunnelOnboarding';
 
 /**
- * Mounts OnboardingController when the user is authenticated so Step 1 appears
- * on any route (home, projects, ask, import) when onboarding is not completed.
- * Does not render on the logged-out landing page.
+ * Mounts tunnel onboarding when the user is authenticated so Step 1 appears
+ * when onboarding is not completed. Step 2/3 modals are on import and project pages.
  */
 export default function GlobalOnboarding() {
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
@@ -31,5 +30,5 @@ export default function GlobalOnboarding() {
   }, []);
 
   if (authenticated !== true) return null;
-  return <OnboardingController />;
+  return <TunnelOnboarding />;
 }

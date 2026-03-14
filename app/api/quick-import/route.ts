@@ -14,71 +14,11 @@ import { generateDedupeHash } from '@/lib/jobs/importProcessor';
 import { dispatchStructureRecompute } from '@/lib/structure/dispatch';
 import crypto from 'crypto';
 
-const GENERIC_SOURCE_TITLES = new Set(['user', 'assistant', 'ai', 'untitled', 'untitled conversation', 'quick capture']);
-
-function deriveSourceTitleFromTranscript(transcript: string): string | null {
-  if (!transcript || typeof transcript !== 'string') return null;
-
-  const trimmed = transcript.trim();
-  if (!trimmed) return null;
-
-  // Take the first non-empty line
-  const firstLine = trimmed
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .find((line) => line.length > 0);
-
-  if (!firstLine) return null;
-
-  let candidate = firstLine;
-
-  // Strip common role prefixes so we don't use "User" or "Assistant" as the title
-  candidate = candidate.replace(/^(user|assistant|ai|human):\s*/i, '').trim();
-  if (!candidate) return null;
-
-  // Optionally cut at the first sentence boundary within the line
-  const sentenceBoundaryMatch = candidate.match(/(.+?[.!?])\s/);
-  if (sentenceBoundaryMatch && sentenceBoundaryMatch[1]) {
-    candidate = sentenceBoundaryMatch[1];
-  }
-
-  // Truncate to roughly 8–12 words (hard cap at 12)
-  const words = candidate.split(/\s+/).filter((w) => w.length > 0);
-  if (words.length === 0) return null;
-
-  const truncatedWords = words.slice(0, 12);
-  candidate = truncatedWords.join(' ');
-
-  // Normalize whitespace and strip excessive trailing punctuation
-  candidate = candidate.replace(/\s+/g, ' ').replace(/[-–—,:;…]+$/g, '').trim();
-
-  if (!candidate) return null;
-  if (GENERIC_SOURCE_TITLES.has(candidate.toLowerCase())) return null;
-  return candidate;
-}
-
-function fallbackQuickCaptureTitle(): string {
-  const now = new Date();
-  const formatted = now.toLocaleString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  });
-  return `Quick Capture — ${formatted}`;
-}
-
-/** Derive a short title from the first user message content (content-derived, not transcript first line). */
-function deriveTitleFromFirstUserMessage(parsed: { messages: Array<{ role: string; content: string }> }): string | null {
-  const firstUser = parsed.messages.find((m) => m.role === 'user');
-  if (!firstUser?.content?.trim()) return null;
-  const text = firstUser.content.replace(/\s+/g, ' ').trim();
-  const firstSentence = text.match(/^[^.!?]+[.!?]?/)?.[0]?.trim() ?? text.slice(0, 60).trim();
-  const candidate = firstSentence.slice(0, 52).replace(/\s+\S*$/, '').trim();
-  if (candidate.length < 4) return null;
-  if (GENERIC_SOURCE_TITLES.has(candidate.toLowerCase())) return null;
-  return candidate;
-}
+import {
+  deriveFromTranscriptFirstLine,
+  deriveFromFirstUserMessage,
+  uniqueTimestampedFallback,
+} from '@/lib/sourceTitle';
 
 async function processQuickImportSync(
   supabase: any,
@@ -88,7 +28,7 @@ async function processQuickImportSync(
   parsed: ReturnType<typeof parseTranscript>,
   projectId: string | null,
   newProject: { name: string; description?: string } | null
-): Promise<{ conversationId: string; error: string | null }> {
+): Promise<{ conversationId: string; projectId: string | null; error: string | null }> {
   try {
     // Handle project creation if needed
     let finalProjectId = projectId;
@@ -104,7 +44,7 @@ async function processQuickImportSync(
         .single();
 
       if (projectError || !newProjectData) {
-        return { conversationId: '', error: `Failed to create project: ${projectError?.message || 'Unknown error'}` };
+        return { conversationId: '', projectId: null, error: `Failed to create project: ${projectError?.message || 'Unknown error'}` };
       }
 
       finalProjectId = newProjectData.id;
@@ -123,7 +63,7 @@ async function processQuickImportSync(
       .single();
 
     if (importError || !importRecord) {
-      return { conversationId: '', error: `Failed to create import record: ${importError?.message || 'Unknown error'}` };
+      return { conversationId: '', projectId: null, error: `Failed to create import record: ${importError?.message || 'Unknown error'}` };
     }
 
     // Create conversation (mark as inactive until import completes).
@@ -144,7 +84,7 @@ async function processQuickImportSync(
       .single();
 
     if (convError || !conversation) {
-      return { conversationId: '', error: `Failed to create conversation: ${convError?.message || 'Unknown error'}` };
+      return { conversationId: '', projectId: null, error: `Failed to create conversation: ${convError?.message || 'Unknown error'}` };
     }
 
     // Insert messages
@@ -160,7 +100,7 @@ async function processQuickImportSync(
     const { error: messagesError } = await supabase.from('messages').insert(messagesToInsert);
 
     if (messagesError) {
-      return { conversationId: conversation.id, error: `Failed to insert messages: ${messagesError.message}` };
+      return { conversationId: conversation.id, projectId: finalProjectId, error: `Failed to insert messages: ${messagesError.message}` };
     }
 
     // Link to project if specified
@@ -197,7 +137,7 @@ async function processQuickImportSync(
           processed_at: new Date().toISOString(),
         })
         .eq('id', importRecord.id);
-      return { conversationId: conversation.id, error: null };
+      return { conversationId: conversation.id, projectId: finalProjectId, error: null };
     }
 
     // Chunk each message
@@ -222,7 +162,7 @@ async function processQuickImportSync(
           processed_at: new Date().toISOString(),
         })
         .eq('id', importRecord.id);
-      return { conversationId: conversation.id, error: null };
+      return { conversationId: conversation.id, projectId: finalProjectId, error: null };
     }
 
     // Insert chunks
@@ -240,7 +180,7 @@ async function processQuickImportSync(
       .select();
 
     if (chunksError || !insertedChunks) {
-      return { conversationId: conversation.id, error: `Failed to insert chunks: ${chunksError?.message || 'Unknown error'}` };
+      return { conversationId: conversation.id, projectId: finalProjectId, error: `Failed to insert chunks: ${chunksError?.message || 'Unknown error'}` };
     }
 
     // Embed chunks in batches to avoid timeouts on long conversations
@@ -258,7 +198,7 @@ async function processQuickImportSync(
       .insert(embeddingsToInsert);
 
     if (embeddingsError) {
-      return { conversationId: conversation.id, error: `Failed to insert embeddings: ${embeddingsError.message}` };
+      return { conversationId: conversation.id, projectId: finalProjectId, error: `Failed to insert embeddings: ${embeddingsError.message}` };
     }
 
     // Mark import as complete
@@ -292,10 +232,11 @@ async function processQuickImportSync(
       console.error('[QuickImport] Failed to dispatch structure recompute:', dispatchError);
     }
 
-    return { conversationId: conversation.id, error: null };
+    return { conversationId: conversation.id, projectId: finalProjectId, error: null };
   } catch (error) {
     return {
       conversationId: '',
+      projectId: null,
       error: error instanceof Error ? error.message : 'Failed to process quick import',
     };
   }
@@ -347,9 +288,9 @@ export async function POST(request: NextRequest) {
     // Generate title if not provided or empty: prefer content-derived (first user message) over transcript first line
     let finalTitle = title?.trim() || '';
     if (!finalTitle) {
-      const fromTranscript = deriveSourceTitleFromTranscript(transcript);
-      const fromFirstUser = deriveTitleFromFirstUserMessage(parsed);
-      finalTitle = fromTranscript || fromFirstUser || fallbackQuickCaptureTitle();
+      const fromTranscript = deriveFromTranscriptFirstLine(transcript);
+      const fromFirstUser = deriveFromFirstUserMessage(parsed.messages);
+      finalTitle = fromTranscript || fromFirstUser || uniqueTimestampedFallback('Quick Capture');
     }
 
     // Check for duplicates
@@ -415,6 +356,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       conversationId: result.conversationId,
+      projectId: result.projectId ?? undefined,
       title: finalTitle,
       messageCount: parsed.messages.length,
       processed: true,
