@@ -68,7 +68,7 @@ export default function UnassignedConversationsClient({
 
       if (!response.ok) {
         const errorData = await response.json();
-        setError(errorData.error || 'Failed to delete conversation');
+        setError(errorData.error || 'Failed to delete source');
         setDeleting(false);
         return;
       }
@@ -82,7 +82,7 @@ export default function UnassignedConversationsClient({
       router.refresh();
       setDeleteConfirmId(null);
     } catch (err) {
-      setError('Failed to delete conversation');
+      setError('Failed to delete source');
       console.error(err);
       setDeleting(false);
     }
@@ -90,7 +90,7 @@ export default function UnassignedConversationsClient({
 
   const handleAssign = async () => {
     if (selectedIds.size === 0) {
-      setError('Please select at least one conversation.');
+      setError('Please select at least one source.');
       return;
     }
 
@@ -157,7 +157,7 @@ export default function UnassignedConversationsClient({
       // Success - redirect to project
       router.push(`/projects/${finalProjectId}?assigned=${selectedIds.size}`);
     } catch (err) {
-      setError('Failed to assign conversations.');
+      setError('Failed to assign sources.');
       console.error(err);
       setLoading(false);
     }
@@ -176,9 +176,9 @@ export default function UnassignedConversationsClient({
     <main className="min-h-screen bg-[rgb(var(--bg))]">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="mb-8">
-          <h1 className="font-serif text-3xl font-semibold text-[rgb(var(--text))] mb-2">Unassigned Conversations</h1>
+          <h1 className="font-serif text-3xl font-semibold text-[rgb(var(--text))] mb-2">Unassigned Sources</h1>
           <p className="text-[rgb(var(--muted))]">
-            Conversations that haven't been assigned to a project yet.
+            Sources that haven't been assigned to a project yet.
           </p>
           <p className="mt-1 text-sm text-[rgb(var(--muted))]">
             Captured items are inert until assigned to a project.
@@ -194,7 +194,7 @@ export default function UnassignedConversationsClient({
         {conversations.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-zinc-600 dark:text-zinc-400 mb-4">
-              No unassigned conversations. All your conversations are organized in projects.
+              No unassigned sources. All your sources are organized in projects.
             </p>
             <Link
               href="/projects"
@@ -246,7 +246,7 @@ export default function UnassignedConversationsClient({
                     className="flex-1 hover:opacity-80 transition-opacity"
                   >
                     <h3 className="font-medium text-foreground mb-1">
-                      {conversation.title || 'Untitled Conversation'}
+                      {conversation.title || 'Untitled Source'}
                     </h3>
                     <div className="flex items-center gap-4 text-sm text-zinc-600 dark:text-zinc-400">
                       <span>{conversation.messageCount} messages</span>
@@ -274,7 +274,7 @@ export default function UnassignedConversationsClient({
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <div className="bg-white dark:bg-zinc-900 rounded-lg max-w-md w-full p-6">
               <h2 className="text-xl font-semibold text-foreground mb-4">
-                Assign {selectedIds.size} Conversation{selectedIds.size > 1 ? 's' : ''}
+                Assign {selectedIds.size} Source{selectedIds.size > 1 ? 's' : ''}
               </h2>
 
               <div className="space-y-4">
@@ -379,10 +379,10 @@ export default function UnassignedConversationsClient({
         {deleteConfirmId && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <div className="bg-white dark:bg-zinc-900 rounded-lg max-w-md w-full p-6">
-              <h2 className="text-xl font-semibold text-foreground mb-4">Delete Conversation</h2>
+              <h2 className="text-xl font-semibold text-foreground mb-4">Delete Source</h2>
 
               <p className="text-zinc-700 dark:text-zinc-300 mb-6">
-                Are you sure you want to delete this conversation?
+                Are you sure you want to delete this source?
                 <br />
                 <span className="text-sm text-zinc-600 dark:text-zinc-400 mt-2 block">
                   This will permanently delete all messages, highlights, and related data. This action cannot be undone.

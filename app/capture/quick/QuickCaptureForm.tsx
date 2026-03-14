@@ -213,7 +213,7 @@ export default function QuickCaptureForm() {
             onClick={() => setSelectedProjectId('')}
             className={`block w-full text-left px-3 py-2 text-sm ${!selectedProjectId ? 'bg-[rgb(var(--ring)/0.08)]' : ''} text-[rgb(var(--text))] hover:bg-[rgb(var(--ring)/0.06)]`}
           >
-            Me (unassigned)
+            Unassigned
           </button>
           {filteredProjects.map((p) => (
             <button

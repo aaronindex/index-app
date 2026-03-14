@@ -6,7 +6,7 @@ import UnassignedConversationsClient from './components/UnassignedConversationsC
 
 export const metadata: Metadata = {
   title: "Unassigned | INDEX",
-  description: "Conversations not yet assigned to a project",
+  description: "Sources not yet assigned to a project",
 };
 
 export default async function UnassignedPage() {
