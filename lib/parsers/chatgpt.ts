@@ -1,7 +1,7 @@
 // lib/parsers/chatgpt.ts
 // Parser for ChatGPT export JSON format
 
-import { deriveFromFirstUserMessage, uniqueTimestampedFallback, GENERIC_SOURCE_TITLES } from '@/lib/sourceTitle';
+import { deriveSourceTitle, deriveFromFirstUserMessage, uniqueTimestampedFallback, GENERIC_SOURCE_TITLES } from '@/lib/sourceTitle';
 
 export interface ChatGPTMessage {
   id: string;
@@ -330,7 +330,8 @@ function parseSingleConversation(conv: any, index: number = 0): ParsedConversati
   // Prefer content-derived title; avoid generic export titles (e.g. "User", "Untitled Conversation")
   const rawTitle = (title || '').trim();
   const isGeneric = !rawTitle || GENERIC_SOURCE_TITLES.has(rawTitle.toLowerCase());
-  const derived = deriveFromFirstUserMessage(messages);
+  const contentText = messages.map((m) => m.content).filter(Boolean).join('\n\n');
+  const derived = deriveSourceTitle(contentText) ?? deriveFromFirstUserMessage(messages);
   const finalTitle =
     rawTitle && !isGeneric
       ? rawTitle

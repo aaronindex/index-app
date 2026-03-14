@@ -72,16 +72,22 @@ export default function ReadStructure({
             <p className="text-xs font-medium text-[rgb(var(--muted))] mb-2">
               Signals contributing
             </p>
-            <ul className="list-none space-y-1.5 text-sm text-[rgb(var(--text))]">
-              {signals.map((s, i) => (
-                <li key={i}>
-                  • {s.title}
-                  {s.type != null && (
-                    <span className="text-[rgb(var(--muted))] ml-1">({s.type})</span>
-                  )}
-                </li>
-              ))}
-            </ul>
+            {signals.length > 0 ? (
+              <ul className="list-none space-y-1.5 text-sm text-[rgb(var(--text))]">
+                {signals.map((s, i) => (
+                  <li key={i}>
+                    • {s.title}
+                    {s.type != null && (
+                      <span className="text-[rgb(var(--muted))] ml-1">({s.type})</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-[rgb(var(--muted))]">
+                No signals linked to this arc yet. Decisions and tasks will appear here as you distill sources.
+              </p>
+            )}
             {showFooter && (
               <p className="text-[11px] text-[rgb(var(--muted))] mt-3">
                 {signals.length} {signals.length === 1 ? 'signal' : 'signals'} across{' '}

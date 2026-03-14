@@ -13,7 +13,7 @@ import type {
   CaptureSourceType,
   CreateCaptureRequest,
 } from './capture.types';
-import { GENERIC_SOURCE_TITLES, uniqueTimestampedFallback } from '@/lib/sourceTitle';
+import { deriveSourceTitle, GENERIC_SOURCE_TITLES, uniqueTimestampedFallback } from '@/lib/sourceTitle';
 
 export type CaptureOutcomesCounts = {
   decisions: number;
@@ -109,15 +109,8 @@ export async function createCapture(opts: {
     } else {
       const trimmed = content.trim();
       if (trimmed) {
-        const firstLine = trimmed.split('\n')[0];
-        const sentenceMatch = /[.!?]/.exec(firstLine);
-        const endIndex = sentenceMatch ? sentenceMatch.index + 1 : firstLine.length;
-        const firstSentence = firstLine.slice(0, endIndex).trim();
-        const candidate = (firstSentence || '').slice(0, 140).trim();
-        conversationTitle =
-          candidate && !GENERIC_SOURCE_TITLES.has(candidate.toLowerCase())
-            ? candidate
-            : uniqueTimestampedFallback('Captured source');
+        const fromContent = deriveSourceTitle(trimmed);
+        conversationTitle = fromContent ?? uniqueTimestampedFallback('Captured source');
       } else {
         conversationTitle = uniqueTimestampedFallback('Captured source');
       }

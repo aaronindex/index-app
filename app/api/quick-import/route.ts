@@ -15,6 +15,7 @@ import { dispatchStructureRecompute } from '@/lib/structure/dispatch';
 import crypto from 'crypto';
 
 import {
+  deriveSourceTitle,
   deriveFromTranscriptFirstLine,
   deriveFromFirstUserMessage,
   uniqueTimestampedFallback,
@@ -285,12 +286,13 @@ export async function POST(request: NextRequest) {
 
     const supabase = await getSupabaseServerClient();
 
-    // Generate title if not provided or empty: prefer content-derived (first user message) over transcript first line
+    // Generate title if not provided or empty: content-derived (decision/topic phrase) → transcript first line → first user sentence → fallback
     let finalTitle = title?.trim() || '';
     if (!finalTitle) {
+      const fromContent = deriveSourceTitle(transcript);
       const fromTranscript = deriveFromTranscriptFirstLine(transcript);
       const fromFirstUser = deriveFromFirstUserMessage(parsed.messages);
-      finalTitle = fromTranscript || fromFirstUser || uniqueTimestampedFallback('Quick Capture');
+      finalTitle = fromContent || fromTranscript || fromFirstUser || uniqueTimestampedFallback('Quick Capture');
     }
 
     // Check for duplicates
