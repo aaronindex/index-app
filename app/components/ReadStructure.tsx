@@ -18,6 +18,8 @@ interface ReadStructureProps {
   onToggle?: () => void;
   /** Render as inline trigger + expandable content. When false, only the expandable content is rendered. */
   withTrigger?: boolean;
+  /** When true, always show the "Read structure ▸" trigger even when arc and signals are empty (e.g. Home Direction). */
+  alwaysShowTrigger?: boolean;
 }
 
 export default function ReadStructure({
@@ -27,6 +29,7 @@ export default function ReadStructure({
   open: controlledOpen,
   onToggle,
   withTrigger = true,
+  alwaysShowTrigger = false,
 }: ReadStructureProps) {
   const isControlled = controlledOpen !== undefined;
   const [internalOpen, setInternalOpen] = useState(false);
@@ -37,12 +40,13 @@ export default function ReadStructure({
   const hasArc = arc != null && arc.trim() !== '';
   const showFooter = sourceCount != null && sourceCount > 0 && signals.length > 0;
 
-  if (!hasContent && withTrigger) return null;
-  if (!hasContent) return null;
+  const showTrigger = withTrigger && (hasContent || alwaysShowTrigger);
+  if (!showTrigger && !hasContent) return null;
+  if (!withTrigger && !hasContent) return null;
 
   return (
     <div className="mt-3">
-      {withTrigger && (
+      {showTrigger && (
         <button
           type="button"
           onClick={setOpen}

@@ -464,6 +464,7 @@ export default function MagicHomeScreen({ initialData = null, initialShowFocusMo
                     arc={directionArc ?? ''}
                     signals={(directionSignals ?? []).map((s) => ({ title: s.label }))}
                     sourceCount={data?.direction?.sourceCount}
+                    alwaysShowTrigger
                   />
                 </div>
               ) : (
@@ -473,6 +474,7 @@ export default function MagicHomeScreen({ initialData = null, initialShowFocusMo
                     arc={directionArc ?? ''}
                     signals={(directionSignals ?? []).map((s) => ({ title: s.label }))}
                     sourceCount={data?.direction?.sourceCount}
+                    alwaysShowTrigger
                   />
                 </div>
               )}
