@@ -403,6 +403,7 @@ export default function MagicHomeScreen({ initialData = null, initialShowFocusMo
   const hasStructuralChange = shifts.length > 0;
   const showDirectionStatusLine = activeArcCount > 0;
   const directionSignals = data?.direction?.signals ?? [];
+  const directionArc = data?.direction?.arc ?? '';
 
   return (
     <div className="space-y-8">
@@ -459,24 +460,20 @@ export default function MagicHomeScreen({ initialData = null, initialShowFocusMo
                       Direction appears as decisions accumulate.
                     </p>
                   </div>
-                  {(directionSignals.length > 0 || (data?.direction?.arc ?? '').trim()) && (
-                    <ReadStructure
-                      signals={directionSignals.map((s) => ({ title: s.label }))}
-                      arc={data?.direction?.arc ?? undefined}
-                      sourceCount={data?.direction?.sourceCount}
-                    />
-                  )}
+                  <ReadStructure
+                    arc={directionArc}
+                    signals={(directionSignals ?? []).map((s) => ({ title: s.label }))}
+                    sourceCount={data?.direction?.sourceCount}
+                  />
                 </div>
               ) : (
                 <div className="text-sm text-[rgb(var(--text))] whitespace-pre-wrap font-sans space-y-3">
                   <div>{directionText}</div>
-                  {(directionSignals.length > 0 || (data?.direction?.arc ?? '').trim()) && (
-                    <ReadStructure
-                      signals={directionSignals.map((s) => ({ title: s.label }))}
-                      arc={data?.direction?.arc ?? undefined}
-                      sourceCount={data?.direction?.sourceCount}
-                    />
-                  )}
+                  <ReadStructure
+                    arc={directionArc}
+                    signals={(directionSignals ?? []).map((s) => ({ title: s.label }))}
+                    sourceCount={data?.direction?.sourceCount}
+                  />
                 </div>
               )}
             </div>

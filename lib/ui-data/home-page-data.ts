@@ -104,14 +104,19 @@ function readablePhraseFromSnapshot(snapshotText: string | null | undefined, max
 }
 
 /**
- * Best label for timeline/shift: use semantic/editorial when not generic; else snapshot phrase when pulse matches latest state.
+ * Best label for timeline/shift.
+ * Priority: 1) Arc title, 2) Semantic headline, 3) Snapshot phrase when pulse matches latest state, 4) Generic fallback.
  */
 function getTimelineLabel(
   p: HomePulse,
   semanticHeadline: string | null | undefined,
   snapshotTextForLatestState: string | null | undefined,
-  latestStateHash: string | null
+  latestStateHash: string | null,
+  arcTitle?: string | null
 ): string {
+  const arcLabel = (arcTitle ?? '').trim();
+  if (arcLabel && !isSystemPhrase(arcLabel)) return arcLabel;
+
   const candidate = getTypedHeadline(p, semanticHeadline);
   const normalized = candidate.trim().toLowerCase();
   if (!GENERIC_TOOLTIP_LABELS.has(normalized)) return candidate;
@@ -230,12 +235,60 @@ export async function getHomePageData(
   const shiftSource = deduped.slice(0, 5);
   const lastChangeAt = shiftSource.length > 0 ? shiftSource[0]!.occurred_at : null;
 
+  const latestStateHash = homeView.latestSnapshot?.state_hash ?? null;
+
+  // Resolve arc title per state_hash so timeline/shift labels prefer arc title (structural coherence with Active Arcs).
+  const arcTitleByStateHash: Record<string, string> = {};
+  try {
+    const distinctStateHashes = [...new Set(homeView.pulses.map((p) => p.state_hash).filter(Boolean))] as string[];
+    const stateHashToArcIds: Record<string, string[]> = {};
+    if (latestStateHash && payload?.active_arc_ids) {
+      stateHashToArcIds[latestStateHash] = payload.active_arc_ids;
+    }
+    const otherHashes = distinctStateHashes.filter((h) => h !== latestStateHash);
+    if (otherHashes.length > 0) {
+      const { data: otherSnapshots } = await serviceClient
+        .from('snapshot_state')
+        .select('state_hash, state_payload')
+        .eq('user_id', user_id)
+        .eq('scope', 'global')
+        .in('state_hash', otherHashes);
+      for (const row of otherSnapshots ?? []) {
+        const r = row as { state_hash: string; state_payload?: { active_arc_ids?: string[] } | null };
+        const ids = Array.isArray(r.state_payload?.active_arc_ids) ? r.state_payload.active_arc_ids : [];
+        if (ids.length > 0) stateHashToArcIds[r.state_hash] = ids;
+      }
+    }
+    const firstArcIds = [...new Set(Object.values(stateHashToArcIds).map((ids) => ids[0]).filter(Boolean))] as string[];
+    if (firstArcIds.length > 0) {
+      const { data: arcRows } = await serviceClient
+        .from('arc')
+        .select('id, summary')
+        .eq('user_id', user_id)
+        .in('id', firstArcIds);
+      const arcIdToTitle = new Map(
+        (arcRows ?? []).map((row: { id: string; summary: string | null }) => [row.id, (row.summary ?? '').trim()])
+      );
+      for (const [h, ids] of Object.entries(stateHashToArcIds)) {
+        const title = ids[0] ? arcIdToTitle.get(ids[0]) : '';
+        if (title) arcTitleByStateHash[h] = title;
+      }
+    }
+  } catch {
+    // Non-fatal: timeline falls back to semantic/snapshot/generic labels.
+  }
+
   // Shifts list (textual): dedupe by headline + day; generic headlines by (headline + day) only.
   // Normalize headline: trim + collapse whitespace. Keep earliest occurrence per key; preserve order.
-  const latestStateHash = homeView.latestSnapshot?.state_hash ?? null;
   const pulseById = new Map(homeView.pulses.map((p) => [p.id, p]));
   const rawShifts = shiftSource.map((p) => {
-    const label = getTimelineLabel(p, semanticHeadlines[p.id], directionText, latestStateHash);
+    const label = getTimelineLabel(
+      p,
+      semanticHeadlines[p.id],
+      directionText,
+      latestStateHash,
+      arcTitleByStateHash[p.state_hash]
+    );
     const normalized = label.trim().replace(/\s+/g, ' ').toLowerCase();
     return {
       id: p.id,
@@ -287,7 +340,13 @@ export async function getHomePageData(
     .map((p) => ({
       id: p.id,
       occurred_at: p.occurred_at,
-      summary: getTimelineLabel(p, semanticHeadlines[p.id], directionText, latestStateHash),
+      summary: getTimelineLabel(
+        p,
+        semanticHeadlines[p.id],
+        directionText,
+        latestStateHash,
+        arcTitleByStateHash[p.state_hash]
+      ),
       pulse_type: p.pulse_type,
       isResult: p.pulse_type === 'result_recorded',
     }));

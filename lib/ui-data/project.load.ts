@@ -445,6 +445,43 @@ export async function loadProjectView(params: {
         })
       : { pulseHeadlines: {} as Record<string, string> };
 
+  // Resolve arc title per pulse state_hash so timeline labels prefer arc title (structural coherence with Active Arcs).
+  const arcTitleByStateHash: Record<string, string> = {};
+  try {
+    const distinctStateHashes = [...new Set((projectPulses ?? []).map((p: { state_hash?: string }) => p.state_hash).filter(Boolean))] as string[];
+    if (distinctStateHashes.length > 0) {
+      const { data: globalSnapshots } = await supabaseClient
+        .from('snapshot_state')
+        .select('state_hash, state_payload')
+        .eq('user_id', user_id)
+        .eq('scope', 'global')
+        .in('state_hash', distinctStateHashes);
+      const stateHashToArcIds: Record<string, string[]> = {};
+      for (const row of globalSnapshots ?? []) {
+        const r = row as { state_hash: string; state_payload?: { active_arc_ids?: string[] } | null };
+        const ids = Array.isArray(r.state_payload?.active_arc_ids) ? r.state_payload.active_arc_ids : [];
+        if (ids.length > 0) stateHashToArcIds[r.state_hash] = ids;
+      }
+      const firstArcIds = [...new Set(Object.values(stateHashToArcIds).map((ids) => ids[0]).filter(Boolean))] as string[];
+      if (firstArcIds.length > 0) {
+        const { data: arcRows } = await supabaseClient
+          .from('arc')
+          .select('id, summary')
+          .eq('user_id', user_id)
+          .in('id', firstArcIds);
+        const arcIdToTitle = new Map(
+          (arcRows ?? []).map((row: { id: string; summary: string | null }) => [row.id, (row.summary ?? '').trim()])
+        );
+        for (const [h, ids] of Object.entries(stateHashToArcIds)) {
+          const title = ids[0] ? arcIdToTitle.get(ids[0]) : '';
+          if (title) arcTitleByStateHash[h] = title;
+        }
+      }
+    }
+  } catch {
+    // Non-fatal: project timeline falls back to semantic/snapshot/generic labels.
+  }
+
   function isSystemPhrase(s: string): boolean {
     const lower = s.toLowerCase().trim();
     if (lower.length < 10) return false;
@@ -463,10 +500,18 @@ export async function loadProjectView(params: {
     return out.length >= 8 ? out : '';
   }
   const pulseEvents = (projectPulses ?? []).map((p: { id: string; pulse_type: string; headline: string | null; occurred_at: string; state_hash?: string }) => {
+    const arcTitle = (p.state_hash && arcTitleByStateHash[p.state_hash]?.trim()) || '';
     const semantic = pulseOverlay.pulseHeadlines[p.id]?.trim();
     const editorial = (p.headline ?? '').trim();
     const signalRef = semantic || editorial;
-    let label = (signalRef && !isSystemPhrase(signalRef)) ? signalRef : pulseTypeFallback(p.pulse_type);
+    let label: string;
+    if (arcTitle && !isSystemPhrase(arcTitle)) {
+      label = arcTitle;
+    } else if (signalRef && !isSystemPhrase(signalRef)) {
+      label = signalRef;
+    } else {
+      label = pulseTypeFallback(p.pulse_type);
+    }
     if (GENERIC_FALLBACKS.has(label.toLowerCase().trim()) && latestStateHash && p.state_hash === latestStateHash && snapshotText?.trim()) {
       const phrase = readablePhrase(snapshotText);
       if (phrase) label = phrase;
