@@ -396,13 +396,13 @@ export async function loadProjectView(params: {
     switch (pt) {
       case 'arc_shift':
       case 'structural_threshold':
-        return 'Structural shift detected';
+        return 'A shift in focus';
       case 'tension':
-        return 'Tension emerging';
+        return 'A tension in focus';
       case 'result_recorded':
         return 'Result recorded';
       default:
-        return 'Structure updated';
+        return 'Update to your structure';
     }
   }
   const GENERIC_FALLBACKS = new Set([
@@ -411,6 +411,9 @@ export async function loadProjectView(params: {
     'structural shift',
     'tension emerging',
     'structure updated',
+    'a shift in focus',
+    'a tension in focus',
+    'update to your structure',
   ]);
 
   let projectTimelineEvents: Array<{ id: string; occurred_at: string; kind: 'pulse' | 'result'; label: string }> = [];
@@ -449,11 +452,14 @@ export async function loadProjectView(params: {
     if (/^(result recorded|structural shift|structural shift detected|arc shift|tension emerging|structure updated)(\s|$)/i.test(lower)) return true;
     return false;
   }
-  function readablePhrase(s: string | null | undefined, maxLen: number = 48): string {
+  const TOOLTIP_PHRASE_MAX_LEN = 80;
+  function readablePhrase(s: string | null | undefined, maxLen: number = TOOLTIP_PHRASE_MAX_LEN): string {
     const t = (s ?? '').trim();
     if (!t) return '';
     const clause = t.match(/^[^.!?]+/)?.[0]?.trim() ?? t;
-    const out = clause.slice(0, maxLen).trim();
+    const out = clause.length <= maxLen
+      ? clause
+      : clause.slice(0, maxLen).replace(/\s+\S*$/, '').trim();
     return out.length >= 8 ? out : '';
   }
   const pulseEvents = (projectPulses ?? []).map((p: { id: string; pulse_type: string; headline: string | null; occurred_at: string; state_hash?: string }) => {

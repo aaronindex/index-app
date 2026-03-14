@@ -82,12 +82,24 @@ const GENERIC_TOOLTIP_LABELS = new Set([
   'structure updated',
 ]);
 
-/** First clause or first maxLen chars of text for use as tooltip when headline is generic. */
-function readablePhraseFromSnapshot(snapshotText: string | null | undefined, maxLen: number = 48): string {
+/** Softer, behavior-of-thinking fallbacks when no semantic/snapshot phrase exists (avoid system-telemetry tooltip body). */
+const SOFT_TOOLTIP_FALLBACK: Record<string, string> = {
+  'structural shift detected': 'A shift in focus',
+  'structural shift': 'A shift in focus',
+  'structure updated': 'Update to your structure',
+  'tension emerging': 'A tension in focus',
+};
+
+const TOOLTIP_PHRASE_MAX_LEN = 80;
+
+/** First clause, truncated at last full word (~80 chars) for timeline tooltip when headline is generic. */
+function readablePhraseFromSnapshot(snapshotText: string | null | undefined, maxLen: number = TOOLTIP_PHRASE_MAX_LEN): string {
   const s = (snapshotText ?? '').trim();
   if (!s) return '';
   const clause = s.match(/^[^.!?]+/)?.[0]?.trim() ?? s;
-  const out = clause.slice(0, maxLen).trim();
+  const out = clause.length <= maxLen
+    ? clause
+    : clause.slice(0, maxLen).replace(/\s+\S*$/, '').trim();
   return out.length >= 8 ? out : '';
 }
 
@@ -107,7 +119,7 @@ function getTimelineLabel(
     const phrase = readablePhraseFromSnapshot(snapshotTextForLatestState);
     if (phrase) return phrase;
   }
-  return candidate;
+  return SOFT_TOOLTIP_FALLBACK[normalized] ?? candidate;
 }
 
 function dedupePulses(pulses: HomePulse[]): HomePulse[] {
@@ -247,6 +259,9 @@ export async function getHomePageData(
     'tension emerging',
     'signals reinforced direction',
     'a new thread of thinking appeared',
+    'a shift in focus',
+    'a tension in focus',
+    'update to your structure',
   ]);
   const seenKeys = new Set<string>();
   const dedupedShifts: Array<{ id: string; occurred_at: string; label: string; pulse_type: string }> = [];
@@ -288,6 +303,15 @@ export async function getHomePageData(
     const activeArcIds = Array.isArray(payload?.active_arc_ids) ? payload!.active_arc_ids! : [];
     if (latestStateHash && activeArcIds.length > 0) {
       const serviceClientForSignals = getSupabaseServiceClient();
+
+      // Fetch arc summary so Read structure can show whenever there are active arcs (even with no linked signals)
+      const { data: arcRows } = await serviceClientForSignals
+        .from('arc')
+        .select('id, summary')
+        .in('id', activeArcIds)
+        .limit(1);
+      directionArc = (arcRows?.[0] as { summary?: string | null } | undefined)?.summary?.trim() ?? null;
+
       const allSignals: StructuralSignal[] = await collectStructuralSignals(
         serviceClientForSignals as unknown as SupabaseClient,
         user_id
@@ -361,12 +385,6 @@ export async function getHomePageData(
         directionSourceCount = new Set(
           contributingSignals.map((s) => s.project_id).filter(Boolean)
         ).size;
-        const { data: arcRows } = await serviceClientForSignals
-          .from('arc')
-          .select('id, summary')
-          .in('id', activeArcIds)
-          .limit(1);
-        directionArc = (arcRows?.[0] as { summary?: string | null } | undefined)?.summary?.trim() ?? null;
       }
     }
   } catch {
