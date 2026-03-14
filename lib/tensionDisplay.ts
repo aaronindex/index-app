@@ -4,7 +4,7 @@
 const MAX_DISPLAY_LEN = 40;
 const LONG_SENTENCE_THRESHOLD = 80;
 
-const PREFIXES = /^\s*(context|text|excerpt|note)\s*:\s*/i;
+const PREFIXES = /^\s*(context|text|excerpt|note|ext)\s*:\s*/i;
 
 /**
  * Extract a short key phrase from a long sentence: first clause, or last substantive words.

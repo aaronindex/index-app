@@ -74,6 +74,42 @@ function getTypedHeadline(p: HomePulse, semanticHeadline?: string | null): strin
   }
 }
 
+const GENERIC_TOOLTIP_LABELS = new Set([
+  'result recorded',
+  'structural shift detected',
+  'structural shift',
+  'tension emerging',
+  'structure updated',
+]);
+
+/** First clause or first maxLen chars of text for use as tooltip when headline is generic. */
+function readablePhraseFromSnapshot(snapshotText: string | null | undefined, maxLen: number = 48): string {
+  const s = (snapshotText ?? '').trim();
+  if (!s) return '';
+  const clause = s.match(/^[^.!?]+/)?.[0]?.trim() ?? s;
+  const out = clause.slice(0, maxLen).trim();
+  return out.length >= 8 ? out : '';
+}
+
+/**
+ * Best label for timeline/shift: use semantic/editorial when not generic; else snapshot phrase when pulse matches latest state.
+ */
+function getTimelineLabel(
+  p: HomePulse,
+  semanticHeadline: string | null | undefined,
+  snapshotTextForLatestState: string | null | undefined,
+  latestStateHash: string | null
+): string {
+  const candidate = getTypedHeadline(p, semanticHeadline);
+  const normalized = candidate.trim().toLowerCase();
+  if (!GENERIC_TOOLTIP_LABELS.has(normalized)) return candidate;
+  if (latestStateHash && p.state_hash === latestStateHash && snapshotTextForLatestState) {
+    const phrase = readablePhraseFromSnapshot(snapshotTextForLatestState);
+    if (phrase) return phrase;
+  }
+  return candidate;
+}
+
 function dedupePulses(pulses: HomePulse[]): HomePulse[] {
   const result: HomePulse[] = [];
   for (const pulse of pulses) {
@@ -184,9 +220,10 @@ export async function getHomePageData(
 
   // Shifts list (textual): dedupe by headline + day; generic headlines by (headline + day) only.
   // Normalize headline: trim + collapse whitespace. Keep earliest occurrence per key; preserve order.
+  const latestStateHash = homeView.latestSnapshot?.state_hash ?? null;
   const pulseById = new Map(homeView.pulses.map((p) => [p.id, p]));
   const rawShifts = shiftSource.map((p) => {
-    const label = getTypedHeadline(p, semanticHeadlines[p.id]);
+    const label = getTimelineLabel(p, semanticHeadlines[p.id], directionText, latestStateHash);
     const normalized = label.trim().replace(/\s+/g, ' ').toLowerCase();
     return {
       id: p.id,
@@ -235,7 +272,7 @@ export async function getHomePageData(
     .map((p) => ({
       id: p.id,
       occurred_at: p.occurred_at,
-      summary: getTypedHeadline(p, semanticHeadlines[p.id]),
+      summary: getTimelineLabel(p, semanticHeadlines[p.id], directionText, latestStateHash),
       pulse_type: p.pulse_type,
       isResult: p.pulse_type === 'result_recorded',
     }));

@@ -405,6 +405,13 @@ export async function loadProjectView(params: {
         return 'Structure updated';
     }
   }
+  const GENERIC_FALLBACKS = new Set([
+    'result recorded',
+    'structural shift detected',
+    'structural shift',
+    'tension emerging',
+    'structure updated',
+  ]);
 
   let projectTimelineEvents: Array<{ id: string; occurred_at: string; kind: 'pulse' | 'result'; label: string }> = [];
 
@@ -439,14 +446,25 @@ export async function loadProjectView(params: {
     const lower = s.toLowerCase().trim();
     if (lower.length < 10) return false;
     if (/\b(threshold|momentum increased|structural threshold|in project)\b/.test(lower)) return true;
-    if (/^(result recorded|structural shift|arc shift|tension emerging|structure updated)(\s|$)/i.test(lower)) return true;
+    if (/^(result recorded|structural shift|structural shift detected|arc shift|tension emerging|structure updated)(\s|$)/i.test(lower)) return true;
     return false;
   }
-  const pulseEvents = (projectPulses ?? []).map((p: { id: string; pulse_type: string; headline: string | null; occurred_at: string }) => {
+  function readablePhrase(s: string | null | undefined, maxLen: number = 48): string {
+    const t = (s ?? '').trim();
+    if (!t) return '';
+    const clause = t.match(/^[^.!?]+/)?.[0]?.trim() ?? t;
+    const out = clause.slice(0, maxLen).trim();
+    return out.length >= 8 ? out : '';
+  }
+  const pulseEvents = (projectPulses ?? []).map((p: { id: string; pulse_type: string; headline: string | null; occurred_at: string; state_hash?: string }) => {
     const semantic = pulseOverlay.pulseHeadlines[p.id]?.trim();
     const editorial = (p.headline ?? '').trim();
     const signalRef = semantic || editorial;
-    const label = (signalRef && !isSystemPhrase(signalRef)) ? signalRef : pulseTypeFallback(p.pulse_type);
+    let label = (signalRef && !isSystemPhrase(signalRef)) ? signalRef : pulseTypeFallback(p.pulse_type);
+    if (GENERIC_FALLBACKS.has(label.toLowerCase().trim()) && latestStateHash && p.state_hash === latestStateHash && snapshotText?.trim()) {
+      const phrase = readablePhrase(snapshotText);
+      if (phrase) label = phrase;
+    }
     return {
       id: p.id,
       occurred_at: p.occurred_at,

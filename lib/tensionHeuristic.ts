@@ -4,11 +4,16 @@
 
 const MAX_LABEL_LEN = 48;
 
+/** Remove common prefixes so stored tension strings are clean at source. */
+function stripPrefix(s: string): string {
+  return s.replace(/^\s*(context|text|excerpt|note|ext)\s*:\s*/i, '').replace(/\s+/g, ' ').trim();
+}
+
 /**
- * Normalize a candidate label: trim, collapse whitespace, truncate.
+ * Normalize a candidate label: strip prefixes, trim, collapse whitespace, truncate.
  */
 function norm(s: string): string {
-  return s.replace(/\s+/g, ' ').trim().slice(0, MAX_LABEL_LEN);
+  return stripPrefix(s).replace(/\s+/g, ' ').trim().slice(0, MAX_LABEL_LEN);
 }
 
 /**

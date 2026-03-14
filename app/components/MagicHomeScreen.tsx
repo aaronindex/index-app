@@ -459,7 +459,7 @@ export default function MagicHomeScreen({ initialData = null, initialShowFocusMo
                       Direction appears as decisions accumulate.
                     </p>
                   </div>
-                  {directionSignals.length > 0 && (
+                  {(directionSignals.length > 0 || (data?.direction?.arc ?? '').trim()) && (
                     <ReadStructure
                       signals={directionSignals.map((s) => ({ title: s.label }))}
                       arc={data?.direction?.arc ?? undefined}
@@ -470,7 +470,7 @@ export default function MagicHomeScreen({ initialData = null, initialShowFocusMo
               ) : (
                 <div className="text-sm text-[rgb(var(--text))] whitespace-pre-wrap font-sans space-y-3">
                   <div>{directionText}</div>
-                  {directionSignals.length > 0 && (
+                  {(directionSignals.length > 0 || (data?.direction?.arc ?? '').trim()) && (
                     <ReadStructure
                       signals={directionSignals.map((s) => ({ title: s.label }))}
                       arc={data?.direction?.arc ?? undefined}
