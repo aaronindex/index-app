@@ -36,6 +36,8 @@ export default function ImportPage() {
   const [tunnelStep, setTunnelStepState] = useState<number | null>(null);
   const [tunnelImportCount, setTunnelImportCountState] = useState(0);
   const [showTunnelStep2Modal, setShowTunnelStep2Modal] = useState(false);
+  /** Project id from first import (new or existing) so we can pre-select when user clicks "Import another". */
+  const [lastUsedProjectId, setLastUsedProjectId] = useState<string | null>(null);
 
   // Update page title
   useEffect(() => {
@@ -47,25 +49,24 @@ export default function ImportPage() {
     setTunnelImportCountState(getTunnelImportCount());
   }, []);
 
-  // Fetch projects on mount
+  const fetchProjects = async () => {
+    const supabase = getSupabaseBrowserClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (user) {
+      const { data: userProjects } = await supabase
+        .from('projects')
+        .select('id, name')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      setProjects(userProjects || []);
+    }
+  };
+
   useEffect(() => {
-    const fetchProjects = async () => {
-      const supabase = getSupabaseBrowserClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (user) {
-        const { data: userProjects } = await supabase
-          .from('projects')
-          .select('id, name')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false });
-
-        setProjects(userProjects || []);
-      }
-    };
-
     fetchProjects();
   }, []);
 
@@ -223,6 +224,10 @@ export default function ImportPage() {
           if (nextCount === 1) {
             setTunnelImportCount(1);
             setTunnelImportCountState(1);
+            if (projectIdFromApi) {
+              setLastUsedProjectId(projectIdFromApi);
+              fetchProjects(); // so dropdown includes the newly created project
+            }
             setShowTunnelStep2Modal(true);
             setQuickSuccess({ conversationId, title, messageCount });
           } else {
@@ -290,6 +295,15 @@ export default function ImportPage() {
               onClick={() => {
                 setShowTunnelStep2Modal(false);
                 setQuickSuccess(null);
+                setQuickTranscript('');
+                setQuickTitle('');
+                setQuickError(null);
+                if (lastUsedProjectId && projects.some((p) => p.id === lastUsedProjectId)) {
+                  setQuickProjectId(lastUsedProjectId);
+                  setQuickProjectAction('existing');
+                  setQuickNewProjectName('');
+                  setQuickNewProjectDescription('');
+                }
               }}
               className="w-full px-6 py-3 bg-[rgb(var(--text))] text-[rgb(var(--bg))] rounded-lg hover:opacity-90 transition-opacity font-medium"
             >

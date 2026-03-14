@@ -22,6 +22,7 @@ export default function OnboardingProjectOverlay() {
 
   const [step, setStep] = useState<ReturnType<typeof getTunnelStep>>(null);
   const [distillCount, setDistillCount] = useState(0);
+  const [step3Dismissed, setStep3Dismissed] = useState(false);
 
   const update = () => {
     setStep(getTunnelStep());
@@ -34,7 +35,7 @@ export default function OnboardingProjectOverlay() {
     return () => window.removeEventListener(TUNNEL_UPDATE, update);
   }, []);
 
-  const showStep3Modal = step === 3 && activeTab === 'chats' && projectId && distillCount === 0;
+  const showStep3Modal = step === 3 && activeTab === 'chats' && projectId && distillCount === 0 && !step3Dismissed;
   const showStep3Confirmation = step === 3 && activeTab === 'chats' && projectId && distillCount === 1;
 
   if (!projectId) return null;
@@ -60,9 +61,16 @@ export default function OnboardingProjectOverlay() {
           <p className="text-sm text-[rgb(var(--muted))] mb-6 font-medium">
             Start with the first source.
           </p>
-          <p className="text-xs text-[rgb(var(--muted))]">
+          <p className="text-xs text-[rgb(var(--muted))] mb-6">
             Use the <strong className="text-[rgb(var(--text))]">Distill signals</strong> button on each source.
           </p>
+          <button
+            type="button"
+            onClick={() => setStep3Dismissed(true)}
+            className="w-full px-6 py-3 bg-[rgb(var(--text))] text-[rgb(var(--bg))] rounded-lg hover:opacity-90 transition-opacity font-medium"
+          >
+            Got it
+          </button>
         </div>
       </div>
     );
