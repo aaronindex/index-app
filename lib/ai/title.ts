@@ -183,7 +183,13 @@ ${excerpt}`;
 
   try {
     const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) return null;
+    if (!apiKey) {
+      if (typeof process !== 'undefined' && process.env.NODE_ENV === 'production') {
+        // eslint-disable-next-line no-console
+        console.warn('[generateSourceTitle] OPENAI_API_KEY not set; using heuristic fallback for source titles.');
+      }
+      return null;
+    }
 
     const response = await openaiRequest('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -199,15 +205,23 @@ ${excerpt}`;
       }),
     });
 
-    if (!response.ok) return null;
+    if (!response.ok) {
+      const errBody = await response.text();
+      console.warn('[generateSourceTitle] OpenAI API non-OK:', response.status, errBody.slice(0, 200));
+      return null;
+    }
 
     const data = await response.json();
     let title = data.choices?.[0]?.message?.content?.trim() ?? '';
     title = title.replace(/^["']|["']$/g, '').trim();
     if (title.length > SOURCE_TITLE_MAX_CHARS) title = title.slice(0, SOURCE_TITLE_MAX_CHARS).trim();
-    if (!title || title.length < 2) return null;
+    if (!title || title.length < 2) {
+      console.warn('[generateSourceTitle] Empty or invalid title in response');
+      return null;
+    }
     return title;
-  } catch {
+  } catch (err) {
+    console.warn('[generateSourceTitle] Error:', err instanceof Error ? err.message : String(err));
     return null;
   }
 }
