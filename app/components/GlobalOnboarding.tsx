@@ -13,14 +13,20 @@ export default function GlobalOnboarding() {
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
 
   useEffect(() => {
+    const supabase = getSupabaseBrowserClient();
     let cancelled = false;
-    getSupabaseBrowserClient()
-      .auth.getUser()
-      .then(({ data: { user } }) => {
-        if (!cancelled) setAuthenticated(!!user);
-      });
+
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!cancelled) setAuthenticated(!!user);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!cancelled) setAuthenticated(!!session?.user);
+    });
+
     return () => {
       cancelled = true;
+      subscription.unsubscribe();
     };
   }, []);
 

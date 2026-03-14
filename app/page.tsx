@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/getUser";
 import LandingPage from "@/app/components/LandingPage";
+import AuthCallbackRedirect from "@/app/components/AuthCallbackRedirect";
 import type { Metadata } from "next";
 
 // Force dynamic rendering since we use cookies() for auth
@@ -26,6 +27,11 @@ export default async function Home() {
     redirect('/home');
   }
 
-  // Show landing page for logged-out users
-  return <LandingPage />;
+  // Logged-out: show LP and run client-side redirect if URL has ?code= (magic link) or session exists
+  return (
+    <>
+      <AuthCallbackRedirect />
+      <LandingPage />
+    </>
+  );
 }
