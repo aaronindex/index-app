@@ -271,7 +271,7 @@ async function processInsertConversationsStep(
       const stableId = parsedConv.id || null;
       const dedupeKey = stableId || `${payload.import_id}-${parsedConv.title}`;
 
-      const contentText = parsedConv.messages.map((m) => m.content).filter(Boolean).join('\n\n');
+      const contentText = parsedConv.messages.map((m: { content: string }) => m.content).filter(Boolean).join('\n\n');
       const resolvedTitle = (await generateSourceTitle(contentText)) ?? parsedConv.title;
 
       // Check if conversation already exists (idempotent)
