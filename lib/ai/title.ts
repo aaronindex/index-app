@@ -164,6 +164,7 @@ const SOURCE_TITLE_INPUT_CHARS = 1200;
  * Used during source ingestion. Returns null on failure so callers can fall back to heuristic.
  */
 export async function generateSourceTitle(content: string): Promise<string | null> {
+  console.log('[generateSourceTitle] called');
   const excerpt = (typeof content === 'string' ? content : '').trim().slice(0, SOURCE_TITLE_INPUT_CHARS);
   if (!excerpt) return null;
 

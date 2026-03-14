@@ -290,6 +290,7 @@ export async function POST(request: NextRequest) {
     // Generate title if not provided or empty: LLM topic label → content-derived → transcript first line → first user → fallback
     let finalTitle = title?.trim() || '';
     if (!finalTitle) {
+      console.log('[quick-import] No title provided, calling generateSourceTitle');
       const llmTitle = await generateSourceTitle(transcript);
       if (llmTitle) {
         finalTitle = llmTitle;
@@ -299,6 +300,8 @@ export async function POST(request: NextRequest) {
         const fromFirstUser = deriveFromFirstUserMessage(parsed.messages);
         finalTitle = fromContent || fromTranscript || fromFirstUser || uniqueTimestampedFallback('Quick Capture');
       }
+    } else {
+      console.log('[quick-import] Using client-provided title, skipping generateSourceTitle');
     }
 
     // Check for duplicates
