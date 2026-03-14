@@ -9,6 +9,7 @@ import { createCapture } from '@/lib/capture/createCapture';
 
 export async function POST(request: NextRequest) {
   try {
+    console.error('[capture] POST received');
     const user = await getCurrentUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

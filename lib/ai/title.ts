@@ -164,7 +164,7 @@ const SOURCE_TITLE_INPUT_CHARS = 1200;
  * Used during source ingestion. Returns null on failure so callers can fall back to heuristic.
  */
 export async function generateSourceTitle(content: string): Promise<string | null> {
-  console.log('[generateSourceTitle] called');
+  console.error('[generateSourceTitle] called');
   const excerpt = (typeof content === 'string' ? content : '').trim().slice(0, SOURCE_TITLE_INPUT_CHARS);
   if (!excerpt) return null;
 
@@ -187,7 +187,7 @@ ${excerpt}`;
     if (!apiKey) {
       if (typeof process !== 'undefined' && process.env.NODE_ENV === 'production') {
         // eslint-disable-next-line no-console
-        console.warn('[generateSourceTitle] OPENAI_API_KEY not set; using heuristic fallback for source titles.');
+        console.error('[generateSourceTitle] OPENAI_API_KEY not set; using heuristic fallback for source titles.');
       }
       return null;
     }
@@ -208,7 +208,7 @@ ${excerpt}`;
 
     if (!response.ok) {
       const errBody = await response.text();
-      console.warn('[generateSourceTitle] OpenAI API non-OK:', response.status, errBody.slice(0, 200));
+      console.error('[generateSourceTitle] OpenAI API non-OK:', response.status, errBody.slice(0, 200));
       return null;
     }
 
@@ -217,12 +217,12 @@ ${excerpt}`;
     title = title.replace(/^["']|["']$/g, '').trim();
     if (title.length > SOURCE_TITLE_MAX_CHARS) title = title.slice(0, SOURCE_TITLE_MAX_CHARS).trim();
     if (!title || title.length < 2) {
-      console.warn('[generateSourceTitle] Empty or invalid title in response');
+      console.error('[generateSourceTitle] Empty or invalid title in response');
       return null;
     }
     return title;
   } catch (err) {
-    console.warn('[generateSourceTitle] Error:', err instanceof Error ? err.message : String(err));
+    console.error('[generateSourceTitle] Error:', err instanceof Error ? err.message : String(err));
     return null;
   }
 }

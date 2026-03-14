@@ -157,6 +157,8 @@ export async function POST(request: NextRequest) {
 
         const contentText = conv.messages.map((m: { content: string }) => m.content).filter(Boolean).join('\n\n');
         const resolvedTitle = (await generateSourceTitle(contentText)) ?? conv.title;
+        const { ensureUniqueConversationTitle } = await import('@/lib/sourceTitle');
+        const uniqueTitle = await ensureUniqueConversationTitle(supabase, user.id, resolvedTitle);
 
         // Create conversation with thinking window from user choice
         const { data: conversation, error: convError } = await supabase
@@ -164,7 +166,7 @@ export async function POST(request: NextRequest) {
           .insert({
             user_id: user.id,
             import_id: importId,
-            title: resolvedTitle,
+            title: uniqueTitle,
             source: 'chatgpt',
             started_at: thinkingWindow.start_at,
             ended_at: thinkingWindow.end_at,

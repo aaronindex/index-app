@@ -19,6 +19,7 @@ import {
   deriveSourceTitle,
   deriveFromTranscriptFirstLine,
   deriveFromFirstUserMessage,
+  ensureUniqueConversationTitle,
   uniqueTimestampedFallback,
 } from '@/lib/sourceTitle';
 
@@ -246,6 +247,7 @@ async function processQuickImportSync(
 
 export async function POST(request: NextRequest) {
   try {
+    console.error('[quick-import] POST received');
     const user = await getCurrentUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -290,7 +292,7 @@ export async function POST(request: NextRequest) {
     // Generate title if not provided or empty: LLM topic label → content-derived → transcript first line → first user → fallback
     let finalTitle = title?.trim() || '';
     if (!finalTitle) {
-      console.log('[quick-import] No title provided, calling generateSourceTitle');
+      console.error('[quick-import] No title provided, calling generateSourceTitle');
       const llmTitle = await generateSourceTitle(transcript);
       if (llmTitle) {
         finalTitle = llmTitle;
@@ -301,10 +303,10 @@ export async function POST(request: NextRequest) {
         finalTitle = fromContent || fromTranscript || fromFirstUser || uniqueTimestampedFallback('Quick Capture');
       }
     } else {
-      console.log('[quick-import] Using client-provided title, skipping generateSourceTitle');
+      console.error('[quick-import] Using client-provided title, skipping generateSourceTitle');
     }
 
-    // Check for duplicates
+    // Check for duplicates (use finalTitle before uniquifying)
     const normalizedText = transcript.trim().substring(0, 4000);
     const dedupeHash = generateDedupeHash(user.id, finalTitle, normalizedText);
 
@@ -342,13 +344,15 @@ export async function POST(request: NextRequest) {
       // Continue with new import
     }
 
+    const uniqueTitle = await ensureUniqueConversationTitle(supabase, user.id, finalTitle);
+
     // Always process quick imports synchronously (no queuing)
     // Quick imports are meant to be fast, single conversations
     const result = await processQuickImportSync(
       supabase,
       user.id,
       transcript,
-      finalTitle,
+      uniqueTitle,
       parsed,
       projectId || null,
       newProject || null
@@ -368,7 +372,7 @@ export async function POST(request: NextRequest) {
       success: true,
       conversationId: result.conversationId,
       projectId: result.projectId ?? undefined,
-      title: finalTitle,
+      title: uniqueTitle,
       messageCount: parsed.messages.length,
       processed: true,
     });

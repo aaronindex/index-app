@@ -3,6 +3,7 @@
 
 import { getSupabaseServerClient } from '@/lib/supabaseServer';
 import { generateSourceTitle } from '@/lib/ai/title';
+import { ensureUniqueConversationTitle } from '@/lib/sourceTitle';
 import { parseChatGPTExport } from '@/lib/parsers/chatgpt';
 import { chunkText } from '@/lib/chunking';
 import { embedTexts } from '@/lib/ai/embeddings';
@@ -273,6 +274,7 @@ async function processInsertConversationsStep(
 
       const contentText = parsedConv.messages.map((m: { content: string }) => m.content).filter(Boolean).join('\n\n');
       const resolvedTitle = (await generateSourceTitle(contentText)) ?? parsedConv.title;
+      const uniqueTitle = await ensureUniqueConversationTitle(supabase, payload.user_id, resolvedTitle);
 
       // Check if conversation already exists (idempotent)
       const { data: existing } = await supabase
@@ -320,7 +322,7 @@ async function processInsertConversationsStep(
           .insert({
             user_id: payload.user_id,
             import_id: payload.import_id,
-            title: resolvedTitle,
+            title: uniqueTitle,
             source: 'chatgpt',
             started_at,
             ended_at,

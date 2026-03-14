@@ -4,6 +4,8 @@
  * Ensures content-derived, summary-like titles; avoids "User", first-line-only, generic labels.
  */
 
+import type { SupabaseClient } from '@supabase/supabase-js';
+
 export const GENERIC_SOURCE_TITLES = new Set([
   'user',
   'assistant',
@@ -182,4 +184,39 @@ export function uniqueTimestampedFallback(
     return `${base} (${disambiguateIndex})`;
   }
   return base;
+}
+
+/**
+ * Ensure the conversation title is unique for this user by appending " (2)", " (3)", etc. when needed.
+ */
+export async function ensureUniqueConversationTitle(
+  supabase: SupabaseClient,
+  userId: string,
+  title: string
+): Promise<string> {
+  const base = title.trim();
+  if (!base) return uniqueTimestampedFallback('Source');
+
+  const { count: exactCount } = await supabase
+    .from('conversations')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .eq('title', base);
+
+  if ((exactCount ?? 0) === 0) return base;
+
+  const { data: likeRows } = await supabase
+    .from('conversations')
+    .select('title')
+    .eq('user_id', userId)
+    .like('title', `${base} (%)`);
+
+  const numbers = (likeRows ?? [])
+    .map((r: { title?: string | null }) => r.title)
+    .filter((t): t is string => typeof t === 'string' && t.startsWith(`${base} (`) && t.endsWith(')'))
+    .map((t) => t.slice(base.length + 2, -1))
+    .filter((s) => /^\d+$/.test(s))
+    .map((s) => parseInt(s, 10));
+  const maxN = numbers.length > 0 ? Math.max(...numbers) : 0;
+  return `${base} (${maxN + 1})`;
 }

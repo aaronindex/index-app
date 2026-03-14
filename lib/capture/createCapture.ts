@@ -14,7 +14,7 @@ import type {
   CreateCaptureRequest,
 } from './capture.types';
 import { generateSourceTitle } from '@/lib/ai/title';
-import { deriveSourceTitle, GENERIC_SOURCE_TITLES, uniqueTimestampedFallback } from '@/lib/sourceTitle';
+import { deriveSourceTitle, ensureUniqueConversationTitle, GENERIC_SOURCE_TITLES, uniqueTimestampedFallback } from '@/lib/sourceTitle';
 
 export type CaptureOutcomesCounts = {
   decisions: number;
@@ -105,21 +105,26 @@ export async function createCapture(opts: {
         ? ((metadata as any).page_title as string).trim()
         : null;
 
-    if (metaTitle) {
-      conversationTitle = metaTitle;
-    } else {
-      const trimmed = content.trim();
-      if (trimmed) {
-        const llmTitle = await generateSourceTitle(trimmed);
-        const fromContent = llmTitle ?? deriveSourceTitle(trimmed);
-        conversationTitle = fromContent ?? uniqueTimestampedFallback('Captured source');
+    const trimmed = content.trim();
+    if (trimmed) {
+      console.error('[createCapture] Calling generateSourceTitle');
+      const llmTitle = await generateSourceTitle(trimmed);
+      if (llmTitle) {
+        conversationTitle = llmTitle;
+      } else if (metaTitle) {
+        conversationTitle = metaTitle;
       } else {
-        conversationTitle = uniqueTimestampedFallback('Captured source');
+        const fromContent = deriveSourceTitle(trimmed);
+        conversationTitle = fromContent ?? uniqueTimestampedFallback('Captured source');
       }
+    } else {
+      conversationTitle = metaTitle ?? uniqueTimestampedFallback('Captured source');
     }
   } catch {
     conversationTitle = uniqueTimestampedFallback('Captured source');
   }
+
+  const uniqueTitle = await ensureUniqueConversationTitle(supabase, userId, conversationTitle ?? 'Captured source');
 
   // Create conversation as canonical capture source
   const { data: conversation, error: convError } = await supabase
@@ -127,7 +132,7 @@ export async function createCapture(opts: {
     .insert({
       user_id: userId,
       import_id: null,
-      title: conversationTitle,
+      title: uniqueTitle,
       source: 'capture',
       started_at: start_at,
       ended_at: end_at,
