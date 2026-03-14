@@ -516,16 +516,18 @@ export async function loadProjectView(params: {
       : clause.slice(0, maxLen).replace(/\s+\S*$/, '').trim();
     return out.length >= 8 ? out : '';
   }
+  // Timeline tooltip label priority: 1) Signal/semantic headline, 2) Arc title, 3) Snapshot phrase, 4) Generic.
+  // Avoids repeating the same arc title when many pulses share one arc (e.g. 12+ all showing arc name).
   const pulseEvents = (projectPulses ?? []).map((p: { id: string; pulse_type: string; headline: string | null; occurred_at: string; state_hash?: string }) => {
     const arcTitle = (p.state_hash && arcTitleByStateHash[p.state_hash]?.trim()) || '';
     const semantic = pulseOverlay.pulseHeadlines[p.id]?.trim();
     const editorial = (p.headline ?? '').trim();
     const signalRef = semantic || editorial;
     let label: string;
-    if (arcTitle && !isSystemPhrase(arcTitle)) {
-      label = arcTitle;
-    } else if (signalRef && !isSystemPhrase(signalRef)) {
+    if (signalRef && !GENERIC_FALLBACKS.has(signalRef.toLowerCase().trim()) && !isSystemPhrase(signalRef)) {
       label = signalRef;
+    } else if (arcTitle && !isSystemPhrase(arcTitle)) {
+      label = arcTitle;
     } else {
       label = pulseTypeFallback(p.pulse_type);
     }
