@@ -445,7 +445,38 @@ export async function loadProjectView(params: {
         })
       : { pulseHeadlines: {} as Record<string, string> };
 
-  // Resolve arc title per pulse state_hash so timeline labels prefer arc title (structural coherence with Active Arcs).
+  // Load project conversations and decisions (newest first) for timeline tooltip priority: source title, decision title.
+  type ConvRow = { id: string; title: string | null; started_at: string | null };
+  type DecisionRow = { id: string; title: string | null; created_at: string | null };
+  let projectConvsByTime: ConvRow[] = [];
+  let projectDecisionsByTime: DecisionRow[] = [];
+  try {
+    const { data: pcRows } = await supabaseClient
+      .from('project_conversations')
+      .select('conversation_id')
+      .eq('project_id', project_id);
+    const convIds = (pcRows ?? []).map((r: { conversation_id: string }) => r.conversation_id);
+    if (convIds.length > 0) {
+      const { data: convRows } = await supabaseClient
+        .from('conversations')
+        .select('id, title, started_at')
+        .eq('user_id', user_id)
+        .in('id', convIds)
+        .order('started_at', { ascending: false });
+      projectConvsByTime = (convRows ?? []) as ConvRow[];
+    }
+    const { data: decisionRows } = await supabaseClient
+      .from('decisions')
+      .select('id, title, created_at')
+      .eq('project_id', project_id)
+      .eq('user_id', user_id)
+      .order('created_at', { ascending: false });
+    projectDecisionsByTime = (decisionRows ?? []) as DecisionRow[];
+  } catch {
+    // Non-fatal: timeline falls back to signal/arc/generic.
+  }
+
+  // Resolve arc title per pulse state_hash for fallback in tooltip priority.
   const arcTitleByStateHash: Record<string, string> = {};
   try {
     const distinctStateHashes = [...new Set((projectPulses ?? []).map((p: { state_hash?: string }) => p.state_hash).filter(Boolean))] as string[];
@@ -516,21 +547,26 @@ export async function loadProjectView(params: {
       : clause.slice(0, maxLen).replace(/\s+\S*$/, '').trim();
     return out.length >= 8 ? out : '';
   }
-  // Timeline tooltip label priority: 1) Signal/semantic headline, 2) Arc title, 3) Snapshot phrase, 4) Generic.
-  // Avoids repeating the same arc title when many pulses share one arc (e.g. 12+ all showing arc name).
+  // Timeline tooltip label priority: 1) Source title, 2) Decision title, 3) Signal/highlight, 4) Arc title, 5) Generic.
+  // Source/decision: latest conversation or decision in this project that occurred before the pulse time.
   const pulseEvents = (projectPulses ?? []).map((p: { id: string; pulse_type: string; headline: string | null; occurred_at: string; state_hash?: string }) => {
+    const pulseTime = p.occurred_at;
+    const sourceTitle =
+      projectConvsByTime.find((c) => (c.started_at ?? '').localeCompare(pulseTime) <= 0)?.title?.trim() || '';
+    const decisionTitle =
+      projectDecisionsByTime.find((d) => (d.created_at ?? '').localeCompare(pulseTime) <= 0)?.title?.trim() || '';
     const arcTitle = (p.state_hash && arcTitleByStateHash[p.state_hash]?.trim()) || '';
     const semantic = pulseOverlay.pulseHeadlines[p.id]?.trim();
     const editorial = (p.headline ?? '').trim();
     const signalRef = semantic || editorial;
-    let label: string;
-    if (signalRef && !GENERIC_FALLBACKS.has(signalRef.toLowerCase().trim()) && !isSystemPhrase(signalRef)) {
-      label = signalRef;
-    } else if (arcTitle && !isSystemPhrase(arcTitle)) {
-      label = arcTitle;
-    } else {
-      label = pulseTypeFallback(p.pulse_type);
-    }
+
+    let label: string =
+      sourceTitle ||
+      decisionTitle ||
+      (signalRef && !GENERIC_FALLBACKS.has(signalRef.toLowerCase().trim()) && !isSystemPhrase(signalRef) ? signalRef : '') ||
+      (arcTitle && !isSystemPhrase(arcTitle) ? arcTitle : '') ||
+      pulseTypeFallback(p.pulse_type);
+
     if (GENERIC_FALLBACKS.has(label.toLowerCase().trim()) && latestStateHash && p.state_hash === latestStateHash && snapshotText?.trim()) {
       const phrase = readablePhrase(snapshotText);
       if (phrase) label = phrase;
@@ -556,6 +592,17 @@ export async function loadProjectView(params: {
   projectTimelineEvents = [...pulseEvents, ...resultEvents].sort(
     (a, b) => new Date(a.occurred_at).getTime() - new Date(b.occurred_at).getTime()
   );
+
+  // Disambiguate duplicate pulse labels (e.g. same arc title for 12+ pulses) so tooltips are unique
+  const pulseLabelCount = new Map<string, number>();
+  projectTimelineEvents = projectTimelineEvents.map((e) => {
+    if (e.kind !== 'pulse') return e;
+    const base = e.label;
+    const n = (pulseLabelCount.get(base) ?? 0) + 1;
+    pulseLabelCount.set(base, n);
+    const label = n > 1 ? `${base} (${n})` : base;
+    return { ...e, label };
+  });
 
   // Load structural signals once (for timeline + contributing signals)
   let timelineEvents: Array<{
