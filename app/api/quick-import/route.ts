@@ -14,6 +14,8 @@ import { generateDedupeHash } from '@/lib/jobs/importProcessor';
 import { dispatchStructureRecompute } from '@/lib/structure/dispatch';
 import crypto from 'crypto';
 
+const GENERIC_SOURCE_TITLES = new Set(['user', 'assistant', 'ai', 'untitled', 'untitled conversation', 'quick capture']);
+
 function deriveSourceTitleFromTranscript(transcript: string): string | null {
   if (!transcript || typeof transcript !== 'string') return null;
 
@@ -29,6 +31,10 @@ function deriveSourceTitleFromTranscript(transcript: string): string | null {
   if (!firstLine) return null;
 
   let candidate = firstLine;
+
+  // Strip common role prefixes so we don't use "User" or "Assistant" as the title
+  candidate = candidate.replace(/^(user|assistant|ai|human):\s*/i, '').trim();
+  if (!candidate) return null;
 
   // Optionally cut at the first sentence boundary within the line
   const sentenceBoundaryMatch = candidate.match(/(.+?[.!?])\s/);
@@ -46,7 +52,9 @@ function deriveSourceTitleFromTranscript(transcript: string): string | null {
   // Normalize whitespace and strip excessive trailing punctuation
   candidate = candidate.replace(/\s+/g, ' ').replace(/[-–—,:;…]+$/g, '').trim();
 
-  return candidate || null;
+  if (!candidate) return null;
+  if (GENERIC_SOURCE_TITLES.has(candidate.toLowerCase())) return null;
+  return candidate;
 }
 
 function fallbackQuickCaptureTitle(): string {

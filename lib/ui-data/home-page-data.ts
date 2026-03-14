@@ -3,6 +3,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { getSupabaseServiceClient } from '@/lib/supabaseService';
+import { getSemanticOverlay } from '@/lib/semantic-overlay/get-overlay';
 import { loadHomeView } from './home.load';
 import type { HomePulse } from './home.load';
 import { collectStructuralSignals } from '@/lib/structure/signals';
@@ -266,11 +267,29 @@ export async function getHomePageData(
         .select('id, summary')
         .eq('user_id', user_id)
         .in('id', firstArcIds);
-      const arcIdToTitle = new Map(
+      const arcIdToSummary = new Map(
         (arcRows ?? []).map((row: { id: string; summary: string | null }) => [row.id, (row.summary ?? '').trim()])
       );
+      // Prefer semantic_labels arc title (e.g. "Launch Direction") when present
+      const { data: semanticRows } = await serviceClient
+        .from('semantic_labels')
+        .select('object_id, title')
+        .eq('user_id', user_id)
+        .eq('scope_type', 'global')
+        .is('scope_id', null)
+        .eq('object_type', 'arc')
+        .in('object_id', firstArcIds)
+        .order('generated_at', { ascending: false });
+      const arcIdToSemanticTitle = new Map<string, string>();
+      for (const row of semanticRows ?? []) {
+        const r = row as { object_id: string; title: string | null };
+        if (r.title?.trim() && !arcIdToSemanticTitle.has(r.object_id)) {
+          arcIdToSemanticTitle.set(r.object_id, r.title.trim());
+        }
+      }
       for (const [h, ids] of Object.entries(stateHashToArcIds)) {
-        const title = ids[0] ? arcIdToTitle.get(ids[0]) : '';
+        const arcId = ids[0];
+        const title = arcId ? (arcIdToSemanticTitle.get(arcId) || arcIdToSummary.get(arcId)) : '';
         if (title) arcTitleByStateHash[h] = title;
       }
     }
@@ -367,9 +386,22 @@ export async function getHomePageData(
       const { data: arcRows } = await serviceClientForSignals
         .from('arc')
         .select('id, summary')
+        .eq('user_id', user_id)
         .in('id', activeArcIds)
         .limit(1);
-      directionArc = (arcRows?.[0] as { summary?: string | null } | undefined)?.summary?.trim() ?? null;
+      let arcSummary = (arcRows?.[0] as { summary?: string | null } | undefined)?.summary?.trim() ?? null;
+      // Prefer semantic arc title (e.g. "Launch Direction") when present
+      const arcOverlay = await getSemanticOverlay({
+        supabaseClient: serviceClientForSignals,
+        user_id,
+        scope_type: 'global',
+        scope_id: null,
+        state_hash: latestStateHash,
+        arc_ids: activeArcIds,
+      });
+      const firstArcId = activeArcIds[0];
+      const semanticArcTitle = firstArcId ? arcOverlay.arcTitles[firstArcId]?.trim() : null;
+      directionArc = semanticArcTitle || arcSummary || (activeArcIds.length > 0 ? 'Current focus' : null);
 
       const allSignals: StructuralSignal[] = await collectStructuralSignals(
         serviceClientForSignals as unknown as SupabaseClient,

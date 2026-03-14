@@ -469,11 +469,28 @@ export async function loadProjectView(params: {
           .select('id, summary')
           .eq('user_id', user_id)
           .in('id', firstArcIds);
-        const arcIdToTitle = new Map(
+        const arcIdToSummary = new Map(
           (arcRows ?? []).map((row: { id: string; summary: string | null }) => [row.id, (row.summary ?? '').trim()])
         );
+        const { data: semanticRows } = await supabaseClient
+          .from('semantic_labels')
+          .select('object_id, title')
+          .eq('user_id', user_id)
+          .eq('scope_type', 'global')
+          .is('scope_id', null)
+          .eq('object_type', 'arc')
+          .in('object_id', firstArcIds)
+          .order('generated_at', { ascending: false });
+        const arcIdToSemanticTitle = new Map<string, string>();
+        for (const row of semanticRows ?? []) {
+          const r = row as { object_id: string; title: string | null };
+          if (r.title?.trim() && !arcIdToSemanticTitle.has(r.object_id)) {
+            arcIdToSemanticTitle.set(r.object_id, r.title.trim());
+          }
+        }
         for (const [h, ids] of Object.entries(stateHashToArcIds)) {
-          const title = ids[0] ? arcIdToTitle.get(ids[0]) : '';
+          const arcId = ids[0];
+          const title = arcId ? (arcIdToSemanticTitle.get(arcId) || arcIdToSummary.get(arcId)) : '';
           if (title) arcTitleByStateHash[h] = title;
         }
       }

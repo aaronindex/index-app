@@ -307,6 +307,17 @@ function parseSingleConversation(conv: any): ParsedConversation | null {
 
   if (messages.length === 0) return null;
 
+  // Avoid using generic export titles (e.g. "User") — derive from first user message when possible
+  const genericTitles = new Set(['user', 'assistant', 'ai', 'untitled', 'untitled conversation']);
+  let finalTitle = (title || '').trim() || 'Untitled Conversation';
+  if (genericTitles.has(finalTitle.toLowerCase())) {
+    const firstUser = messages.find((m) => m.role === 'user');
+    if (firstUser?.content?.trim()) {
+      const derived = firstUser.content.split('\n')[0].trim().substring(0, 60);
+      if (derived && !genericTitles.has(derived.toLowerCase())) finalTitle = derived;
+    }
+  }
+
   // Determine start/end times
   const timestamps = messages
     .map((m) => m.timestamp)
@@ -318,7 +329,7 @@ function parseSingleConversation(conv: any): ParsedConversation | null {
 
   return {
     id: conversationId,
-    title,
+    title: finalTitle,
     messages,
     startedAt,
     endedAt,
