@@ -68,6 +68,18 @@ function fallbackQuickCaptureTitle(): string {
   return `Quick Capture — ${formatted}`;
 }
 
+/** Derive a short title from the first user message content (content-derived, not transcript first line). */
+function deriveTitleFromFirstUserMessage(parsed: { messages: Array<{ role: string; content: string }> }): string | null {
+  const firstUser = parsed.messages.find((m) => m.role === 'user');
+  if (!firstUser?.content?.trim()) return null;
+  const text = firstUser.content.replace(/\s+/g, ' ').trim();
+  const firstSentence = text.match(/^[^.!?]+[.!?]?/)?.[0]?.trim() ?? text.slice(0, 60).trim();
+  const candidate = firstSentence.slice(0, 52).replace(/\s+\S*$/, '').trim();
+  if (candidate.length < 4) return null;
+  if (GENERIC_SOURCE_TITLES.has(candidate.toLowerCase())) return null;
+  return candidate;
+}
+
 async function processQuickImportSync(
   supabase: any,
   userId: string,
@@ -332,11 +344,12 @@ export async function POST(request: NextRequest) {
 
     const supabase = await getSupabaseServerClient();
 
-    // Generate title if not provided or empty
+    // Generate title if not provided or empty: prefer content-derived (first user message) over transcript first line
     let finalTitle = title?.trim() || '';
     if (!finalTitle) {
-      const derived = deriveSourceTitleFromTranscript(transcript);
-      finalTitle = derived || fallbackQuickCaptureTitle();
+      const fromTranscript = deriveSourceTitleFromTranscript(transcript);
+      const fromFirstUser = deriveTitleFromFirstUserMessage(parsed);
+      finalTitle = fromTranscript || fromFirstUser || fallbackQuickCaptureTitle();
     }
 
     // Check for duplicates

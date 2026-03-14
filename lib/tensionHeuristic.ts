@@ -2,7 +2,7 @@
 // Lightweight tension detection v1.1: surface unresolved strategic forks from text.
 // Heuristic-only; no semantic analysis. Understate: if signal is weak, return null.
 
-const MAX_LABEL_LEN = 48;
+const MAX_PHRASE_LEN = 40;
 
 /** Remove common prefixes so stored tension strings are clean at source. */
 function stripPrefix(s: string): string {
@@ -10,10 +10,30 @@ function stripPrefix(s: string): string {
 }
 
 /**
- * Normalize a candidate label: strip prefixes, trim, collapse whitespace, truncate.
+ * Extract a short conceptual phrase (for tension pair display), not a raw character slice.
+ * Prefer: words after "focus on", else last 3–5 words. Cap at word boundary.
+ */
+function toPhrase(s: string): string {
+  const trimmed = stripPrefix(s).replace(/\s+/g, ' ').trim();
+  if (!trimmed) return '';
+
+  let segment = trimmed;
+  const focusOn = trimmed.match(/\bfocus\s+on\s+(.+)/i);
+  if (focusOn?.[1]) segment = focusOn[1].trim();
+
+  const words = segment.split(/\s+/).filter(Boolean);
+  if (words.length <= 5) return segment.length <= MAX_PHRASE_LEN ? segment : segment.slice(0, MAX_PHRASE_LEN).replace(/\s+\S*$/, '').trim();
+  const take = Math.min(5, Math.max(3, Math.ceil(words.length / 2)));
+  const phrase = words.slice(-take).join(' ');
+  if (phrase.length <= MAX_PHRASE_LEN) return phrase;
+  return phrase.slice(0, MAX_PHRASE_LEN).replace(/\s+\S*$/, '').trim();
+}
+
+/**
+ * Normalize a candidate label at source: strip prefixes, extract phrase, no mid-word truncation.
  */
 function norm(s: string): string {
-  return stripPrefix(s).replace(/\s+/g, ' ').trim().slice(0, MAX_LABEL_LEN);
+  return toPhrase(s);
 }
 
 /**

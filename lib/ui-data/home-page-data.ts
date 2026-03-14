@@ -300,13 +300,14 @@ export async function getHomePageData(
   // Shifts list (textual): dedupe by headline + day; generic headlines by (headline + day) only.
   // Normalize headline: trim + collapse whitespace. Keep earliest occurrence per key; preserve order.
   const pulseById = new Map(homeView.pulses.map((p) => [p.id, p]));
+  const latestArcTitle = latestStateHash ? arcTitleByStateHash[latestStateHash] : null;
   const rawShifts = shiftSource.map((p) => {
     const label = getTimelineLabel(
       p,
       semanticHeadlines[p.id],
       directionText,
       latestStateHash,
-      arcTitleByStateHash[p.state_hash]
+      arcTitleByStateHash[p.state_hash] || latestArcTitle
     );
     const normalized = label.trim().replace(/\s+/g, ' ').toLowerCase();
     return {
@@ -364,7 +365,7 @@ export async function getHomePageData(
         semanticHeadlines[p.id],
         directionText,
         latestStateHash,
-        arcTitleByStateHash[p.state_hash]
+        arcTitleByStateHash[p.state_hash] || latestArcTitle
       ),
       pulse_type: p.pulse_type,
       isResult: p.pulse_type === 'result_recorded',

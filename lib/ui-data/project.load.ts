@@ -499,6 +499,8 @@ export async function loadProjectView(params: {
     // Non-fatal: project timeline falls back to semantic/snapshot/generic labels.
   }
 
+  const fallbackArcTitle = Object.values(arcTitleByStateHash)[0] ?? null;
+
   function isSystemPhrase(s: string): boolean {
     const lower = s.toLowerCase().trim();
     if (lower.length < 10) return false;
@@ -517,7 +519,7 @@ export async function loadProjectView(params: {
     return out.length >= 8 ? out : '';
   }
   const pulseEvents = (projectPulses ?? []).map((p: { id: string; pulse_type: string; headline: string | null; occurred_at: string; state_hash?: string }) => {
-    const arcTitle = (p.state_hash && arcTitleByStateHash[p.state_hash]?.trim()) || '';
+    const arcTitle = (p.state_hash && arcTitleByStateHash[p.state_hash]?.trim()) || fallbackArcTitle || '';
     const semantic = pulseOverlay.pulseHeadlines[p.id]?.trim();
     const editorial = (p.headline ?? '').trim();
     const signalRef = semantic || editorial;
